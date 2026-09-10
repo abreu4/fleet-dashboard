@@ -188,17 +188,45 @@
      the HUD's 168px interior at 900px of screen height, and .hud clips -- so on a
      13" Air the bottom buttons were simply sliced off. Paired up they need four
      rows instead of six and the column fits at any height the HUD can take. */
+  /* The permanent answer to the crammed corner. Two rows: the theme control on
+     its own, then a row of fixed 28px squares that can never outgrow the column
+     -- five of them at the narrowest width is 160px inside 176px. Only the
+     controls you reach for while glancing stay out here (pause, music, sound,
+     terminal); collapse, flush and refresh live behind the last square, in a
+     menu where they get their words back. Every theme styles button.ghost
+     already, and the menu is built from the same tokens, so it wears each world
+     without one line of per-theme CSS. */
   .ctl{
-    display:flex; flex-wrap:wrap; gap:6px;
+    position:relative;
+    display:flex; flex-wrap:wrap; gap:6px 5px;
     align-content:center; flex:none; width:clamp(176px, 14vw, 218px);
   }
   .ctl > *{min-width:0}
   .ctl .wide{width:100%; flex:none}
-  .ctl button{
-    flex:1; min-width:32px; padding:5px 0;
+  .ctl > button{
+    flex:0 0 28px; width:28px; height:28px; padding:0;
     display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1;
   }
-  .ctl button span{display:none} /* hide text, keep icons */
+  .ctl > button span{display:none}          /* icons only in the row */
+  .ctl > #more{order:99}                    /* last, whatever appends after it */
+  .ctl > #more[aria-expanded="true"]{color:var(--accent); border-color:var(--edge-hot)}
+  /* The menu hangs off body, not .ctl: the HUD clips its overflow, and a menu
+     that drops below the HUD would be cut off at its bottom edge. Its position
+     is measured from the square that opens it. */
+  .more-menu{
+    position:fixed; z-index:9; display:none;
+    flex-direction:column; gap:3px; min-width:196px; padding:6px;
+    border:1px solid var(--edge-hot); border-radius:7px; background:var(--panel);
+    box-shadow:0 18px 44px -18px #000;
+  }
+  .more-menu.on{display:flex}
+  .more-menu button.ghost{
+    width:100%; padding:7px 10px;
+    display:flex; align-items:center; justify-content:flex-start; gap:9px;
+    font-size:12px; text-align:left; white-space:nowrap;
+  }
+  .more-menu button span{display:inline}
 
 
   /* The theme control wears the theme: its own accent, and four of the palette's
@@ -276,8 +304,7 @@
     .gauges{flex:0 1 270px; min-width:252px}
     .trace{flex:1 1 190px; min-width:180px}
     .ctl{flex:0 0 112px; min-width:0}
-    .ctl select, .ctl button{width:100%; min-width:0}
-    .ctl button{padding-inline:6px; white-space:nowrap}
+    .ctl select{width:100%; min-width:0}   /* the squares wrap by themselves */
   }
   @media (max-width:700px){
     .trace{display:none}
@@ -3850,6 +3877,45 @@ themePicker.addEventListener('keydown', e => {
   }
 });
 themePicker.addEventListener('change', () => { themeBefore = null; });
+
+/* ---- the HUD controls: squares and a menu ------------------------------- */
+/* Collapse, flush and refresh are moved -- the same nodes, not copies -- into a
+   menu behind a last square, so every handler bound to them by id above keeps
+   working and nothing here knows what they do. The sounds module appends its
+   own button to .ctl whenever it is ready; #more's flex order keeps the menu
+   square last regardless. */
+(function(){
+  const ctl = document.querySelector('.ctl');
+  if(!ctl) return;
+  const more = document.createElement('button');
+  more.className = 'ghost'; more.id = 'more'; more.textContent = '\u22ef';
+  more.title = 'more controls';
+  more.setAttribute('aria-haspopup', 'true'); more.setAttribute('aria-expanded', 'false');
+  const menu = document.createElement('div');
+  menu.className = 'more-menu'; menu.id = 'more-menu'; menu.setAttribute('role', 'menu');
+  ctl.appendChild(more); document.body.appendChild(menu);
+  const place = () => {
+    const r = more.getBoundingClientRect();
+    menu.style.top = (r.bottom + 6) + 'px';
+    menu.style.right = Math.max(8, innerWidth - r.right) + 'px';
+  };
+  ['collapse', 'flush', 'refresh'].forEach(id => {
+    const b = document.getElementById(id);
+    if(b) menu.appendChild(b);
+  });
+  const setOpen = on => {
+    if(on) place();
+    menu.classList.toggle('on', on);
+    more.setAttribute('aria-expanded', on ? 'true' : 'false');
+  };
+  more.onclick = e => { e.stopPropagation(); setOpen(!menu.classList.contains('on')); };
+  menu.addEventListener('click', e => { if(e.target.closest('button')) setOpen(false); });
+  document.addEventListener('click', e => {
+    if(!ctl.contains(e.target) && !menu.contains(e.target)) setOpen(false);
+  });
+  addEventListener('resize', () => { if(menu.classList.contains('on')) place(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') setOpen(false); });
+})();
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
 }, 1000);
