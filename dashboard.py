@@ -340,8 +340,13 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         if origin is not None and origin not in ALLOWED_ORIGINS:
             return False
-        if need_origin and origin is None:
-            return False
+        # Origin is checked when present but no longer required: Firefox-family
+        # browsers with the privacy setting that strips it (Zen ships it) send
+        # same-origin POSTs with no Origin at all, which made every terminal call
+        # from that browser fail. The token is the gate -- it never leaves the
+        # served page, so a cross-origin form cannot carry it. `need_origin` is
+        # kept in the signature so the call sites still read as intended.
+        del need_origin
         token = self.headers.get("X-Fleet-Token") or ""
         return bool(TERMINAL_TOKEN) and secrets.compare_digest(token, TERMINAL_TOKEN)
 
