@@ -28,6 +28,8 @@ import sqlite3
 import subprocess
 import time
 
+import metrics
+
 HOME = os.path.expanduser("~")
 CLAUDE_DIR = os.path.join(HOME, ".claude")
 AGY_DIR = os.path.join(HOME, ".gemini", "antigravity-cli")
@@ -885,17 +887,10 @@ def _ps():
     third of the cost of a whole refresh. The window is shorter than the
     refresh interval, so every pass still gets its own reading.
     """
-    global _ps_cache
-    stamp, cached = _ps_cache
-    if time.time() - stamp < PS_SECONDS:
-        return cached
-    try:
-        out = subprocess.run(["ps", "-Ao", "pid=,etime=,args="],
-                             capture_output=True, text=True, timeout=6).stdout
-    except (OSError, subprocess.SubprocessError):
-        out = ""
-    _ps_cache = (time.time(), out)
-    return out
+    # Telemetry walked the table a fourth time in its own module, for the same
+    # listing with different columns. Both now read one spawn, owned there with
+    # the rest of the host readings; the union of columns puts etime second.
+    return metrics.process_table()
 
 
 def live_processes(provider):
@@ -906,10 +901,10 @@ def live_processes(provider):
         return []
     found = []
     for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) < 3:
+        parts = line.split(None, 4)
+        if len(parts) < 5:
             continue
-        pid, etime, args = parts
+        pid, etime, _rss, _pcpu, args = parts
         if _NOT_SESSION.search(args) or not pattern.search(args):
             continue
         try:
@@ -918,8 +913,16 @@ def live_processes(provider):
             continue
         found.append({"pid": int(pid), "cwd": _process_cwd(pid),
                       "started": int((time.time() - age) * 1000)})
-    # drop stale pids from the cwd cache
-    alive = {p["pid"] for p in found}
+    # Drop stale pids from the cwd cache, measured against every pid on the
+    # machine rather than this provider's matches. live_processes runs once per
+    # provider, so sweeping by `found` meant the claude pass evicted codex's
+    # entries and the codex pass evicted claude's -- the cache could never hold
+    # more than the last lane scanned, whatever its keys were.
+    alive = set()
+    for line in out.splitlines():
+        head = line.split(None, 1)
+        if head and head[0].isdigit():
+            alive.add(int(head[0]))
     for pid in list(_cwd_cache):
         if pid not in alive:
             _cwd_cache.pop(pid, None)

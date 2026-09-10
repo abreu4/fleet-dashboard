@@ -40,10 +40,38 @@ def _sysctl_int(name):
         return 0
 
 
+_const_cache = {}
+
+
+def _sysctl_const(name):
+    """A sysctl that cannot change while the machine is up.
+
+    hw.memsize and kern.boottime were each being spawned thirty times a minute
+    to be told the same number. Nothing about a rebuild is cheap enough to
+    afford asking twice, let alone a thousand times an hour.
+    """
+    if name not in _const_cache:
+        _const_cache[name] = _sh("sysctl", "-n", name).strip()
+    return _const_cache[name]
+
+
+def process_table():
+    """The one `ps -A` per rebuild, shared with the session collectors.
+
+    The collectors already collapsed their own three walks into one; this was
+    the fourth, left outside because telemetry lives in a different module and
+    wanted different columns. The column set here is the union of what both
+    readers need, so one spawn now answers both. The window is shorter than the
+    rebuild interval, so every pass still gets its own reading.
+    """
+    return _cached("ps", 1.0, lambda: _sh(
+        "ps", "-Ao", "pid=,etime=,rss=,pcpu=,args=", timeout=6))
+
+
 # --------------------------------------------------------------------------
 
 def memory():
-    total = _sysctl_int("hw.memsize")
+    total = int(_sysctl_const("hw.memsize") or 0)
     out = _sh("vm_stat")
     if not out or not total:
         return {"total": total, "used": 0, "pct": 0}
@@ -80,7 +108,7 @@ def cpu():
 
 
 def uptime():
-    raw = _sh("sysctl", "-n", "kern.boottime")
+    raw = _sysctl_const("kern.boottime")
     match = re.search(r"sec\s*=\s*(\d+)", raw)
     return int(time.time() - int(match.group(1))) if match else 0
 
@@ -140,14 +168,14 @@ _NOT_AGENT = re.compile(r"/Applications/|Electron Framework|Helper|crashpad")
 
 def processes():
     """RSS and CPU actually spent by agent CLIs, split by provider."""
-    out = _sh("ps", "-Ao", "pid=,rss=,pcpu=,args=", timeout=6)
+    out = process_table()
     tally = {key: {"count": 0, "rssMb": 0.0, "cpu": 0.0}
              for key, _ in _AGENT_PATTERNS}
     for line in out.splitlines():
-        parts = line.split(None, 3)
-        if len(parts) < 4:
+        parts = line.split(None, 4)
+        if len(parts) < 5:
             continue
-        _, rss, pcpu, args = parts
+        _, _etime, rss, pcpu, args = parts
         if _NOT_AGENT.search(args):
             continue
         for key, pattern in _AGENT_PATTERNS:
