@@ -1,0 +1,959 @@
+"""Read-only collectors that turn each agent CLI's on-disk state into sessions.
+
+Every collector returns a list of dicts with the same shape:
+
+    id        stable identifier
+    provider  'claude' | 'antigravity' | 'codex'
+    name      short display name
+    project   grouping key (usually the repo directory name)
+    place     where inside the project ('worktree: x', 'main', branch...)
+    state     'running' | 'blocked' | 'idle' | 'done' | 'unknown'
+    brief     what this session was asked to do (stable)
+    now       where it has got to (changes)
+    needs     what it is waiting on, when blocked
+    links     [{'label': ..., 'href': ...}]
+    tokens    int or None
+    started   epoch ms or None
+    updated   epoch ms or None
+
+Nothing here writes, and nothing here holds a whole transcript in memory.
+"""
+
+import glob
+import json
+import os
+import re
+import shutil
+import sqlite3
+import subprocess
+import time
+
+HOME = os.path.expanduser("~")
+CLAUDE_DIR = os.path.join(HOME, ".claude")
+AGY_DIR = os.path.join(HOME, ".gemini", "antigravity-cli")
+CODEX_DIR = os.path.join(HOME, ".codex")
+
+# Sessions older than this stop being interesting on a live board.
+STALE_MS = 3 * 24 * 60 * 60 * 1000
+# A file touched this recently means the agent is mid-turn.
+LIVE_S = 120
+
+
+# --------------------------------------------------------------------------
+# text
+# --------------------------------------------------------------------------
+
+_FENCE = re.compile(r"```.*?```", re.S)
+_TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$", re.M)
+_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_HEADING = re.compile(r"^\s{0,3}#{1,6}\s*", re.M)
+_BULLET = re.compile(r"^\s{0,6}(?:[-*+]|\d+[.)])\s+", re.M)
+_EMPH = re.compile(r"(\*\*|__|~~|`)")
+_TAG = re.compile(r"<[^>\n]{1,120}>")
+_WS = re.compile(r"\s+")
+
+# Claude Code wraps slash commands and hook output in these; they are not the
+# user talking, so they must never become a session's brief.
+_NOT_USER = (
+    "<local-command",
+    "<command-name>",
+    "<command-message>",
+    "<system-reminder>",
+    "Caveat: The messages below",
+    "[Request interrupted",
+    "This session is being continued",
+)
+
+# Monitors, task notifications and hook output arrive as user turns with an
+# opaque id in front, so a prefix test is not enough to spot them.
+_INJECTED = re.compile(
+    r"(monitor event:|task-notification|<task-|hook (?:output|feedback)|"
+    r"tool_use_error|\[request interrupted)", re.I)
+
+
+def flatten(text):
+    """Markdown (or a stray HTML tag) in, one clean line out."""
+    if not text:
+        return ""
+    t = _FENCE.sub(" ", text)
+    t = _TABLE_ROW.sub(" ", t)
+    t = _LINK.sub(r"\1", t)
+    t = _HEADING.sub("", t)
+    t = _BULLET.sub("", t)
+    t = _EMPH.sub("", t)
+    t = _TAG.sub(" ", t)
+    t = t.replace("—", "-").replace("|", " ")
+    return _WS.sub(" ", t).strip(" -–—:")
+
+
+def clip(text, limit=220):
+    """Trim to `limit`, preferring a sentence or word boundary."""
+    t = (text or "").strip()
+    if len(t) <= limit:
+        return t
+    window = t[:limit]
+    for stop in (". ", "; ", " - "):
+        cut = window.rfind(stop)
+        if cut > limit * 0.55:
+            return window[:cut + 1].strip()
+    cut = window.rfind(" ")
+    return (window[:cut] if cut > limit * 0.5 else window).rstrip() + "…"
+
+
+_ABS_PATH = re.compile(r"(?:/[\w.@+-]+){2,}/([\w.@+-]+)")
+_API_ERR = re.compile(r"API Error:\s*(\d{3})[^.]*\.?.*", re.I)
+_CONN_ERR = re.compile(r"API Error:\s*Connection refused.*", re.I)
+
+
+def shorten_paths(text):
+    """A brief that points at a file should name the file, not the path to it."""
+    return _ABS_PATH.sub(r"\1", text or "")
+
+
+def normalise_error(text):
+    """Provider outages are the same three sentences every time; say it once."""
+    t = text or ""
+    t = _CONN_ERR.sub("API connection refused - retrying", t)
+    t = _API_ERR.sub(lambda m: "API error %s - retrying" % m.group(1), t)
+    return re.sub(r"(?:API (?:error|unavailable|connection)[^·]*·\s*)+", "", t).strip(" ·") or t
+
+
+def looks_like_user(text):
+    t = (text or "").lstrip()
+    if not t or t.startswith(_NOT_USER):
+        return False
+    return not _INJECTED.search(t[:160])
+
+
+def message_text(message):
+    """Pull the plain text out of a transcript message, tool calls excluded."""
+    if not isinstance(message, dict):
+        return ""
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return ""
+    parts = []
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text") or "")
+    return "\n".join(parts)
+
+
+def compact_section(summary, *names):
+    """Pull one named section out of a compact summary.
+
+    A compact summary is a ~20KB document the model wrote about its own
+    session, under a fixed set of section names ("Primary Request and Intent",
+    "Current Work", "Optional Next Step"). Reading the section we want beats
+    both the boilerplate preamble and any fresh summarising. Two layouts are in
+    the wild: markdown headings, and bold numbered items.
+    """
+    if not summary:
+        return ""
+    for name in names:
+        escaped = re.escape(name)
+        for pattern, stop in (
+            (r"^#{1,3}\s*\d*\.?\s*" + escaped + r":?\s*$", r"^#{1,3}\s"),
+            (r"^\s*\d+\.\s*\*\*" + escaped + r":?\*\*:?\s*$", r"^\s*\d+\.\s*\*\*"),
+        ):
+            match = re.search(pattern + r"(.*?)(?=" + stop + r"|\Z)",
+                              summary, re.M | re.S)
+            if match:
+                picked = _first_substance(match.group(1))
+                if picked:
+                    return picked
+    return ""
+
+
+def _first_substance(body):
+    """Join paragraphs until there is a real statement, skipping the lead-in
+    sentence that only introduces a list."""
+    picked = []
+    for para in body.split("\n\n"):
+        line = flatten(para)
+        if len(line) < 30:
+            continue
+        picked.append(line)
+        joined = " ".join(picked)
+        if len(joined) >= 120 and not para.rstrip().endswith(":"):
+            return joined
+    return " ".join(picked)
+
+
+def intent_from_compact(summary):
+    body = compact_section(summary, "Primary Request and Intent")
+    if body:
+        return body
+    # Older/shorter summaries: skip the preamble, take the first real prose.
+    tail = re.sub(r"^.*?Summary:\s*", "", summary or "", flags=re.S)
+    return _first_substance(tail) or flatten(tail)
+
+
+_MD_REF = re.compile(r"(/[^\s'\"]+\.md)")
+
+
+def doc_brief(text):
+    """A launch order that says "read brief_x.md" is a pointer, not a brief.
+    If the document it names is still on disk, summarise that instead."""
+    for path in reversed(_MD_REF.findall(text or "")):
+        try:
+            with open(path, encoding="utf-8") as handle:
+                body = handle.read(8000)
+        except OSError:
+            continue
+        head = re.search(r"^#\s+(.+?)\s*$", body, re.M)
+        title = flatten(head.group(1)) if head else ""
+        for para in body.split("\n\n")[1 if head else 0:]:
+            line = flatten(para)
+            if len(line) > 60:
+                return ("%s — %s" % (title, line)) if title else line
+        if title:
+            return title
+    return ""
+
+
+def plan_brief(slug):
+    """Sessions that went through plan mode left the plan on disk, named by the
+    session's slug. Its title and opening paragraph are the model's own
+    statement of the task."""
+    if not slug:
+        return ""
+    path = os.path.join(CLAUDE_DIR, "plans", slug + ".md")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read(8000)
+    except OSError:
+        return ""
+    title = ""
+    head = re.search(r"^#\s+(.+?)\s*$", text, re.M)
+    if head:
+        title = flatten(head.group(1)).replace(" - plan", "").replace(" — plan", "")
+    for para in text.split("\n\n")[1:]:
+        line = flatten(para)
+        if len(line) > 60 and not line.lower().startswith(("context", "the question")):
+            return ("%s — %s" % (title, line)) if title else line
+    return title
+
+
+# --------------------------------------------------------------------------
+# transcripts, read once and then only from where we stopped
+# --------------------------------------------------------------------------
+
+class Transcripts:
+    """Incremental reader over ~/.claude/projects/**/<session>.jsonl.
+
+    A transcript is append-only, so after the first pass each refresh only
+    reads the bytes that arrived since the last one.
+    """
+
+    def __init__(self):
+        self._entries = {}
+        self._paths = {}
+
+    def path_for(self, session_id, cwd):
+        if not session_id:
+            return None
+        cached = self._paths.get(session_id)
+        if cached and os.path.exists(cached):
+            return cached
+        found = None
+        if cwd:
+            slug = re.sub(r"[^A-Za-z0-9]", "-", cwd)
+            guess = os.path.join(CLAUDE_DIR, "projects", slug, session_id + ".jsonl")
+            if os.path.exists(guess):
+                found = guess
+        if not found:
+            matches = glob.glob(os.path.join(
+                CLAUDE_DIR, "projects", "*", session_id + ".jsonl"))
+            found = matches[0] if matches else None
+        if found:
+            self._paths[session_id] = found
+        return found
+
+    def read(self, path):
+        if not path:
+            return {}
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return {}
+        entry = self._entries.get(path)
+        fresh = (entry is None
+                 or entry["ino"] != stat.st_ino
+                 or stat.st_size < entry["offset"])
+        if fresh:
+            entry = {"ino": stat.st_ino, "offset": 0, "pending": b"",
+                     "first_prompt": None, "first_substantial": None, "compact": None,
+                     "last_assistant": None, "last_prompt": None,
+                     "turns": 0, "mtime": 0, "slug": None, "prev_assistant": None,
+                     "started": None, "updated": None}
+            self._entries[path] = entry
+        elif stat.st_size == entry["offset"]:
+            return entry
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(entry["offset"])
+                chunk = handle.read(stat.st_size - entry["offset"])
+        except OSError:
+            return entry
+        entry["offset"] = stat.st_size
+        entry["mtime"] = int(stat.st_mtime * 1000)
+        self._absorb(entry, chunk)
+        return entry
+
+    def _absorb(self, entry, chunk):
+        buffer = entry["pending"] + chunk
+        lines = buffer.split(b"\n")
+        entry["pending"] = lines.pop()  # possibly a half-written line
+        for raw in lines:
+            if not raw.strip():
+                continue
+            try:
+                row = json.loads(raw.decode("utf-8", "replace"))
+            except ValueError:
+                continue
+            self._absorb_row(entry, row)
+
+    def _absorb_row(self, entry, row):
+        kind = row.get("type")
+        stamp = row.get("timestamp")
+        if stamp:
+            entry["updated"] = stamp
+            if entry["started"] is None:
+                entry["started"] = stamp
+
+        if kind == "last-prompt":
+            prompt = row.get("lastPrompt")
+            if looks_like_user(prompt):
+                entry["last_prompt"] = prompt
+            return
+
+        if kind == "user":
+            if row.get("isSidechain") or row.get("isMeta"):
+                return
+            text = message_text(row.get("message"))
+            if row.get("isCompactSummary"):
+                entry["compact"] = text
+                return
+            if not looks_like_user(text):
+                return
+            if entry["first_prompt"] is None:
+                entry["first_prompt"] = text
+            # "retry?" or "continue" is a nudge, not a brief; hold out for the
+            # first prompt that actually states a task.
+            if entry["first_substantial"] is None and len(flatten(text)) >= 60:
+                entry["first_substantial"] = text
+            return
+
+        if row.get("slug"):
+            entry["slug"] = row["slug"]
+
+        if kind == "assistant" and not row.get("isSidechain"):
+            entry["turns"] += 1
+            text = message_text(row.get("message"))
+            if text.strip():
+                # "Acknowledged." as the closing line tells you nothing, so keep
+                # the one before it to fall back on.
+                if entry["last_assistant"] and len(flatten(entry["last_assistant"])) >= 60:
+                    entry["prev_assistant"] = entry["last_assistant"]
+                entry["last_assistant"] = text
+
+
+# --------------------------------------------------------------------------
+# claude code
+# --------------------------------------------------------------------------
+
+def _split_cwd(cwd):
+    if not cwd:
+        return "unknown", ""
+    if "/.claude/worktrees/" in cwd:
+        root, branch = cwd.split("/.claude/worktrees/", 1)
+        return os.path.basename(root), "worktree: " + branch.split("/")[0]
+    if cwd.rstrip("/") == HOME.rstrip("/"):
+        return "home", "~"
+    return os.path.basename(cwd.rstrip("/")), "main checkout"
+
+
+def _job_state(job_id):
+    path = os.path.join(CLAUDE_DIR, "jobs", job_id, "state.json")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+
+def _job_detail(job_id):
+    """Last non-error status line the worker published to its timeline."""
+    path = os.path.join(CLAUDE_DIR, "jobs", job_id, "timeline.jsonl")
+    try:
+        with open(path, "rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            back = min(handle.tell(), 64 * 1024)
+            handle.seek(-back, os.SEEK_END)
+            lines = handle.read().split(b"\n")
+    except OSError:
+        return None
+    for raw in reversed(lines):
+        if not raw.strip():
+            continue
+        try:
+            row = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            continue
+        detail = row.get("detail")
+        if detail and "session limit" not in detail:
+            return flatten(detail)
+    return None
+
+
+def _coerce_dict(value):
+    """job state.json stores some fields as python-repr strings."""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip().startswith(("{", "[")):
+        try:
+            return json.loads(value.replace("'", '"'))
+        except ValueError:
+            return None
+    return None
+
+
+# launchd starts us with a bare PATH, so the CLI has to be found by hand. The
+# symlink is re-pointed on every update, so resolve it per call, never cache it.
+_CLI_DIRS = (os.path.join(HOME, ".local", "bin"), "/opt/homebrew/bin",
+             "/usr/local/bin", "/usr/bin")
+
+
+def claude_cli():
+    found = shutil.which("claude")
+    if found:
+        return found
+    for directory in _CLI_DIRS:
+        candidate = os.path.join(directory, "claude")
+        if os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+_agents_roster = (0.0, [])
+ROSTER_SECONDS = 6.0
+
+
+def claude_agents(binary):
+    """The `claude agents --json` roster, kept on a slower clock than the board.
+
+    Spawning the Node CLI costs ~350ms; every other source in a rebuild costs
+    ~90ms put together, so at a two-second refresh this one call would be the
+    whole cost of the dashboard. The roster only changes when a session starts
+    or ends, and the transcripts behind it -- which is where a tile's state,
+    gist and age come from -- are re-read every pass regardless. So a new
+    session appears within six seconds and everything about the ones already
+    on screen stays live.
+    """
+    global _agents_roster
+    stamp, cached = _agents_roster
+    if time.time() - stamp < ROSTER_SECONDS:
+        return cached
+    try:
+        proc = subprocess.run([binary, "agents", "--json"],
+                              capture_output=True, text=True, timeout=15)
+        agents = json.loads(proc.stdout) if proc.returncode == 0 else cached
+    except (OSError, ValueError, subprocess.SubprocessError):
+        agents = cached
+    _agents_roster = (time.time(), agents)
+    return agents
+
+
+def collect_claude(transcripts):
+    binary = claude_cli()
+    if not binary:
+        return []
+    agents = claude_agents(binary)
+
+    sessions = []
+    for agent in agents:
+        cwd = agent.get("cwd") or ""
+        project, place = _split_cwd(cwd)
+        state = (agent.get("state") or agent.get("status") or "unknown").lower()
+        if state in ("busy", "working", "active"):
+            state = "running"
+        job_id = agent.get("id")
+        session_id = agent.get("sessionId") or ""
+
+        brief = now = needs = None
+        links = []
+        tokens = None
+        turns = 0
+        last_activity = None
+
+        if job_id:
+            job = _job_state(job_id)
+            if job:
+                raw_intent = job.get("intent") or ""
+                brief = shorten_paths(flatten(raw_intent))
+                # "Lê contrato.md e depois brief_x.md" says nothing on a tile.
+                if re.match(r"^\s*(l[eê]|read|abre|open)\b", brief, re.I):
+                    brief = doc_brief(raw_intent) or brief
+                needs = normalise_error(flatten(job.get("needs") or ""))
+                result = _coerce_dict(job.get("output")) or {}
+                detail = flatten(job.get("detail") or "") or _job_detail(job_id)
+                now = flatten(result.get("result") or "") if state == "done" else ""
+                now = normalise_error(now or detail or "")
+                try:
+                    tokens = int(job.get("tokens"))
+                except (TypeError, ValueError):
+                    tokens = None
+                for child in _coerce_dict(job.get("children")) or []:
+                    if isinstance(child, dict) and child.get("href"):
+                        label = child.get("kind", "link")
+                        links.append({
+                            "label": "%s #%s" % (label, child.get("id", "")),
+                            "href": child["href"]})
+
+        entry = transcripts.read(transcripts.path_for(session_id, cwd))
+        nxt = ""
+        if entry:
+            compact = entry.get("compact")
+            # Everything below is a summary somebody already wrote — a compact
+            # section, a plan document, a worker's own status line. None of it
+            # is synthesised here.
+            if compact:
+                brief = intent_from_compact(compact) or brief
+                nxt = compact_section(compact, "Optional Next Step", "Pending Tasks")
+                current = compact_section(compact, "Current Work")
+                if current:
+                    now = now or current
+            if not brief:
+                brief = plan_brief(entry.get("slug"))
+            if not brief:
+                brief = flatten(entry.get("first_substantial")
+                                or entry.get("first_prompt") or "")
+            prompt = flatten(entry.get("last_prompt") or "")
+            reply = flatten(entry.get("last_assistant") or "")
+            if len(reply) < 60:
+                reply = flatten(entry.get("prev_assistant") or "") or reply
+            if not now:
+                # A one-turn session would otherwise print the same sentence
+                # twice; show the reply instead so the two lines differ.
+                now = prompt if prompt and prompt != brief else reply
+            turns = entry.get("turns") or 0
+            last_activity = entry.get("mtime") or None
+
+        sessions.append({
+            # Roster entries can share a parent sessionId. The job id is the
+            # tile identity; sessionId remains the command used for --resume.
+            "id": "claude:%s:%s" % (
+                job_id or session_id or "session",
+                agent.get("name") or "unnamed",
+            ),
+            "provider": "claude",
+            "name": agent.get("name") or "unnamed",
+            "project": project,
+            "place": place,
+            "kind": agent.get("kind") or "",
+            "state": state,
+            "brief": clip(brief or "", 260),
+            "now": clip(now or "", 220),
+            "needs": clip(needs or "", 200) if (needs or "") != (now or "") else "",
+            "next": clip(nxt or "", 220),
+            "links": links,
+            "tokens": tokens,
+            "turns": turns,
+            "cwd": cwd,
+            "sessionId": session_id,
+            "resume": "claude" if session_id else "",
+            "started": agent.get("startedAt"),
+            "updated": last_activity,
+        })
+    return sessions
+
+
+# --------------------------------------------------------------------------
+# antigravity  (agy)
+# --------------------------------------------------------------------------
+
+def _agy_titles():
+    path = os.path.join(AGY_DIR, "conversation_summaries.db")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % path, uri=True, timeout=1)
+        for cid, title, preview in conn.execute(
+                "select conversation_id, title, preview from conversation_summaries"):
+            out[cid] = (title or preview or "").strip()
+        conn.close()
+    except sqlite3.Error:
+        pass
+    return out
+
+
+# Antigravity writes its prompts to history.jsonl without a conversationId more
+# often than with one, so the conversation databases are the only reliable
+# source. Steps are protobuf blobs; the human text is the longest printable run
+# that is not an id, a token or a tool-permission string.
+_AGY_NOISE = re.compile(
+    r"^\$?[0-9a-f]{8}-[0-9a-f-]{20,}$|^\$|^sessionID$|^[A-Za-z0-9+/=_-]{26,}$")
+_AGY_PATH = re.compile(rb"/Users/[\w./ -]{2,90}")
+AGY_USER_STEP = 14      # step_type of a user prompt
+_agy_cache = {}
+
+
+def _agy_text(blob):
+    """Pull the human sentence out of a protobuf step.
+
+    Length alone picks the wrong string: injected rules like
+    `#timeout_long_running_search_command` are longer than "test_update". The
+    prompt itself is stored in two fields of the same message, so a run that
+    occurs twice is the prompt; everything else falls back to prose scoring.
+    """
+    runs = []
+    for raw in re.findall(rb"[\x20-\x7e]{4,}", blob or b""):
+        text = raw.decode("ascii", "replace").strip().strip('"').strip()
+        if not text or "(*)" in text or _AGY_NOISE.search(text):
+            continue
+        if text[0] in "+.-_/\\|=#" or "/Users/" in text or "://" in text:
+            continue
+        wordish = sum(1 for ch in text if ch.isalpha() or ch.isspace())
+        if wordish < len(text) * 0.7:          # ids, hashes, serialised args
+            continue
+        runs.append(text)
+
+    seen = {}
+    for text in runs:
+        seen[text] = seen.get(text, 0) + 1
+    for text in runs:
+        if seen[text] > 1:
+            return text
+    best, best_score = "", 0
+    for text in runs:
+        score = sum(1 for ch in text if ch.isalpha() or ch.isspace())
+        score += 20 if " " in text else 0
+        if score > best_score:
+            best, best_score = text, score
+    return best
+
+
+def _agy_conversation(path):
+    """(first prompt, latest text, steps, workspace) for one conversation."""
+    try:
+        stamp = os.path.getmtime(path)
+    except OSError:
+        return None
+    hit = _agy_cache.get(path)
+    if hit and hit[0] == stamp:
+        return hit[1]
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % path, uri=True, timeout=1)
+        steps = conn.execute("select count(*) from steps").fetchone()[0]
+        first = conn.execute(
+            "select step_payload from steps where step_type = ? order by idx limit 1",
+            (AGY_USER_STEP,)).fetchone()
+        if not first:
+            first = conn.execute(
+                "select step_payload from steps order by idx limit 1").fetchone()
+        tail = conn.execute(
+            "select step_payload from steps order by idx desc limit 3").fetchall()
+        workspace = ""
+        try:
+            for row in conn.execute("select * from trajectory_metadata_blob limit 1"):
+                for value in row:
+                    if isinstance(value, bytes):
+                        found = _AGY_PATH.search(value)
+                        if found:
+                            workspace = found.group(0).decode("utf-8", "replace")
+                            break
+        except sqlite3.Error:
+            pass
+        conn.close()
+    except sqlite3.Error:
+        return None
+
+    opening = _agy_text(first[0]) if first else ""
+    latest = ""
+    for (blob,) in tail:
+        latest = _agy_text(blob)
+        if latest and latest != opening:
+            break
+    result = (opening, latest, steps, workspace)
+    _agy_cache[path] = (stamp, result)
+    return result
+
+
+def _agy_workspaces():
+    """history.jsonl still carries the workspace, even on rows with no id."""
+    path = os.path.join(AGY_DIR, "history.jsonl")
+    by_id, latest = {}, ""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for raw in handle:
+                try:
+                    row = json.loads(raw)
+                except ValueError:
+                    continue
+                if row.get("workspace"):
+                    latest = row["workspace"]
+                    if row.get("conversationId"):
+                        by_id[row["conversationId"]] = row["workspace"]
+    except OSError:
+        pass
+    return by_id, latest
+
+
+def collect_antigravity():
+    if not os.path.isdir(AGY_DIR):
+        return []
+    by_id, fallback_ws = _agy_workspaces()
+    now_ms = time.time() * 1000
+    sessions = []
+
+    for path in glob.glob(os.path.join(AGY_DIR, "conversations", "*.db")):
+        cid = os.path.basename(path)[:-3]
+        try:
+            updated = os.path.getmtime(path) * 1000
+        except OSError:
+            continue
+        if now_ms - updated > STALE_MS:
+            continue
+        read = _agy_conversation(path)
+        if not read:
+            continue
+        opening, latest, steps, workspace = read
+
+        lock = os.path.join(AGY_DIR, "presence", cid + ".lock")
+        try:
+            live = (now_ms - os.path.getmtime(lock) * 1000) < LIVE_S * 1000
+        except OSError:
+            live = False
+
+        workspace = (workspace or by_id.get(cid) or fallback_ws or HOME).rstrip("/")
+        project = os.path.basename(workspace) or "home"
+        if workspace == HOME.rstrip("/"):
+            project = "home"
+
+        sessions.append({
+            "id": cid,
+            "provider": "antigravity",
+            "name": clip(flatten(opening), 34) or ("session " + cid[:8]),
+            "project": project,
+            "place": "cli",
+            "kind": "interactive",
+            "state": "running" if live else "idle",
+            "brief": clip(shorten_paths(flatten(opening)), 260),
+            "now": clip(flatten(latest), 220),
+            "needs": "",
+            "next": "",
+            "links": [],
+            "tokens": None,
+            "turns": steps,
+            "cwd": workspace or HOME,
+            "sessionId": cid,
+            "resume": "",
+            "started": None,
+            "updated": int(updated),
+        })
+
+    # A running `agy` with no fresh presence lock is still a live session: give
+    # the processes to the most recently touched conversations before falling
+    # back to a bare process tile.
+    running = len(live_processes("antigravity"))
+    for session in sorted(sessions, key=lambda s: -(s["updated"] or 0))[:running]:
+        session["state"] = "running"
+    # merge_live then matches those against the processes, so a live agy shows
+    # as its conversation rather than as a bare pid.
+    return merge_live(sessions, "antigravity", "agy")
+
+
+# --------------------------------------------------------------------------
+# codex
+# --------------------------------------------------------------------------
+
+def collect_codex():
+    path = os.path.join(CODEX_DIR, "state_5.sqlite")
+    if not os.path.exists(path):
+        return []
+    rows = []
+    try:
+        conn = sqlite3.connect("file:%s?mode=ro" % path, uri=True, timeout=1)
+        rows = conn.execute(
+            "select id, title, cwd, git_branch, tokens_used, first_user_message,"
+            "       preview, created_at, updated_at"
+            "  from threads where archived = 0"
+            "  order by updated_at desc limit 40").fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return []
+
+    now_ms = time.time() * 1000
+    sessions = []
+    for (tid, title, cwd, branch, tokens, first, preview, created, updated) in rows:
+        updated_ms = (updated or 0) * 1000
+        if now_ms - updated_ms > STALE_MS:
+            continue
+        cwd = (cwd or "").rstrip("/")
+        project = os.path.basename(cwd) or "home"
+        if cwd == HOME.rstrip("/"):
+            project = "home"
+        brief = flatten(first or title or "")
+        latest = flatten(preview or "")
+        sessions.append({
+            "id": tid,
+            "provider": "codex",
+            "name": clip(flatten(title or first or tid), 34),
+            "project": project,
+            "place": ("branch: " + branch) if branch else "main checkout",
+            "kind": "interactive",
+            "state": "running" if (now_ms - updated_ms) < LIVE_S * 1000 else "idle",
+            "brief": clip(brief, 260),
+            "now": clip(latest if latest != brief else "", 220),
+            "needs": "",
+            "next": "",
+            "links": [],
+            "tokens": tokens or None,
+            "turns": 0,
+            "cwd": cwd or HOME,
+            "sessionId": tid,
+            "resume": "codex",
+            "started": (created or 0) * 1000 or None,
+            "updated": updated_ms or None,
+        })
+    return merge_live(sessions, "codex", "codex")
+
+# --------------------------------------------------------------------------
+# live processes
+# --------------------------------------------------------------------------
+
+# A session exists the moment its CLI starts, but most agents write nothing to
+# disk for the first minute or two. Watching for the process as well means a
+# session you just opened appears immediately instead of after its first flush.
+_LIVE_PROCS = (
+    ("codex", re.compile(r"(?:^|/)codex(?:\s|$)")),
+    ("antigravity", re.compile(r"(?:^|/)(?:agy|antigravity)(?:\s|$)")),
+)
+# Long-lived helpers and editor hosts are not sessions.
+_NOT_SESSION = re.compile(
+    r"app-server|--analytics|language-server|\.vscode/extensions|dashboard\.py|"
+    r"bg-pty-host|bg-spare|mcp|--daemon")
+
+_cwd_cache = {}
+
+
+def _etime_seconds(text):
+    """ps etime: [[dd-]hh:]mm:ss"""
+    days = 0
+    if "-" in text:
+        days, text = text.split("-", 1)
+        days = int(days)
+    parts = [int(x) for x in text.split(":")]
+    while len(parts) < 3:
+        parts.insert(0, 0)
+    return days * 86400 + parts[0] * 3600 + parts[1] * 60 + parts[2]
+
+
+def _process_cwd(pid):
+    hit = _cwd_cache.get(pid)
+    if hit:
+        return hit
+    try:
+        proc = subprocess.run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
+                              capture_output=True, text=True, timeout=4)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    for line in proc.stdout.splitlines():
+        if line.startswith("n/"):
+            _cwd_cache[pid] = line[1:]
+            return line[1:]
+    return ""
+
+
+_ps_cache = (0.0, "")
+PS_SECONDS = 1.0
+
+
+def _ps():
+    """One process table per rebuild, not one per provider.
+
+    Three lanes each asked `ps` for the same 60ms listing, which was a
+    third of the cost of a whole refresh. The window is shorter than the
+    refresh interval, so every pass still gets its own reading.
+    """
+    global _ps_cache
+    stamp, cached = _ps_cache
+    if time.time() - stamp < PS_SECONDS:
+        return cached
+    try:
+        out = subprocess.run(["ps", "-Ao", "pid=,etime=,args="],
+                             capture_output=True, text=True, timeout=6).stdout
+    except (OSError, subprocess.SubprocessError):
+        out = ""
+    _ps_cache = (time.time(), out)
+    return out
+
+
+def live_processes(provider):
+    """Every running CLI session for one provider: pid, cwd, age."""
+    out = _ps()
+    pattern = dict(_LIVE_PROCS).get(provider)
+    if not pattern:
+        return []
+    found = []
+    for line in out.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid, etime, args = parts
+        if _NOT_SESSION.search(args) or not pattern.search(args):
+            continue
+        try:
+            age = _etime_seconds(etime)
+        except ValueError:
+            continue
+        found.append({"pid": int(pid), "cwd": _process_cwd(pid),
+                      "started": int((time.time() - age) * 1000)})
+    # drop stale pids from the cwd cache
+    alive = {p["pid"] for p in found}
+    for pid in list(_cwd_cache):
+        if pid not in alive:
+            _cwd_cache.pop(pid, None)
+    return found
+
+
+def merge_live(sessions, provider, label):
+    """Add a tile for any running process that no on-disk session accounts for."""
+    # Compare against what disk reported, not against tiles added in this loop:
+    # two sessions of the same agent in one directory are two sessions.
+    on_disk = [(s.get("cwd") or "").rstrip("/") for s in sessions
+               if s["state"] == "running"]
+    for proc in live_processes(provider):
+        cwd = (proc["cwd"] or HOME).rstrip("/")
+        if cwd in on_disk:
+            on_disk.remove(cwd)      # one process, one on-disk session
+            continue
+        project = os.path.basename(cwd) or "home"
+        if cwd == HOME.rstrip("/"):
+            project = "home"
+        sessions.append({
+            "id": "%s:pid:%d" % (provider, proc["pid"]),
+            "provider": provider,
+            "name": "%s %d" % (label, proc["pid"]),
+            "project": project,
+            "place": "live",
+            "kind": "interactive",
+            "state": "running",
+            "brief": "",
+            "now": "",
+            "needs": "",
+            "next": "",
+            "links": [],
+            "tokens": None,
+            "turns": 0,
+            "cwd": cwd,
+            "sessionId": "",
+            "resume": "",
+            "started": proc["started"],
+            "updated": int(time.time() * 1000),
+        })
+    return sessions

@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Name the sessions on the fleet board, from a terminal.
+
+    fleet-name                     list every session, with its current name
+    fleet-name <match> <new name>  rename whatever <match> picks out
+    fleet-name <match> --clear     put the detected name back
+
+<match> is any substring of a session's name, project or id -- enough of it to
+be unambiguous. Renaming changes what THIS BOARD calls a session; the agent
+goes on calling itself whatever it always did, and nothing is ever written into
+~/.claude, ~/.codex or ~/.gemini. The names live in ~/.config/fleet/aliases.json,
+which is a supported hand-edit: change it in an editor and the board picks it up
+within one refresh.
+"""
+import json, sys, urllib.request
+
+BASE = "http://127.0.0.1:8787"
+
+
+def api(path, payload=None):
+    req = urllib.request.Request(
+        BASE + path, method="POST" if payload else "GET",
+        data=json.dumps(payload).encode() if payload else None,
+        headers={"Content-Type": "application/json"} if payload else {})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.load(r)
+    except OSError as exc:
+        sys.exit("cannot reach the dashboard on %s (%s)" % (BASE, exc))
+
+
+def sessions():
+    out = []
+    for lane in api("/api/state")["lanes"]:
+        for proj in lane["projects"]:
+            for s in proj["sessions"]:
+                out.append((lane["key"], proj["name"], s))
+    return out
+
+
+def main(argv):
+    rows = sessions()
+    if not argv:
+        for prov, proj, s in rows:
+            flag = "*" if s.get("detectedName") and s["name"] != s["detectedName"] else " "
+            print("%s %-11s %-16s %-34s %s" % (flag, prov, proj[:16], s["name"][:34], s["id"]))
+        print("\n* = renamed. `fleet-name <match> <new name>` to change one.")
+        return 0
+
+    match = argv[0].lower()
+    hits = [r for r in rows
+            if match in r[2]["name"].lower() or match in r[2]["id"].lower()
+            or match in r[1].lower()]
+    if not hits:
+        sys.exit("nothing matches %r" % argv[0])
+    if len(hits) > 1:
+        print("%r matches %d sessions -- be more specific:" % (argv[0], len(hits)))
+        for _, _, s in hits:
+            print("   %-34s %s" % (s["name"][:34], s["id"]))
+        return 1
+
+    s = hits[0][2]
+    if len(argv) < 2:
+        sys.exit("give a new name, or --clear")
+    name = "" if argv[1] in ("--clear", "-c") else " ".join(argv[1:])
+    got = api("/api/name", {"id": s["id"], "name": name})
+    if not got.get("ok"):
+        sys.exit(got.get("message") or "rename refused")
+    print("%s  ->  %s" % (got.get("detected") or s["name"], got.get("name")))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

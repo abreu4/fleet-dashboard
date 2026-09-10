@@ -1,0 +1,7 @@
+# the interpreter and its wheels are reproducible from requirements.txt
+.venv/
+__pycache__/
+*.pyc
+
+# timestamped safety copies taken before hand-edits; git is the history now
+ui.html.bak.*
