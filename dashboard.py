@@ -225,7 +225,8 @@ ALLOWED_ORIGINS = frozenset()
 LOOPBACK = ("127.0.0.1", "::1", "localhost")
 VENDOR = {"/vendor/xterm.js": "application/javascript",
           "/vendor/xterm.css": "text/css",
-          "/vendor/xterm-addon-fit.js": "application/javascript"}
+          "/vendor/xterm-addon-fit.js": "application/javascript",
+          "/vendor/fleet-sounds.js": "application/javascript"}
 
 
 # The same Host/Origin pair the terminal enforces, minus the token, for the
