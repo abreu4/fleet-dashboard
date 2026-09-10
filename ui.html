@@ -181,10 +181,78 @@
   .s-running{background:var(--running); box-shadow:0 0 calc(var(--glow)*7px) var(--running)}
   .s-idle{background:var(--idle)} .s-done{background:var(--done)} .s-unknown{background:var(--unknown)}
   .s-waiting{background:var(--waiting); box-shadow:0 0 calc(var(--glow)*7px) var(--waiting)}
-  .ctl{display:flex; flex-direction:column; justify-content:center; gap:5px; flex:none}
-  .ctl select{
-    background:var(--cell); border:1px solid var(--edge); color:var(--accent); border-radius:4px;
-    padding:3px 6px; font:11px/1.5 var(--mono); letter-spacing:.09em; text-transform:uppercase;
+  /* Two columns, because this column grew. Six controls stacked wanted 182px of
+     the HUD's 168px interior at 900px of screen height, and .hud clips -- so on a
+     13" Air the bottom buttons were simply sliced off. Paired up they need four
+     rows instead of six and the column fits at any height the HUD can take. */
+  .ctl{
+    display:grid; grid-template-columns:1fr 1fr; gap:5px;
+    align-content:center; flex:none; width:clamp(172px, 14vw, 212px);
+  }
+  .ctl > *{min-width:0}
+  .ctl .wide{grid-column:1/-1}
+  .ctl button{padding-inline:7px}
+
+  /* The theme control wears the theme: its own accent, and four of the palette's
+     colours alongside, so the button that changes the look is also the one place
+     you can see the look. */
+  #themebtn{
+    display:flex; align-items:center; justify-content:space-between; gap:7px;
+    color:var(--accent); border-color:var(--edge-hot);
+  }
+  #themebtn .lbl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #themebtn .sw{display:flex; gap:2px; flex:none}
+  #themebtn .sw i{width:4px; height:11px; border-radius:1px}
+
+  /* A palette, not a dropdown. Thirteen worlds at 11px in a 112px column was a
+     list you had to already know the answer to; these are cards wearing their own
+     colours, big enough to hit on a 13" screen. Arrowing through them applies
+     each one to the real board behind the scrim, and Escape puts back whatever
+     you walked in with -- so looking costs nothing. */
+  .palette{
+    position:fixed; inset:0; z-index:10; display:none;
+    align-items:center; justify-content:center; padding:4vh 4vw;
+    background:color-mix(in srgb, var(--void) 74%, transparent);
+    backdrop-filter:blur(3px);
+  }
+  .palette.on{display:flex}
+  .pal-box{
+    width:min(860px,100%); max-height:92vh; overflow:auto; scrollbar-width:thin;
+    border:1px solid var(--edge-hot); border-radius:10px; background:var(--panel);
+    box-shadow:0 26px 70px -24px #000; padding:15px 17px 17px;
+  }
+  .pal-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin-bottom:13px; font:11px/1.5 var(--mono); letter-spacing:.11em;
+    text-transform:uppercase; color:var(--faint);
+  }
+  .pal-head b{color:var(--ink); letter-spacing:.18em}
+  .pal-sect{
+    margin:14px 0 7px; font:10px/1.5 var(--mono); letter-spacing:.18em;
+    text-transform:uppercase; color:var(--faint);
+  }
+  .pal-sect:first-of-type{margin-top:0}
+  .pal-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:9px}
+  .pal-card{
+    display:block; text-align:left; padding:0; overflow:hidden; cursor:pointer;
+    border:1px solid var(--edge); border-radius:8px; background:var(--cell);
+    font:inherit; color:inherit; transition:transform .12s ease, border-color .12s ease;
+  }
+  .pal-card:hover, .pal-card:focus-visible{
+    transform:translateY(-2px); border-color:var(--edge-hot); outline:none;
+  }
+  .pal-card[aria-current="true"]{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
+  .pal-face{display:flex; height:46px}
+  .pal-face i{flex:1}
+  .pal-meta{
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+    padding:7px 10px 8px; border-top:1px solid var(--edge);
+  }
+  .pal-name{font:12.5px/1.3 var(--mono); letter-spacing:.03em; color:var(--ink)}
+  .pal-sig{font-size:13px; opacity:.8; color:var(--accent)}
+  @media (prefers-reduced-motion:reduce){
+    .pal-card{transition:none}
+    .pal-card:hover, .pal-card:focus-visible{transform:none}
   }
   .brand b::after{content:var(--sigil); margin-left:7px; font-size:13px; opacity:.85}
   @media (max-width:1120px){.readout{display:none}}
@@ -532,18 +600,19 @@
 .gauge .lab, .trace .cap, .chip, .project > header, .rail .vlabel,
 .hrail .who, .hrail .note, .bubble .foot, .panel .sub, .panel section h3,
 .stat .k, .ctl select, button.ghost, .acts button, .readout dt{
-  text-shadow: 0 1px 0 rgb(0 0 0 / .50);
+  text-shadow: 0 1px 0 var(--letterpress, rgb(0 0 0 / .50));
 }
-:root[data-theme="paper"] .gauge .lab, :root[data-theme="paper"] .trace .cap,
-:root[data-theme="paper"] .chip, :root[data-theme="paper"] .project > header,
-:root[data-theme="paper"] .rail .vlabel, :root[data-theme="paper"] .hrail .who,
-:root[data-theme="paper"] .hrail .note, :root[data-theme="paper"] .bubble .foot,
-:root[data-theme="paper"] .panel .sub, :root[data-theme="paper"] .panel section h3,
-:root[data-theme="paper"] .stat .k, :root[data-theme="paper"] .ctl select,
-:root[data-theme="paper"] button.ghost, :root[data-theme="paper"] .acts button,
-:root[data-theme="paper"] .readout dt{
-  text-shadow: 0 1px 0 rgb(255 255 255 / .95);
-}
+/* The shadow is a token so a light ground can invert it in one line instead of
+   restating all fifteen selectors. On cream, a black 1px shadow under dark text
+   muddies the glyph edge it is supposed to sharpen -- it is letterpress run the
+   wrong way. `paper` shipped with the antidote spelled out; `aperture`,
+   `cardstock` and `ochre` arrived later and only ever corrected the wordmark,
+   so every small-caps label on those three boards carried a 50%-black halo at
+   the 10-12px size where it costs most. Each stock gets its own near-white. */
+:root[data-theme="paper"]    { --letterpress: rgb(255 255 255 / .95); }
+:root[data-theme="aperture"] { --letterpress: rgb(255 255 255 / .90); }
+:root[data-theme="cardstock"]{ --letterpress: rgb(255 253 246 / .90); }
+:root[data-theme="ochre"]    { --letterpress: rgb(255 248 231 / .90); }
 
 /* 1d. Masthead. A double rule under FLEET — thick then hairline — which is
    how a printed masthead is set. Replaces glow as the brand's ornament. */

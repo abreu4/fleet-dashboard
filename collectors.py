@@ -854,6 +854,11 @@ def _etime_seconds(text):
 
 
 def _process_cwd(pid):
+    # Keyed by int, because the sweep at the end of the scan builds its live set
+    # from int(pid). Cached under a string, every entry missed that set and was
+    # evicted on the very pass that wrote it -- so the cache never once returned
+    # a hit, and each pass paid for a fresh lsof per process.
+    pid = int(pid)
     hit = _cwd_cache.get(pid)
     if hit:
         return hit
