@@ -333,15 +333,12 @@
     /* Orbital command deck, cyan vector glass: clean sine ticks with a glass
      * transient, radar ping for alerts. */
     console: {
-      drive: { type: 'soft', k: 1.7 }, verb: { time: 0.16, mix: 0.12 },
-      tap:    [click({ hp: 4500, g: 0.45 }), body('sine', 1700, { g: 0.4, d: 0.03 }), thump({ g: 0.6 })],
-      tile:   [click({ hp: 3200, g: 0.4 }), body('sine', 1150, { g: 0.45, d: 0.04 }), thump({ f: 150, g: 0.7 })],
-      switch: [click({ g: 0.4 }), S('sine', 420, { f2: 1500, slide: 0.11, a: 0.002, d: 0.14, g: 0.35 }), thump({ g: 0.6 })],
-      alert:  [thump({ f: 160, g: 0.7 }), S('sine', 1400, { a: 0.002, d: 0.16, g: 0.45 }),
-               at(0.13, S('sine', 1400, { a: 0.002, d: 0.16, g: 0.24 })),
-               at(0.24, S('sine', 1400, { a: 0.002, d: 0.14, g: 0.12 }))],
-      done:   [click({ g: 0.3 }), S('sine', 880, { a: 0.002, d: 0.14, g: 0.35 }),
-               at(0.11, S('sine', 1320, { a: 0.002, d: 0.3, g: 0.35 })), at(0.11, S('sine', 2640, { a: 0.002, d: 0.16, g: 0.1 }))]
+      drive: { type: 'hard', k: 8.5 }, verb: { time: 0.05, mix: 0.02 },
+      tap:    [click({ hp: 3000, g: 0.9 }), thump({ f: 100, g: 0.8 })],
+      tile:   [click({ hp: 2000, g: 0.9 }), thump({ f: 150, g: 0.9 })],
+      switch: [click({ g: 1.0 }), thump({ f: 80, g: 1.0 }), N(0.02, 'white', { hp: 4000, d: 0.08, g: 0.4 })],
+      alert:  [thump({ f: 160, g: 1.0 }), S('square', 900, { a: 0.01, d: 0.08, g: 0.3 }), at(0.12, S('square', 900, { a: 0.01, d: 0.08, g: 0.2 }))],
+      done:   [click({ g: 1.0 }), thump({ f: 120, g: 1.0 }), S('square', 500, { a: 0.01, d: 0.15, g: 0.3 }), at(0.15, S('square', 1000, { a: 0.01, d: 0.2, g: 0.2 }))]
     },
 
     /* Cinestill neon film on wet asphalt: filtered saw blips, a hint of room,
@@ -617,7 +614,7 @@
   var btn = null;
   function label() {
     if (!btn) return;
-    btn.textContent = muted ? '♪ off' : '♪ on';
+    btn.innerHTML = muted ? '🔇<span> off</span>' : '🔊<span> on</span>';
     btn.title = 'ui sounds ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
               + '\nclick: mute / unmute · shift+click: cycle volume';
     btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
