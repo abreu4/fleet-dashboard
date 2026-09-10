@@ -1010,6 +1010,7 @@
   --accent:#1d6079;
   --blocked:#c62d11; --running:#2f7a1c; --idle:#2b6a8f; --done:#a45c00; --unknown:#7b7161;
   --good:#2f7a1c; --warn:#a45c00;
+  --waiting:#b4521f;                 /* printed vermilion, ~4.9:1 on the card face */
   --glow:0; --sigil:"\2726";
   --scan:rgba(110,88,48,.05); --halo:rgba(255,206,110,.34);
   --grain:
@@ -1028,6 +1029,7 @@
   --accent:#f7c62e;
   --blocked:#ff4257; --running:#3fcf72; --idle:#6d9be6; --done:#ff8f2e; --unknown:#8496c4;
   --good:#3fcf72; --warn:#ffb02e;
+  --waiting:#ff8f2e;                 /* arcade amber — console's salmon is off-palette here */
   --glow:1.15; --sigil:"\276F";
   --scan:rgba(150,196,255,.05); --halo:rgba(247,198,46,.10);
   --grain:
@@ -1049,6 +1051,7 @@
   --accent:#e59b3f;
   --blocked:#c9433f; --running:#5f8d45; --idle:#4f7f9c; --done:#d4772d; --unknown:#807567;
   --good:#5f8d45; --warn:#d4772d;
+  --waiting:#b5441a;                 /* Mann Co crate orange, ~4.6:1 on the cream */
   --glow:0; --sigil:"\2699";
   --scan:rgba(73,57,38,.055); --halo:rgba(255,241,205,.34);
   --grain:
@@ -2703,17 +2706,25 @@ const GAP = 7;
    rather than squeezing everything else to keep them the same size. The floor
    is the point where a name and one line of gist stop being readable from
    arm's length; below it a group scrolls instead. */
+/* How big a tile wants to be, before the fit pass divides up the room there
+   actually is. The nine numbers below are the sizes that read at arm's length on
+   the Air; TILE_SCALE moves the whole envelope off them, so the board can be
+   made coarser or denser with one value instead of re-tuning all nine. Scaling
+   the clamp is the same as scaling its floor, its ceiling and its share of the
+   viewport, since the factor is positive -- so the relationships hold. */
+const TILE_SCALE = 1.4;
+
 function bounds(){
-  const w = innerWidth, h = innerHeight;
+  const w = innerWidth, h = innerHeight, k = TILE_SCALE;
   if(compact) return {
-    minW: Math.round(Math.max(104, Math.min(150, w / 11))),
-    minH: Math.round(Math.max(44,  Math.min(56,  h / 17))),
-    maxH: Math.round(Math.max(50,  Math.min(66,  h / 12))),
+    minW: Math.round(k * Math.max(104, Math.min(150, w / 11))),
+    minH: Math.round(k * Math.max(44,  Math.min(56,  h / 17))),
+    maxH: Math.round(k * Math.max(50,  Math.min(66,  h / 12))),
   };
   return {
-    minW: Math.round(Math.max(126, Math.min(196, w / 8.2))),
-    minH: Math.round(Math.max(56,  Math.min(84,  h / 12.0))),
-    maxH: Math.round(Math.max(112, Math.min(214, h / 4.2))),
+    minW: Math.round(k * Math.max(126, Math.min(196, w / 8.2))),
+    minH: Math.round(k * Math.max(56,  Math.min(84,  h / 12.0))),
+    maxH: Math.round(k * Math.max(112, Math.min(214, h / 4.2))),
   };
 }
 
@@ -3174,6 +3185,13 @@ flushBtn.onclick = async () => {
 };
 
 const themePicker = document.getElementById('theme');
+
+/* A terminal keeps the palette it was built with, so changing themes with the
+   sheet open would otherwise leave the shell in the previous theme's colours.
+   The terminal section assigns this; it stays null until then, because setTheme
+   runs once at load before any of that has been evaluated. */
+let retintTerms = null;
+
 function setTheme(name){
   const moved = document.documentElement.dataset.theme !== name;
   document.documentElement.dataset.theme = name;
@@ -3181,6 +3199,7 @@ function setTheme(name){
   try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
   if(latest) drawTrace(latest.history || []);   // the trace is drawn, not styled
   if(latest) render(latest);                    // marks are per-theme too
+  if(moved && retintTerms) retintTerms();       // open shells follow the theme
 
   // Walking into another world changes what is on the shelves, not what is
   // currently playing. The track finishes; whatever follows comes from here.
@@ -3580,6 +3599,14 @@ const emptyEl = document.getElementById('term-empty');
 
 let sheetOn = false, sheetStep = 0, xtermReady = null, streaming = false;
 const terms = new Map();                 // tid -> {meta, term, fit, view, pending, alive}
+
+// Hands every live shell the new theme's palette. Declared up by setTheme so it
+// can be called before this block has run; see the note there.
+retintTerms = () => {
+  if(!terms.size) return;
+  const t = xtermTheme();
+  terms.forEach(x => { if(x.term) x.term.options.theme = t; });
+};
 let activeTid = null;
 const outbox = new Map();                // tid -> string waiting to be POSTed
 let inFlight = false;
@@ -3620,13 +3647,83 @@ function loadXterm(){
   return xtermReady;
 }
 
+/* Enough colour arithmetic to keep a palette readable. WCAG 2.x relative
+   luminance, because that is the number the rest of the file's legibility pass
+   was tuned against. */
+const _rgb = h => {
+  h = String(h).trim().replace('#','');
+  if(h.length === 3) h = h[0]+h[0] + h[1]+h[1] + h[2]+h[2];
+  return [0,2,4].map(i => parseInt(h.slice(i,i+2), 16) || 0);
+};
+const _hex = c => '#' + c.map(x =>
+  Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2,'0')).join('');
+const _lum = c => {
+  const f = x => (x /= 255) <= .03928 ? x/12.92 : Math.pow((x+.055)/1.055, 2.4);
+  return .2126*f(c[0]) + .7152*f(c[1]) + .0722*f(c[2]);
+};
+const _ratio = (a, b) => {
+  const x = _lum(a), y = _lum(b);
+  return (Math.max(x,y) + .05) / (Math.min(x,y) + .05);
+};
+const _mix = (a, b, t) => a.map((x, i) => x + (b[i] - x) * t);
+
+/* The ANSI palette is derived from the board's own tokens, so a shell looks
+   like it belongs to the theme it was opened in. Those tokens were chosen to
+   read as small text on a *tile*, though, and this function used to set only
+   ten of the sixteen slots -- xterm filled the other six from its own
+   dark-background defaults, and three more were hardcoded dark-theme values
+   (`#10151c`, `#c792ea`, `#ffffff`). On a light theme that last one is white on
+   cream: team spirit's terminal was genuinely unreadable, and paper, pokémon
+   and portal were only getting away with it.
+
+   So every slot is now set from a token, and every slot is then walked toward
+   the foreground until it clears 4:1 against the terminal's own background.
+   `black` is the exception: TUIs paint with it and it is meant to be the dark
+   one, so it takes whichever of --void / --ink is actually darker rather than
+   being forced to contrast with the paper it may be sitting on.
+
+   This fixes all thirteen themes at once, and any fourteenth, because nothing
+   here names a theme. */
 function xtermTheme(){
   const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  return {background: v('--cell'), foreground: v('--ink'), cursor: v('--accent'),
-          cursorAccent: v('--cell'), selectionBackground: v('--edge-hot'),
-          black:'#10151c', red:v('--blocked'), green:v('--running'), yellow:v('--done'),
-          blue:v('--idle'), magenta:'#c792ea', cyan:v('--accent'), white:v('--dim'),
-          brightBlack:v('--faint'), brightWhite:'#ffffff'};
+  const bg = _rgb(v('--cell')), fg = _rgb(v('--ink'));
+
+  // Nudge toward the foreground until it can be read. 24 steps of 8% covers the
+  // whole distance, so this terminates whatever it is handed.
+  const legible = (src, floor) => {
+    let c = _rgb(src);
+    for(let i = 0; i < 24 && _ratio(c, bg) < floor; i++) c = _mix(c, fg, .08);
+    return _hex(c);
+  };
+
+  const void_ = _rgb(v('--void'));
+  /* Magenta is the one slot with no token behind it: the board has no purple,
+     and the nearest candidates (--waiting, --accent) collide with red or cyan in
+     several themes -- on team spirit --waiting is #b5441a against --blocked
+     #c9433f, which a program using magenta to mean "not red" would lose. So it
+     keeps a lilac of its own and earns its contrast the same way as the rest. */
+  const LILAC = '#c792ea';
+  const hue = {red:'--blocked', green:'--running', yellow:'--done',
+               blue:'--idle', cyan:'--accent', white:'--dim'};
+  const out = {
+    background: v('--cell'), foreground: v('--ink'),
+    cursor: v('--accent'), cursorAccent: v('--cell'),
+    selectionBackground: v('--edge-hot'),
+    // black and brightBlack are the only slots the loop below does not reach.
+    black: _hex(_lum(void_) <= _lum(fg) ? void_ : fg),
+    brightBlack: legible(v('--faint'), 4),
+    magenta: legible(LILAC, 4),
+    brightMagenta: legible(_hex(_mix(_rgb(LILAC), fg, .22)), 4.5),
+  };
+  for(const [slot, token] of Object.entries(hue)){
+    const base = _rgb(v(token));
+    out[slot] = legible(_hex(base), 4);
+    // The bright tier is the same hue carried further from the ground -- which on
+    // a light theme means darker, not lighter. Leaning on the foreground gets
+    // that right in both directions without asking which way is up.
+    out['bright' + slot[0].toUpperCase() + slot.slice(1)] = legible(_hex(_mix(base, fg, .22)), 4.5);
+  }
+  return out;
 }
 
 function cellsForSheet(){
