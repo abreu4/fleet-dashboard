@@ -220,12 +220,20 @@ SNAPSHOT = Snapshot()
 # ---------------------------------------------------------------------------
 TERMINAL = None                 # the terminal.Terminals instance, or None
 TERMINAL_TOKEN = ""
+# One id per process, stamped on every response. The terminal token is also
+# per-process, so a page loaded before a restart holds a token the new process
+# has never seen and every terminal call it makes is refused -- silently, from
+# where the user sits. The board restarts often while it is being worked on
+# (launchd counted ten today), and a tab kept open for hours had no way to know.
+# It reads this header on each poll and reloads itself the moment it changes.
+BOOT_ID = secrets.token_hex(6)
 ALLOWED_HOSTS = frozenset()
 ALLOWED_ORIGINS = frozenset()
 LOOPBACK = ("127.0.0.1", "::1", "localhost")
 VENDOR = {"/vendor/xterm.js": "application/javascript",
           "/vendor/xterm.css": "text/css",
-          "/vendor/xterm-addon-fit.js": "application/javascript"}
+          "/vendor/xterm-addon-fit.js": "application/javascript",
+          "/vendor/fleet-sounds.js": "application/javascript"}
 
 
 # The same Host/Origin pair the terminal enforces, minus the token, for the
@@ -288,6 +296,7 @@ class Handler(BaseHTTPRequestHandler):
         # charset is not optional: without it the browser guesses latin-1 and
         # every accented name and every glyph comes out as mojibake.
         self.send_header("Content-Type", content_type + "; charset=utf-8")
+        self.send_header("X-Fleet-Boot", BOOT_ID)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()

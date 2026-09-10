@@ -189,8 +189,8 @@
      13" Air the bottom buttons were simply sliced off. Paired up they need four
      rows instead of six and the column fits at any height the HUD can take. */
   .ctl{
-    display:grid; grid-template-columns:1fr 1fr; gap:5px;
-    align-content:center; flex:none; width:clamp(172px, 14vw, 212px);
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+    align-content:center; flex:none; width:clamp(176px, 14vw, 218px);
   }
   .ctl > *{min-width:0}
   .ctl .wide{grid-column:1/-1}
@@ -280,13 +280,43 @@
     .gauges{min-width:238px}
     .ctl{flex-basis:104px}
   }
-  button.ghost{
-    background:var(--cell); border:1px solid var(--edge); color:var(--dim); border-radius:4px;
-    padding:4px 10px; cursor:pointer; font:11px/1.5 var(--mono); letter-spacing:.09em; text-transform:uppercase;
+   button.ghost{
+    background:color-mix(in srgb, var(--cell) 72%, transparent);
+    border:1px solid color-mix(in srgb, var(--edge) 60%, transparent);
+    color:var(--dim); border-radius:6px;
+    padding:5px 10px; cursor:pointer;
+    font:11px/1.5 var(--mono); letter-spacing:.09em; text-transform:uppercase;
+    transition:color .15s ease, border-color .15s ease, background .15s ease,
+               box-shadow .15s ease, transform .1s ease;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    position:relative; overflow:hidden;
   }
-  button.ghost:hover{color:var(--accent); border-color:var(--edge-hot)}
+  button.ghost::before{
+    content:''; position:absolute; inset:0; border-radius:inherit;
+    background:linear-gradient(135deg, rgba(255,255,255,.04) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  button.ghost:hover{
+    color:var(--accent); border-color:var(--edge-hot);
+    background:color-mix(in srgb, var(--tile-hi) 50%, var(--cell));
+    box-shadow:0 0 calc(var(--glow)*8px) color-mix(in srgb, var(--accent) 15%, transparent),
+               inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  button.ghost:active{
+    transform:scale(.96);
+    background:var(--tile-hi);
+    transition-duration:.04s;
+  }
+  button.ghost:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
   button.ghost.lit{color:var(--accent); border-color:var(--edge-hot);
-                   background:var(--tile-hi)}
+                   background:var(--tile-hi);
+                   box-shadow:0 0 calc(var(--glow)*10px) color-mix(in srgb, var(--accent) 20%, transparent)}
+  @media (prefers-reduced-motion:reduce){
+    button.ghost{transition:none}
+    button.ghost:active{transform:none}
+  }
 
   /* ===================== board ===================== */
   .board{flex:1; min-height:0; display:flex; flex-direction:column; gap:var(--gap);
@@ -2932,10 +2962,11 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
         <option value="staunton">chess</option>
         </optgroup>
       </select>
-      <button class="ghost" id="pause">pause</button>
-      <button class="ghost" id="collapse">collapse all</button>
+      <button class="ghost" id="pause" title="pause / resume live polling">⏸ pause</button>
+      <button class="ghost" id="collapse" title="collapse all tiles to one-line summaries">⊟ collapse</button>
       <button class="ghost" id="flush"
-              title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">flush</button>
+              title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">⏏ flush</button>
+      <button class="ghost" id="refresh" title="force refresh ui layout without stopping music">↻ refresh</button>
       <button class="ghost" id="music">♪ music</button>
       <button class="ghost" id="termbtn" hidden
               title="show or hide the terminal sheet (ctrl-`)">⌨ terminal</button>
@@ -3692,14 +3723,14 @@ document.addEventListener('keydown', e => {
   deselect();
 });
 document.getElementById('pause').onclick = e => {
-  paused = !paused; e.target.textContent = paused ? 'resume' : 'pause';
+  paused = !paused; e.target.textContent = paused ? '▶ resume' : '⏸ pause';
 };
 const collapseBtn = document.getElementById('collapse');
 function setCompact(on){
   compact = on;
   localStorage.setItem(COMPACT_KEY, on ? '1' : '0');
   board.classList.toggle('compact', on);
-  collapseBtn.textContent = on ? 'expand all' : 'collapse all';
+  collapseBtn.textContent = on ? '⊞ expand' : '⊟ collapse';
   if(latest) render(latest);
 }
 collapseBtn.onclick = () => {
@@ -3707,7 +3738,7 @@ collapseBtn.onclick = () => {
   setCompact(!compact);
 };
 board.classList.toggle('compact', compact);
-collapseBtn.textContent = compact ? 'expand all' : 'collapse all';
+collapseBtn.textContent = compact ? '⊞ expand' : '⊟ collapse';
 addEventListener('resize', fit);
 
 /* Flush clears finished work off the BOARD. It never signals a process, never
@@ -4057,6 +4088,17 @@ function minimizePlayer(on){
   minBtn.setAttribute('aria-label', on ? 'expand player' : 'minimize player');
   remember();
 }
+
+document.getElementById('refresh').onclick = () => {
+  boardSig = '';
+  prevState = new Map();
+  everPainted = false;
+  if(latest) {
+    render(latest);
+    setTimeout(fit, 100);
+  }
+};
+
 document.getElementById('music').onclick = () => {
   if(playerEl.classList.contains('min')){
     minimizePlayer(false); crateEl.classList.add('on'); return;
@@ -4147,6 +4189,7 @@ async function tick(){
   if(!paused){
     try{
       const r = await fetch('/api/state', {cache:'no-store'});
+      watchBoot(r);
       const d = await r.json();
       // Polling is intentionally faster than the server rebuild. Do no DOM work
       // when this is the same immutable snapshot we rendered last tick.
@@ -4209,7 +4252,34 @@ function termPost(path, body){
     method:'POST',
     headers:{'Content-Type':'application/json', 'X-Fleet-Token':TERMCFG.token},
     body: JSON.stringify(body)
-  }).then(r => r.json()).catch(() => ({ok:false, message:'server unreachable'}));
+  }).then(r => {
+    if(r.status === 404){ staleToken(); return {ok:false, message:'dashboard restarted — reloading'}; }
+    return r.json();
+  }).catch(() => ({ok:false, message:'server unreachable'}));
+}
+
+/* ---- surviving a server restart ---------------------------------------- */
+/* The terminal token is minted per server process and spliced into this page,
+   so a tab loaded before a restart is holding a token the new process has never
+   seen: every terminal call it makes comes back 404, forever, with nothing on
+   screen to say why. This is the failure the user described as "how is this
+   even possible" -- the board restarted ten times in one working day, and a tab
+   kept open across all of them had no way to know. Two detectors, one action:
+   the server stamps X-Fleet-Boot on every response and the poll compares it;
+   and any terminal 404 is treated as the same event. Either one reloads the
+   page, once, after saying so. */
+let bootSeen = null, reloading = false;
+function watchBoot(r){
+  const b = r.headers.get('X-Fleet-Boot');
+  if(!b) return;
+  if(bootSeen === null){ bootSeen = b; return; }
+  if(b !== bootSeen) staleToken();
+}
+function staleToken(){
+  if(reloading) return;
+  reloading = true;
+  toast('dashboard restarted — reloading');
+  setTimeout(() => location.reload(), 900);
 }
 
 /* xterm.js is 290KB and most sessions never open a terminal, so it is fetched
@@ -4342,12 +4412,12 @@ function showSheet(on){
   if(on && compactBeforeSheet === null){
     compactBeforeSheet = compact;
     if(!compact){ compact = true; board.classList.add('compact');
-                  collapseBtn.textContent = 'expand all'; }
+                  collapseBtn.textContent = '⊞ expand'; }
   }else if(!on && compactBeforeSheet !== null){
     if(compact !== compactBeforeSheet){
       compact = compactBeforeSheet;
       board.classList.toggle('compact', compact);
-      collapseBtn.textContent = compact ? 'expand all' : 'collapse all';
+      collapseBtn.textContent = compact ? '⊞ expand' : '⊟ collapse';
     }
     compactBeforeSheet = null;
   }
@@ -4491,6 +4561,7 @@ async function startStream(){
   for(;;){
     try{
       const res = await fetch('/api/term/stream', {headers:{'X-Fleet-Token':TERMCFG.token}});
+      if(res.status === 404){ staleToken(); return; }
       if(!res.ok || !res.body) throw new Error('no stream');
       backoff = 500;
       const reader = res.body.getReader(), dec = new TextDecoder();
@@ -4551,5 +4622,6 @@ if(TERMCFG.enabled){
   startStream();
 }
 </script>
+<script src="/vendor/fleet-sounds.js"></script>
 </body>
 </html>
