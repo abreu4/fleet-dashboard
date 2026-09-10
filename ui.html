@@ -189,12 +189,17 @@
      13" Air the bottom buttons were simply sliced off. Paired up they need four
      rows instead of six and the column fits at any height the HUD can take. */
   .ctl{
-    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+    display:flex; flex-wrap:wrap; gap:6px;
     align-content:center; flex:none; width:clamp(176px, 14vw, 218px);
   }
   .ctl > *{min-width:0}
-  .ctl .wide{grid-column:1/-1}
-  .ctl button{padding-inline:7px}
+  .ctl .wide{width:100%; flex:none}
+  .ctl button{
+    flex:1; min-width:32px; padding:5px 0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ctl button span{display:none} /* hide text, keep icons */
+
 
   /* The theme control wears the theme: its own accent, and four of the palette's
      colours alongside, so the button that changes the look is also the one place
@@ -490,11 +495,23 @@
   .player .qn{text-transform:uppercase}
   .player .bar{display:flex; align-items:center; gap:4px; margin-top:7px}
   .player .bar button{
-    background:var(--cell); border:1px solid var(--edge); color:var(--dim); border-radius:4px;
+    background:color-mix(in srgb, var(--cell) 72%, transparent);
+    border:1px solid color-mix(in srgb, var(--edge) 60%, transparent);
+    color:var(--dim); border-radius:6px;
     padding:4px 0; cursor:pointer; font:12px/1.2 var(--mono); flex:1 1 0; min-width:0;
-    white-space:nowrap;
+    white-space:nowrap; display:flex; align-items:center; justify-content:center;
+    transition:color .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .1s ease;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   }
-  .player .bar button:hover{color:var(--accent); border-color:var(--edge-hot)}
+  .player .bar button:hover{
+    color:var(--accent); border-color:var(--edge-hot);
+    background:color-mix(in srgb, var(--tile-hi) 50%, var(--cell));
+  }
+  .player .bar button:active{ transform:scale(.94); transition-duration:.04s; }
+  @media (prefers-reduced-motion:reduce){
+    .player .bar button{transition:none}
+    .player .bar button:active{transform:none}
+  }
   .player .bar .sp{margin-left:auto}
 
   /* Sits on top of the player, so it carries the same --taken offset. Its height
@@ -2942,7 +2959,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     </div>
     <dl class="readout" id="readout"></dl>
     <div class="ctl">
-      <select id="theme" title="colour scheme">
+      <select id="theme" class="wide" title="colour scheme">
         <optgroup label="base">
           <option value="console">console</option>
           <option value="cyber">neon film</option>
@@ -2962,14 +2979,14 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
         <option value="staunton">chess</option>
         </optgroup>
       </select>
-      <button class="ghost" id="pause" title="pause / resume live polling">⏸ pause</button>
-      <button class="ghost" id="collapse" title="collapse all tiles to one-line summaries">⊟ collapse</button>
+      <button class="ghost" id="pause" title="pause / resume live polling">⏸<span> pause</span></button>
+      <button class="ghost" id="collapse" title="collapse all tiles to one-line summaries">⊟<span> collapse</span></button>
       <button class="ghost" id="flush"
-              title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">⏏ flush</button>
-      <button class="ghost" id="refresh" title="force refresh ui layout without stopping music">↻ refresh</button>
-      <button class="ghost" id="music">♪ music</button>
+              title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">⏏<span> flush</span></button>
+      <button class="ghost" id="refresh" title="force refresh ui layout without stopping music">↻<span> refresh</span></button>
+      <button class="ghost" id="music">♪<span> music</span></button>
       <button class="ghost" id="termbtn" hidden
-              title="show or hide the terminal sheet (ctrl-`)">⌨ terminal</button>
+              title="show or hide the terminal sheet (ctrl-`)">⌨<span> terminal</span></button>
     </div>
   </div>
   <div class="board" id="board"></div>
@@ -3856,6 +3873,11 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  console:   'deep electronic focus minimal tech ambient',
+  cyber:     'dark cyberpunk industrial techno synthwave',
+  earth:     'acoustic guitar instrumental nature ambient focus',
+  neutral:   'lofi hip hop beats to relax study to',
+  paper:     'acoustic cafe jazz background music instrumental',
   miami86:  '80s synthwave outrun retrowave neon horror disco playlist',
   signal:   'dystopian industrial synth glitch techno dark electro playlist',
   aperture: 'clean room ambient minimal drone instrumental focus playlist',
@@ -4189,6 +4211,7 @@ async function tick(){
   if(!paused){
     try{
       const r = await fetch('/api/state', {cache:'no-store'});
+      watchBoot(r);
       const d = await r.json();
       // Polling is intentionally faster than the server rebuild. Do no DOM work
       // when this is the same immutable snapshot we rendered last tick.
@@ -4251,7 +4274,34 @@ function termPost(path, body){
     method:'POST',
     headers:{'Content-Type':'application/json', 'X-Fleet-Token':TERMCFG.token},
     body: JSON.stringify(body)
-  }).then(r => r.json()).catch(() => ({ok:false, message:'server unreachable'}));
+  }).then(r => {
+    if(r.status === 404){ staleToken(); return {ok:false, message:'dashboard restarted — reloading'}; }
+    return r.json();
+  }).catch(() => ({ok:false, message:'server unreachable'}));
+}
+
+/* ---- surviving a server restart ---------------------------------------- */
+/* The terminal token is minted per server process and spliced into this page,
+   so a tab loaded before a restart is holding a token the new process has never
+   seen: every terminal call it makes comes back 404, forever, with nothing on
+   screen to say why. This is the failure the user described as "how is this
+   even possible" -- the board restarted ten times in one working day, and a tab
+   kept open across all of them had no way to know. Two detectors, one action:
+   the server stamps X-Fleet-Boot on every response and the poll compares it;
+   and any terminal 404 is treated as the same event. Either one reloads the
+   page, once, after saying so. */
+let bootSeen = null, reloading = false;
+function watchBoot(r){
+  const b = r.headers.get('X-Fleet-Boot');
+  if(!b) return;
+  if(bootSeen === null){ bootSeen = b; return; }
+  if(b !== bootSeen) staleToken();
+}
+function staleToken(){
+  if(reloading) return;
+  reloading = true;
+  toast('dashboard restarted — reloading');
+  setTimeout(() => location.reload(), 900);
 }
 
 /* xterm.js is 290KB and most sessions never open a terminal, so it is fetched
@@ -4533,6 +4583,7 @@ async function startStream(){
   for(;;){
     try{
       const res = await fetch('/api/term/stream', {headers:{'X-Fleet-Token':TERMCFG.token}});
+      if(res.status === 404){ staleToken(); return; }
       if(!res.ok || !res.body) throw new Error('no stream');
       backoff = 500;
       const reader = res.body.getReader(), dec = new TextDecoder();
