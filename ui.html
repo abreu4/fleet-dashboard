@@ -3282,7 +3282,25 @@ function setTheme(name){
     msearch(seed, !spinning);
   }
 }
-themePicker.onchange = () => setTheme(themePicker.value);
+/* Choosing a theme should be looking at it, not committing to it and judging
+   afterwards. `input` fires the moment the value moves where `change` waits for
+   a commit, so arrowing the focused picker walks the board through the list.
+   Escape puts back whatever was on screen when the picker took focus, so a
+   wander costs nothing. (A macOS native select popup emits no events while the
+   menu itself is open, so the walk works on the focused-and-closed picker; the
+   open menu would need a custom list to preview.) */
+let themeBefore = null;
+themePicker.addEventListener('focus', () => {
+  themeBefore = document.documentElement.dataset.theme;
+});
+themePicker.addEventListener('input', () => setTheme(themePicker.value));
+themePicker.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && themeBefore && themeBefore !== themePicker.value){
+    setTheme(themeBefore);
+    themePicker.blur();
+  }
+});
+themePicker.addEventListener('change', () => { themeBefore = null; });
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
 }, 1000);
