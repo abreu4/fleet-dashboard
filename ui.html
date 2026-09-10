@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <title>FLEET · agent console</title>
 <style>
   /* ============================================================
@@ -377,6 +380,9 @@
     margin-top:auto; display:flex; align-items:center; gap:5px; overflow:hidden; white-space:nowrap;
     font:10.5px/1.4 var(--mono); letter-spacing:.05em; text-transform:uppercase; color:var(--faint);
   }
+  .bubble .foot .st{flex:none; font-weight:inherit}
+  .bubble .foot .rest{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--faint)}
+  .bubble .foot .rest::before{content:'\00b7\00a0'}
   /* what a tile shows scales with the height it actually got */
   .project[data-size="lg"] .bubble .nm{-webkit-line-clamp:2}
   .project[data-size="lg"] .bubble .gist{-webkit-line-clamp:3}
@@ -741,6 +747,115 @@
   border-color: color-mix(in srgb, var(--waiting) 45%, var(--edge));
 }
 .bubble[data-state="waiting"]::before{ width:8px; }
+
+/* ---------- 4. MOTION — the glance layer moves, the hairline does not ----------
+   The comment in 2d is right that a 4px rib is below what the periphery
+   resolves, yet the rib was the only thing on the board that ever moved.
+   Motion is the strongest channel off-axis and it was spent on the weakest
+   surface. So: a halo child under the text carries the tint AND the motion,
+   opacity-only so it composites without a repaint on a board that runs for
+   days. Two stages -- a one-shot onset when a session actually changes state
+   (diff-driven from JS, so the 5s age refresh cannot retrigger it), then a
+   slow breath that only blocked and waiting keep, because those are the two
+   states that want a human. Stale blocks escalate by amplitude and area,
+   never by rate: the periphery detects onset, not frequency. */
+.bubble > .halo{
+  position:absolute; inset:0; pointer-events:none; z-index:0; opacity:0;
+  background: color-mix(in oklab, var(--rib) 26%, transparent);
+}
+.bubble::before{ z-index:2; }
+.bubble > .nm, .bubble > .gist, .bubble > .foot{ position:relative; z-index:1; }
+@keyframes breathe{ 0%,100%{opacity:.30} 50%{opacity:.80} }
+.bubble[data-state="blocked"] > .halo,
+.bubble[data-state="waiting"] > .halo{
+  animation: breathe 2.6s ease-in-out infinite; will-change: opacity;
+}
+.bubble[data-state="blocked"]::before{ animation:none; }
+@keyframes arrive{
+  0%  { opacity:0;   transform:scale(.94); }
+  22% { opacity:1;   transform:scale(1.015); }
+  100%{ opacity:.30; transform:scale(1); }
+}
+.bubble.just-changed > .halo{
+  animation: arrive .9s linear(0, .62 16%, .98 32%, 1 44%, .55 70%, .30) 1;
+}
+.bubble.just-changed:not([data-state="blocked"]):not([data-state="waiting"]) > .halo{
+  animation-name: arrive-fade;
+}
+@keyframes arrive-fade{
+  0%  { opacity:0;   transform:scale(.96); }
+  22% { opacity:.85; transform:scale(1.01); }
+  100%{ opacity:0;   transform:scale(1); }
+}
+.bubble[data-state="blocked"][data-stale="1"] > .halo{ animation-duration:3.2s;
+  background: color-mix(in oklab, var(--rib) 34%, transparent); }
+.bubble[data-state="blocked"][data-stale="2"]{
+  outline:1px solid color-mix(in oklab, var(--blocked) 55%, transparent); outline-offset:2px;
+}
+.bubble[data-state="blocked"][data-stale="2"] > .halo{ animation-duration:3.8s;
+  background: color-mix(in oklab, var(--rib) 42%, transparent); }
+@media (prefers-reduced-motion: reduce){
+  .bubble > .halo{ animation:none !important; }
+  .bubble[data-state="blocked"] > .halo,
+  .bubble[data-state="waiting"] > .halo{ opacity:.62; }   /* keep the cue, drop the motion */
+}
+
+/* 4b. State is encoded by rib WIDTH and PATTERN as well as hue, so the six
+   states separate with no colour vision at all -- and in the periphery, where
+   red/green opponency is behaviourally absent anyway. Blocked is a fine
+   stripe, waiting a coarse one; done a half-bar; unknown a hairline dash. */
+.bubble[data-state="blocked"]::before{ width:9px;
+  background-image:repeating-linear-gradient(0deg, rgb(0 0 0 /.34) 0 2px, transparent 2px 5px); }
+.bubble[data-state="waiting"]::before{ width:9px;
+  background-image:repeating-linear-gradient(0deg, rgb(0 0 0 /.34) 0 5px, transparent 5px 10px); }
+.bubble[data-state="running"]::before{ width:6px; }
+.bubble[data-state="idle"]::before   { width:3px; }
+.bubble[data-state="done"]::before   { width:6px;
+  background-image:linear-gradient(0deg, transparent 0 50%, rgb(0 0 0 /.30) 50% 100%); }
+.bubble[data-state="unknown"]::before{ width:3px;
+  background-image:repeating-linear-gradient(0deg, rgb(0 0 0 /.30) 0 1px, transparent 1px 4px); }
+/* the same idea on the 7px tally dot: shape, not just hue */
+.dot{ position:relative; box-sizing:border-box; }
+.s-waiting{ background:transparent; border:2px solid var(--waiting); }
+.s-done{ background:linear-gradient(180deg, var(--done) 50%, transparent 50%); border:1px solid var(--done); }
+.s-unknown{ background:transparent; border:1.5px dotted var(--unknown); }
+.s-idle{ width:5px; height:5px; margin:1px; }
+
+/* 4c. Scoped view transitions on the board. Only the tiles that actually
+   changed are named from JS, the root group is silenced so nothing crossfades
+   board-wide, and a tile that moves or restates glides instead of snapping --
+   the transient is what defeats change blindness, not the final colour. */
+.bubble{ view-transition-name:none; }
+::view-transition-group(root){ animation:none; }
+::view-transition-group(*){
+  animation-duration:.42s;
+  animation-timing-function: linear(0, .42 18%, .83 42%, 1.02 62%, 1.005 82%, 1);
+}
+/* 4d. Changing worlds is a dissolve, not a snap. The only thing moving on the
+   board is the halo, and a static snapshot would tear against it, so the
+   breath is paused for the duration of the swap. */
+html:active-view-transition-type(theme)::view-transition-old(root),
+html:active-view-transition-type(theme)::view-transition-new(root){
+  animation-duration:.38s; animation-timing-function:ease;
+}
+html.theme-swapping .bubble > .halo{ animation:none; }
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-group(*), ::view-transition-old(root), ::view-transition-new(root){ animation-duration:1ms; }
+}
+
+/* 4e. One shadow token instead of six literal #000 shadows, so a light stock
+   wears a warm, shallow shade instead of a dark-room drop shadow. */
+:root{ --shade: rgb(0 0 0 / .30); --shade-deep: rgb(0 0 0 / .55); }
+:root[data-theme="paper"], :root[data-theme="aperture"],
+:root[data-theme="cardstock"], :root[data-theme="ochre"]{
+  --shade: rgb(90 70 40 / .16); --shade-deep: rgb(90 70 40 / .28);
+}
+.player, .crate{ box-shadow:0 18px 44px -18px var(--shade-deep); }
+.panel{ box-shadow:-30px 0 60px -30px var(--shade-deep); }
+.sheet{ box-shadow:0 -26px 50px -32px var(--shade-deep); }
+.wrap::after{ background: radial-gradient(120% 95% at 50% 42%, transparent 55%, var(--shade) 100%); }
+.bubble:hover{ box-shadow: inset 0 1px 0 rgb(255 255 255 / .07),
+  0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 10px 22px -12px var(--shade-deep); }
 
 /* ---------- BASE THEME IDENTITIES ----------
    These use cheap gradients and borders only. The world themes below can be
@@ -2137,12 +2252,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    PROSE   Helvetica Neue.
    -------------------------------------------------------------------------- */
 :root[data-theme="cyber"]{
-  --face-data:   "Iosevka", ui-monospace, "SF Mono", Menlo, monospace;
-  --face-prose:  "Helvetica Neue", "Inter", -apple-system, system-ui, sans-serif;
-  --face-chrome: "Bebas Neue", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
-  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
-  --fs-chrome: 1.14;         /* Bebas has no lowercase and a narrow set width */
-  --tr-chrome: 1.2;
+  --face-data:   "Share Tech Mono", "Iosevka", ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  "Rajdhani", "Helvetica Neue", "Inter", -apple-system, system-ui, sans-serif;
+  --face-chrome: "Orbitron", "Bebas Neue", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
+  --face-code:   "Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome: 1.0;
+  --tr-chrome: 1.0;
 }
 :root[data-theme="cyber"] .brand b{ font-weight: 400; letter-spacing: .3em; }
 :root[data-theme="cyber"] .chip,
@@ -2573,6 +2688,113 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="ochre"] .gauge .val,
 :root[data-theme="ochre"] .stat .v{ font-weight: 700; }
 
+
+/* ===== theme: chess ======================================================= */
+/* STAUNTON -- a tournament board on a club table. English racing green lacquer
+   and Carrara marble, the squares cut rather than printed, with a brass fillet
+   inlaid around the frame. The greens are a lacquer green, deepened with black
+   instead of brightened with yellow, and the white is stone, not paper: it has
+   grey veins in it. Gold shows only where a board actually carries metal -- the
+   inlaid line, the engraved file letters, the clock. Nothing glows. A board is
+   lit, not lit up, which also makes this the restful dark world on the list.
+
+   Measured: --faint 5.32:1 on --tile. Worst state word on its own tinted face
+   3.64:1 (hoarstone ships 3.04, chequer 3.33). Worst colour-blind state pair
+   dE 7.6 deutan / 7.7 protan (hoarstone 7, chequer 3). Running is a high-
+   lightness jade precisely because the ground is green: dE 53 from --tile. */
+:root[data-theme="staunton"]{
+  --void:#04140d; --panel:#072317; --cell:#0a2c1d; --tile:#0f3b27; --tile-hi:#14492f;
+  --edge:#1e5a3d; --edge-hot:#3a8a5e;
+  --ink:#f4f1e4; --dim:#c3d2c2; --faint:#9aae9c;
+  --accent:#c9a227;
+  --blocked:#f17264; --running:#86e3ad; --idle:#8fb2cc; --done:#f4cc64; --unknown:#97a299;
+  --good:#86e3ad; --warn:#f4cc64;
+  --waiting:#f99e65;
+  --glow:0; --sigil:"\265E";                 /* the knight, the one glyph nobody misreads */
+  --scan:rgba(244,241,228,.012); --halo:rgba(201,162,39,.055);
+  /* Marble: one broad soft mottle for the stone, one fine rake for the vein. */
+  --grain:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23v)' opacity='.085'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(64deg, rgba(244,241,228,.014) 0 1px, transparent 1px 23px);
+  --hud-a:#0a2e1e; --hud-b:#061d13; --rail-a:#0c3422; --rail-b:#061e14;
+}
+
+/* A lamp off the top-left corner and the table falling away into the corners.
+   No bloom: the gold is reflecting, not emitting. */
+:root[data-theme="staunton"] body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(118% 96% at 16% -10%, rgba(244,241,228,.055), transparent 54%),
+    radial-gradient(136% 120% at 50% 52%, transparent 52%, rgba(1,8,5,.60) 100%);
+}
+/* THE TELL, 1 -- the board itself. Squares at tile scale, not the micro-chequer
+   of an arcade hillside, so a lane reads as a board with sessions standing on
+   it. Marble over lacquer, and the brass fillet inlaid just inside the frame. */
+:root[data-theme="staunton"] .lane{
+  background-image:
+    conic-gradient(from 90deg at 50% 50%, rgba(244,241,228,.038) 0 25%, transparent 0 50%, rgba(244,241,228,.038) 0 75%, transparent 0),
+    var(--grain);
+  background-size:76px 76px, auto, auto;
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.20), inset 0 1px 0 rgba(244,241,228,.05);
+}
+/* THE TELL, 2 -- engraved file letters. Every project in a lane is a file on
+   the board, lettered a, b, c the way the frame of a real board is. Pure CSS
+   counters, so it costs nothing and needs no markup. */
+:root[data-theme="staunton"] .lane{counter-reset:file}
+:root[data-theme="staunton"] .project{counter-increment:file}
+:root[data-theme="staunton"] .project > header{position:relative; padding-left:19px}
+:root[data-theme="staunton"] .project > header::before{
+  content:counter(file, lower-alpha);
+  position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  font:700 10px/1 var(--mono); letter-spacing:0;
+  color:var(--accent); opacity:.72;
+  text-shadow:0 1px 0 rgba(1,8,5,.55);
+}
+/* Pieces stand on the square: a stone face, a bright arris catching the lamp,
+   and a brass hairline under it. */
+:root[data-theme="staunton"] .bubble{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23s)' opacity='.06'/%3E%3C/svg%3E");
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.10), inset 0 -1px 0 rgba(201,162,39,.16);
+}
+:root[data-theme="staunton"] .bubble:hover{
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.14),
+             0 0 0 1px rgba(201,162,39,.55),
+             0 10px 22px -14px rgba(1,8,5,.9);
+}
+:root[data-theme="staunton"] .bubble.sel{
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.16), 0 0 0 1px var(--accent);
+}
+/* The HUD is the marble slab the board sits on, with a brass rule along its
+   bottom edge -- the one place the theme allows a hard metal line. */
+:root[data-theme="staunton"] .hud{
+  background-image:
+    radial-gradient(125% 150% at 22% -30%, rgba(244,241,228,.07), transparent 58%),
+    var(--grain),
+    linear-gradient(180deg, var(--hud-a), var(--hud-b));
+  border-bottom:1px solid rgba(201,162,39,.42);
+}
+/* Coordinates are engraved into the frame, so the rail labels are cut in gold
+   and spaced like lettering on brass rather than set like type. */
+:root[data-theme="staunton"] .rail .vlabel,
+:root[data-theme="staunton"] .hrail .who{
+  color:#cdb470; letter-spacing:.22em; text-shadow:0 1px 0 rgba(1,8,5,.6);
+}
+:root[data-theme="staunton"] .rail .rcount,
+:root[data-theme="staunton"] .project > header .ct{color:var(--accent); opacity:.8}
+:root[data-theme="staunton"] .gauge, :root[data-theme="staunton"] .trace,
+:root[data-theme="staunton"] .readout, :root[data-theme="staunton"] .stat{
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.06), inset 0 0 0 1px rgba(201,162,39,.10);
+}
+:root[data-theme="staunton"] .panel{
+  background-image:var(--grain);
+  box-shadow:inset 1px 0 0 rgba(201,162,39,.22), -26px 0 60px -30px rgba(1,8,5,.95);
+}
+:root[data-theme="staunton"] .toast{background:#0a2416; border-color:rgba(201,162,39,.5)}
+:root[data-theme="staunton"] .scrim{background:rgba(2,12,7,.62)}
+:root[data-theme="staunton"] .brand b{letter-spacing:.22em; color:#f4f1e4}
+:root[data-theme="staunton"] .acts button:hover{
+  background:#123a26; box-shadow:0 0 0 1px rgba(201,162,39,.55);
+}
 </style>
 </head>
 <body>
@@ -2607,6 +2829,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="cardstock">pokémon</option>
           <option value="chequer">sonic</option>
           <option value="ochre">team spirit</option>
+        <option value="staunton">chess</option>
         </optgroup>
       </select>
       <button class="ghost" id="pause">pause</button>
@@ -2753,6 +2976,14 @@ const THEME_MARKS = {
     antigravity:'<path d="M8 1.5 L13.6 8.1 L10.1 8.1 L10.1 9.5 L5.9 9.5 L5.9 8.1 L2.4 8.1Z" fill="currentColor"/><path d="M5.9 10.6h4.2v1.9H5.9zM5.9 13.6h4.2v1.5H5.9z" fill="currentColor"/>',
     codex:'<path d="M6.2 2.5L4.6 4.2" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M3.85 5.0L1.9 7.1V8.9l1.95 2.1" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M4.6 11.8l1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M9.8 2.5l1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M12.15 5.0L14.1 7.1V8.9l-1.95 2.1" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.4 11.8l-1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/>',
   },
+  /* chess -- the three Staunton pieces whose silhouettes survive at 16px:
+     a coronet, a mitre and a battlemented tower. Straight edges only, because
+     a turned piece photographs as a hard outline under a club lamp. */
+  staunton:{
+    claude:'<path d="M2.3 4.6 L4.4 8.3 L6.2 3.9 L8 8.5 L9.8 3.9 L11.6 8.3 L13.7 4.6 L12.5 11.2 L3.5 11.2 Z" fill="currentColor"/><path d="M3.3 12.1h9.4v1.4H3.3zM2.9 13.9h10.2v1.5H2.9z" fill="currentColor"/><circle cx="2.3" cy="3.8" r=".95" fill="currentColor"/><circle cx="6.2" cy="3.1" r=".95" fill="currentColor"/><circle cx="8" cy="2.6" r="1" fill="currentColor"/><circle cx="9.8" cy="3.1" r=".95" fill="currentColor"/><circle cx="13.7" cy="3.8" r=".95" fill="currentColor"/>',
+    antigravity:'<path d="M8 1.9 L10.5 6.4 L5.5 6.4 Z" fill="currentColor"/><circle cx="8" cy="1.5" r=".95" fill="currentColor"/><path d="M5 6.9h6v1.3H5z" fill="currentColor"/><path d="M5.7 8.6 L10.3 8.6 L11.5 12.3 L4.5 12.3 Z" fill="currentColor"/><path d="M3.4 12.8h9.2v1.3H3.4zM3 14.2h10v1.4H3z" fill="currentColor"/>',
+    codex:'<path d="M3.3 2.4h2.2v2.4H3.3zM6.9 2.4h2.2v2.4H6.9zM10.5 2.4h2.2v2.4H10.5zM3.3 4.8h9.4v1.5H3.3zM4.5 6.3h7v6.1h-7zM3.2 12.4h9.6v1.5H3.2zM2.8 13.9h10.4v1.5H2.8z" fill="currentColor"/>',
+  },
 };
 
 // A theme may re-draw the provider marks in its own idiom. Anything it does
@@ -2760,6 +2991,23 @@ const THEME_MARKS = {
 function markFor(key){
   const set = THEME_MARKS[document.documentElement.dataset.theme];
   return (set && set[key]) || MARKS[key] || '';
+}
+
+/* VOICE -- the board's vocabulary, per world. A theme may rename what a state
+   is called and what an empty box says; anything it leaves out falls through
+   to the plain words. The dot, the rib and the tint keep their state colour,
+   so the glance layer is unchanged -- only the register moves. Keep every
+   word short enough to survive a narrow tile, and obvious enough to decode
+   without having read this table. */
+const VOICE_BASE = {
+  blocked:'blocked', waiting:'waiting', running:'running', idle:'idle', done:'done', unknown:'unknown',
+  blank:'nothing written to disk yet', quiet:'no active sessions', empty:'no active sessions',
+  offline:'OFFLINE',
+};
+const VOICE = {};   /* filled by the theme packs further down */
+function voice(k){
+  const v = VOICE[document.documentElement.dataset.theme];
+  return (v && v[k]) || VOICE_BASE[k] || k;
 }
 
 const STATES = ['blocked','waiting','running','idle','done','unknown'];
@@ -2879,7 +3127,7 @@ function drawHud(d){
     + '<dt>uptime</dt><dd><b>'+dur(h.uptime)+'</b></dd>';
 
   document.getElementById('tally').innerHTML = STATES.filter(s=>d.tally[s])
-    .map(s=>'<span class="chip"><i class="dot s-'+s+'"></i>'+s+'<b>'+d.tally[s]+'</b></span>').join('');
+    .map(s=>'<span class="chip" title="'+s+'"><i class="dot s-'+s+'"></i>'+esc(voice(s))+'<b>'+d.tally[s]+'</b></span>').join('');
   drawTrace(d.history||[]);
 }
 
@@ -2935,6 +3183,25 @@ function drawTrace(hist){
    them moved -- otherwise a hover, a scroll position or a half-made click
    would be thrown away twice a second for no news. */
 let boardSig = '';
+/* Which sessions changed state since the last paint. This is what every
+   transient on the board keys off -- never DOM insertion, because the board is
+   rebuilt wholesale every few seconds to keep the ages fresh, and an entry
+   animation tied to insertion would flash the whole board forever. */
+let prevState = new Map(), everPainted = false;
+function stateDiff(d){
+  const now = new Map(), changed = [], arrived = [];
+  d.lanes.forEach(l => l.projects.forEach(p => p.sessions.forEach(s => {
+    now.set(s.id, s.state);
+    if(!prevState.has(s.id)) arrived.push(s.id);
+    else if(prevState.get(s.id) !== s.state) changed.push({id:s.id, from:prevState.get(s.id), to:s.state});
+  })));
+  const left = [...prevState.keys()].filter(id => !now.has(id));
+  const first = !everPainted; everPainted = true;
+  prevState = now;
+  return {changed, arrived, left, first};
+}
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function render(d){
   latest = d;
   drawHud(d);
@@ -2946,6 +3213,47 @@ function render(d){
             + '|' + Math.floor(Date.now() / 5000);
   if(sig === boardSig) return;
   boardSig = sig;
+  const diff = stateDiff(d);
+  const interesting = !diff.first && (diff.changed.length || diff.arrived.length || diff.left.length);
+  // Scoped view transitions (Chrome 147+) glide only the tiles that moved;
+  // anywhere else the halo's own onset animation carries the transient.
+  const canVT = interesting && typeof board.startViewTransition === 'function' && !reducedMotion();
+  const paint = () => paintBoard(d);
+  if(!canVT){ paint(); afterPaint(diff); return; }
+  diff.changed.forEach(c => {
+    const el = board.querySelector('.bubble[data-id="'+CSS.escape(c.id)+'"]');
+    if(el) el.style.viewTransitionName = 'tile-' + c.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+  });
+  let t;
+  try{ t = board.startViewTransition(paint); }catch(e){ paint(); afterPaint(diff); return; }
+  t.ready.catch(() => {});                       // superseded -> AbortError, expected
+  t.finished.catch(() => {}).finally(() => {
+    board.querySelectorAll('.bubble[style*="view-transition-name"]')
+         .forEach(el => el.style.viewTransitionName = '');
+  });
+  afterPaint(diff);
+}
+/* One-shot onset for the tiles that changed, and a message for anything else
+   on the page that cares (the sound packs listen for it). */
+function afterPaint(diff){
+  if(diff.first) return;
+  diff.changed.forEach(c => {
+    const el = board.querySelector('.bubble[data-id="'+CSS.escape(c.id)+'"]');
+    if(el){
+      el.classList.add('just-changed');
+      el.addEventListener('animationend', () => el.classList.remove('just-changed'), {once:true});
+    }
+    document.dispatchEvent(new CustomEvent('fleet:state', {detail:c}));
+  });
+  diff.arrived.forEach(id => {
+    const el = board.querySelector('.bubble[data-id="'+CSS.escape(id)+'"]');
+    if(el){
+      el.classList.add('just-changed');
+      el.addEventListener('animationend', () => el.classList.remove('just-changed'), {once:true});
+    }
+  });
+}
+function paintBoard(d){
   board.innerHTML = d.lanes.map(lane => {
     // a lane's height follows the sessions still on show in it
     const weight = lane.projects
@@ -2959,13 +3267,13 @@ function render(d){
         + '<span class="caret">'+(min?'▸':'▾')+'</span><span class="nm">'+esc(p.name)+'</span>'
         + '<span class="ct">'+p.count+'</span></header>'
         + '<div class="bubbles">'+p.sessions.map(tile).join('')+'</div></div>';
-    }).join('') : '<div class="empty">no active sessions</div>';
+    }).join('') : '<div class="empty">'+esc(voice('empty'))+'</div>';
     const mark = '<svg viewBox="0 0 16 16" aria-hidden="true">'+markFor(lane.key)+'</svg>';
     // An agent with nothing running keeps a strip, not a whole row.
     if(!lane.count)
       return '<div class="lane flat"><div class="hrail">'+mark
         + '<span class="who">'+esc(SHORT[lane.key]||lane.label)+'</span>'
-        + '<span class="note">no active sessions</span></div></div>';
+        + '<span class="note">'+esc(voice('quiet'))+'</span></div></div>';
     return '<div class="lane'+(weight < 4 ? ' short' : '')+'" style="flex:'+weight+' 1 0">'
       + '<div class="rail">'+mark
       + '<span class="rcount">'+lane.count+'</span>'
@@ -2991,14 +3299,34 @@ function tile(s){
   // spend it on how long the session has been quiet and how far it has run.
   const wt = (s.place||'').startsWith('worktree: ') ? s.place.slice(10) : '';
   const where = (wt && wt === s.name) ? '' : s.place;
-  const foot = [s.state, where, s.updated ? age(s.updated) : '',
-                s.turns ? s.turns+'t' : ''].filter(Boolean).slice(0,3).join(' · ');
+  // The status word is the one thing on the foot line you read from across
+  // the room, so it gets its own non-shrinking span; the rest of the line
+  // ellipsizes cleanly instead of being chopped mid-path. A long path is
+  // folded to its last segment -- the tile's width is better spent on age.
+  const rest = [s.updated ? age(s.updated) : '', s.turns ? s.turns+'t' : '',
+                shortPlace(where)].filter(Boolean).join(' · ');
+  // A block that has sat unanswered escalates: a little louder after eight
+  // minutes, an outline after thirty. Amplitude and area, never rate.
+  const since = s.updated ? Date.now() - s.updated : 0;
+  const stale = s.state === 'blocked' ? (since > 30*60000 ? 2 : since > 8*60000 ? 1 : 0) : 0;
+  const vt = (s.state && prevState.has(s.id) && prevState.get(s.id) !== s.state)
+           ? ';view-transition-name:tile-' + s.id.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
   return '<button class="bubble" data-id="'+esc(s.id)+'" data-state="'+esc(s.state)+'"'
-    + ' style="--rib:var(--'+s.state+')" title="'+esc(s.name)+' — '+esc(s.state)+'&#10;'+esc(gist)+'">'
+    + (stale ? ' data-stale="'+stale+'"' : '')
+    + ' style="--rib:var(--'+s.state+')'+vt+'" title="'+esc(s.name)+' — '+esc(s.state)+'&#10;'+esc(where||'')+'&#10;'+esc(gist)+'">'
+    + '<i class="halo" aria-hidden="true"></i>'
     + '<span class="nm">'+esc(s.name)+'</span>'
     + '<span class="gist'+(blank?' none':'')+(s.note?' said':'')+'">'
-    + esc(blank ? 'nothing written to disk yet' : gist)+'</span>'
-    + '<span class="foot"><i class="dot s-'+s.state+'"></i>'+esc(foot)+'</span></button>';
+    + esc(blank ? voice('blank') : gist)+'</span>'
+    + '<span class="foot"><i class="dot s-'+s.state+'"></i><b class="st">'+esc(voice(s.state))+'</b>'
+    + (rest ? '<span class="rest">'+esc(rest)+'</span>' : '') + '</span></button>';
+}
+// "~/Documents/Dev/casaradar" is three segments of nothing the tile needs;
+// keep the leaf and let the title attribute carry the full path.
+function shortPlace(p){
+  if(!p) return '';
+  const parts = String(p).replace(/\/+$/,'').split('/');
+  return parts.length > 2 ? '\u2026/' + parts[parts.length-1] : p;
 }
 
 function toggle(key){
@@ -3263,12 +3591,28 @@ let retintTerms = null;
 
 function setTheme(name){
   const moved = document.documentElement.dataset.theme !== name;
-  document.documentElement.dataset.theme = name;
-  themePicker.value = name;
-  try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
-  if(latest) drawTrace(latest.history || []);   // the trace is drawn, not styled
-  if(latest) render(latest);                    // marks are per-theme too
-  if(moved && retintTerms) retintTerms();       // open shells follow the theme
+  const apply = () => {
+    document.documentElement.dataset.theme = name;
+    themePicker.value = name;
+    try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
+    if(latest) drawTrace(latest.history || []);   // the trace is drawn, not styled
+    if(latest){ boardSig = ''; render(latest); }  // marks and voice are per-theme too
+    if(moved && retintTerms) retintTerms();       // open shells follow the theme
+    if(moved) document.dispatchEvent(new CustomEvent('fleet:theme', {detail:{theme:name}}));
+  };
+  // Walking into another world is a dissolve, not a snap: a document-level
+  // crossfade, with the halo's breath paused so the static snapshot has
+  // nothing to tear against. Infrequent and user-initiated, so its cost is
+  // irrelevant to the board's steady state.
+  if(moved && document.documentElement.dataset.theme && typeof document.startViewTransition === 'function' && !reducedMotion()){
+    document.documentElement.classList.add('theme-swapping');
+    let t;
+    try{ t = document.startViewTransition({update: apply, types: ['theme']}); }
+    catch(e){ try{ t = document.startViewTransition(apply); }catch(e2){ apply(); } }
+    if(t){ t.ready.catch(()=>{}); t.finished.catch(()=>{}).finally(() =>
+      document.documentElement.classList.remove('theme-swapping')); }
+    else document.documentElement.classList.remove('theme-swapping');
+  } else apply();
 
   // Walking into another world changes what is on the shelves, not what is
   // currently playing. The track finishes; whatever follows comes from here.
@@ -3334,6 +3678,7 @@ const THEME_MUSIC = {
   cardstock: 'chiptune game boy lofi instrumental',
   chequer:   'genesis chiptune funk fusion retro instrumental',
   ochre:     'playful big band spy jazz brass action instrumental',
+  staunton:  'solo piano nocturnes and cello adagio for deep concentration',
 };
 
 // The YouTube API script is fetched the first time the player is opened, so a
@@ -3657,7 +4002,7 @@ async function tick(){
         if(selected) select(selected);
       }
     }catch(err){
-      document.getElementById('clock').textContent = 'OFFLINE';
+      document.getElementById('clock').textContent = voice('offline');
     }
   }
   // Half the server's rebuild interval, so a fresh snapshot is on screen
