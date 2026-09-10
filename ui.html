@@ -2717,6 +2717,13 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23v)' opacity='.085'/%3E%3C/svg%3E"),
     repeating-linear-gradient(64deg, rgba(244,241,228,.014) 0 1px, transparent 1px 23px);
   --hud-a:#0a2e1e; --hud-b:#061d13; --rail-a:#0c3422; --rail-b:#061e14;
+  /* Real leaf, not a flat gold fill: metal is only legible as metal when it
+     carries a light and a dark within one stroke. Eight stops, warm-dark at the
+     ends and a near-white specular band off-centre, which is what a polished
+     bevel actually does under one lamp. Swept slowly across the wordmark so it
+     catches the light rather than sitting there being yellow. */
+  --leaf:linear-gradient(100deg,#6f4f0f 0%,#b8891f 14%,#e6cf79 28%,#fbf3c8 38%,
+                         #e0c163 47%,#9c7318 60%,#d8bb5e 74%,#f4e4a4 85%,#7d5a12 100%);
 }
 
 /* A lamp off the top-left corner and the table falling away into the corners.
@@ -2795,6 +2802,99 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .acts button:hover{
   background:#123a26; box-shadow:0 0 0 1px rgba(201,162,39,.55);
 }
+
+/* ===== chess: the metal and the wheel ===================================== */
+/* Gold leaf on the wordmark, swept. background-clip:text takes the sigil with
+   it, so the knight is struck from the same leaf as the letters -- and the
+   inherited text-shadow has to go, because a shadow behind transparent fill
+   shows straight through the glyph and muddies it. */
+:root[data-theme="staunton"] .brand b{
+  background:var(--leaf);
+  background-size:260% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+  text-shadow:none;
+  animation:leafsweep 9s linear infinite;
+}
+:root[data-theme="staunton"] .brand b::after{ opacity:.85 }
+/* The engraved file letters are struck from the same leaf. */
+:root[data-theme="staunton"] .project > header::before{
+  background:var(--leaf); background-size:300% 100%;
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent;
+  opacity:1; text-shadow:none;
+  animation:leafsweep 14s linear infinite;
+}
+/* A drawn brass rule under the HUD instead of a flat border: bright along the
+   top edge, dark underneath, the way an inlaid strip catches a room. */
+:root[data-theme="staunton"] .hud{border-bottom:0; position:relative}
+:root[data-theme="staunton"] .hud::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(251,243,200,.85) 0 1px, rgba(201,162,39,.75) 1px 2px, rgba(70,50,10,.85) 2px 3px),
+    var(--leaf);
+  background-size:auto, 220% 100%;
+  animation:leafsweep 16s linear infinite;
+}
+/* The counts and the accent numerals get the metal too, flat rather than swept
+   so the board does not shimmer in six places at once. */
+:root[data-theme="staunton"] .rail .rcount,
+:root[data-theme="staunton"] .gauge .val{
+  background:var(--leaf); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:transparent; text-shadow:none;
+}
+@keyframes leafsweep{from{background-position:0% 50%} to{background-position:260% 50%}}
+
+/* THE WHEEL -- a roulette set into the club table at the corner of the room:
+   thirty-seven pockets in house green and black, gold frets between them, a
+   gold rim and hub. It turns once every two and a half minutes, which is slow
+   enough to never pull the eye off a tile and fast enough that you catch it
+   moving if you look. Cropped by the corner, because the table is bigger than
+   the screen. */
+:root[data-theme="staunton"] .wrap::before{
+  content:""; position:fixed; left:-104px; bottom:-104px;
+  width:320px; height:320px; border-radius:50%;
+  pointer-events:none; z-index:0; opacity:.15;
+  background:
+    radial-gradient(circle, rgba(251,243,200,.95) 0 5%, rgba(201,162,39,.9) 5% 7%, transparent 8%),
+    radial-gradient(circle, transparent 19%, rgba(201,162,39,.85) 20% 22%, transparent 23%),
+    radial-gradient(circle, transparent 65%, rgba(251,243,200,.5) 66% 68%, rgba(201,162,39,.75) 68% 73%, transparent 74%),
+    repeating-conic-gradient(from 0deg, rgba(247,231,166,.7) 0 .6deg, transparent .6deg 9.7297deg),
+    repeating-conic-gradient(from 0deg, #0e3c25 0 9.7297deg, #100f0b 9.7297deg 19.4595deg);
+  animation:wheelspin 150s linear infinite;
+}
+@keyframes wheelspin{from{transform:rotate(0)} to{transform:rotate(360deg)}}
+/* Point at the board's corner and the wheel picks up -- the one easter egg. */
+:root[data-theme="staunton"] .wrap:hover::before{animation-duration:26s}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="staunton"] .wrap::before,
+  :root[data-theme="staunton"] .wrap:hover::before,
+  :root[data-theme="staunton"] .brand b,
+  :root[data-theme="staunton"] .hud::after,
+  :root[data-theme="staunton"] .project > header::before{animation:none}
+}
+
+  /* Renaming a session is a property of this board, not of the agent: nothing is
+     written back to the CLI. The row hides itself for a tile that has no session
+     id yet, because there is nothing stable to attach a name to. */
+  .panel .rename{display:flex; gap:6px; margin-top:10px}
+  .panel .rename.off, .panel .rename-no.off{display:none}
+  .panel .rename input{
+    flex:1 1 auto; min-width:0; background:var(--cell); border:1px solid var(--edge);
+    color:var(--ink); border-radius:4px; padding:5px 8px; font:12px/1.4 var(--mono);
+  }
+  .panel .rename input:focus{outline:none; border-color:var(--edge-hot)}
+  .panel .rename button{flex:none}
+  .panel .rename-no{
+    margin-top:10px; font:10.5px/1.5 var(--mono); color:var(--faint);
+    letter-spacing:.04em;
+  }
+  .panel h2.aliased::after{
+    content:"named"; margin-left:8px; vertical-align:.18em;
+    font:9.5px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent); opacity:.8;
+  }
 </style>
 </head>
 <body>
@@ -2836,6 +2936,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
       <button class="ghost" id="collapse">collapse all</button>
       <button class="ghost" id="flush"
               title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">flush</button>
+      <button class="ghost" id="refresh" title="force refresh ui layout without stopping music">↻ refresh</button>
       <button class="ghost" id="music">♪ music</button>
       <button class="ghost" id="termbtn" hidden
               title="show or hide the terminal sheet (ctrl-`)">⌨ terminal</button>
@@ -2847,7 +2948,14 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 <div class="scrim" id="scrim"></div>
 <aside class="panel" id="panel">
   <button class="ghost close" id="close">close</button>
-  <div><h2 id="p-name"></h2><div class="sub" id="p-sub"></div></div>
+  <div><h2 id="p-name"></h2><div class="sub" id="p-sub"></div>
+    <div class="rename off" id="p-rename">
+      <input id="p-alias" autocomplete="off" spellcheck="false" maxlength="48">
+      <button class="ghost" id="p-alias-save">rename</button>
+      <button class="ghost" id="p-alias-clear" title="back to the name the agent reports">reset</button>
+    </div>
+    <div class="rename-no off" id="p-rename-no">this one has written nothing to disk yet, so it has no id to name</div>
+  </div>
   <div class="stats" id="p-stats"></div>
   <section><h3>Open it</h3><div class="acts" id="p-acts"></div></section>
   <section><h3>Brief — what it was asked to do</h3><p id="p-brief"></p></section>
@@ -3439,7 +3547,10 @@ function select(id){
   if(sig === selSig) return;
   selSig = sig;
 
-  document.getElementById('p-name').textContent = s.name;
+  const nameEl = document.getElementById('p-name');
+  nameEl.textContent = s.name;
+  nameEl.classList.toggle('aliased', !!s.aliased);
+  fillRename(s);
   document.getElementById('p-sub').textContent =
     [s.provider, s.project, s.place, s.kind].filter(Boolean).join(' · ');
 
@@ -3519,6 +3630,51 @@ async function open_(id, target){
     toast(d.message || (d.ok ? 'opened' : 'could not open'));
   }catch(e){ toast('could not reach the dashboard server'); }
 }
+
+/* ---- naming a session -------------------------------------------------- */
+/* The board's own label for a session, stored server-side in aliases.json and
+   keyed by provider:sessionId. A tile that exists only because a process is
+   running has no id, so it cannot be named and says so instead of offering a
+   control that would fail. */
+const aliasRow = document.getElementById('p-rename');
+const aliasNo  = document.getElementById('p-rename-no');
+const aliasIn  = document.getElementById('p-alias');
+
+function fillRename(s){
+  const nameable = !!s.aliasKey;
+  aliasRow.classList.toggle('off', !nameable);
+  aliasNo.classList.toggle('off', nameable);
+  if(!nameable) return;
+  aliasIn.placeholder = s.detectedName || s.name || 'give it a name…';
+  // Never pull the field out from under someone mid-type: the drawer refills
+  // on every change to the session, which is often.
+  if(document.activeElement !== aliasIn) aliasIn.value = s.aliased ? (s.name||'') : '';
+}
+
+async function sendName(name){
+  if(!selected) return;
+  try{
+    const r = await fetch('/api/name', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id: selected, name})
+    });
+    const d = await r.json();
+    toast(d.message || (d.ok ? 'renamed' : 'could not rename'));
+    if(d.ok){
+      aliasIn.blur();
+      selSig = '';                 // force the drawer to redraw with the new name
+      if(latest) render(latest);
+    }
+  }catch(e){ toast('could not reach the dashboard server'); }
+}
+
+document.getElementById('p-alias-save').onclick = () => sendName(aliasIn.value.trim());
+document.getElementById('p-alias-clear').onclick = () => { aliasIn.value=''; sendName(''); };
+aliasIn.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); sendName(aliasIn.value.trim()); }
+  if(e.key === 'Escape'){ aliasIn.blur(); }
+  e.stopPropagation();            // the board's own hotkeys must not fire while typing
+});
 
 function deselect(){
   selected = null;
@@ -3902,6 +4058,17 @@ function minimizePlayer(on){
   minBtn.setAttribute('aria-label', on ? 'expand player' : 'minimize player');
   remember();
 }
+
+document.getElementById('refresh').onclick = () => {
+  boardSig = '';
+  prevState = new Map();
+  everPainted = false;
+  if(latest) {
+    render(latest);
+    setTimeout(fit, 100);
+  }
+};
+
 document.getElementById('music').onclick = () => {
   if(playerEl.classList.contains('min')){
     minimizePlayer(false); crateEl.classList.add('on'); return;
