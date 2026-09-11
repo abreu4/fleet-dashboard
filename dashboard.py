@@ -13,6 +13,8 @@ import base64
 import json
 import os
 import secrets
+import signal
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +23,7 @@ from urllib.parse import parse_qs, urlparse
 import actions
 import aliases
 import flush as flushmod
+import instance
 import sunset
 import collectors
 import metrics
@@ -379,8 +382,10 @@ class Handler(BaseHTTPRequestHandler):
             broken.append(True)
 
     def do_GET(self):
+        global LAST_POLL
         path = self.path.split("?")[0]
         if path == "/api/state":
+            LAST_POLL = time.time()
             self._send(SNAPSHOT.get(), "application/json")
             return
         if path == "/api/term/stream":
@@ -652,6 +657,61 @@ def _ui_version():
         return "0"
 
 
+# Set by the one route a browser cannot avoid calling. The terminal POSTs and
+# the SSE stream are deliberately NOT counted: a page that has gone away can
+# leave a socket half-open, and a pty still printing is covered by the
+# live-terminal test in _idle_watch.
+LAST_POLL = time.time()
+
+
+def _idle_watch(seconds, server, stop):
+    """Exit an unwatched instance. Never the kiosk: --kiosk sets seconds to 0.
+
+    An instance exists to be looked at. If nothing has asked for /api/state in
+    half an hour, nobody is looking, and the only thing it is still doing is
+    spawning a few hundred processes a minute. Fifteen of these, started from
+    agents' shells and never told to stop, once took 28% of the machine. The
+    exemptions are the kiosk, excluded before this thread starts, and a live
+    pty -- hanging up on somebody's `claude --resume` to save a tenth of a
+    core is not a trade worth making.
+    """
+    while not stop.wait(30):
+        if time.time() - LAST_POLL < seconds:
+            continue
+        if TERMINAL is not None and any(p.exited is None for p in TERMINAL._ptys.values()):
+            continue
+        print("no browser for %.0f min and no live terminal -- exiting" % (seconds / 60))
+        threading.Thread(target=server.shutdown, daemon=True).start()
+        return
+
+
+def _bind(args):
+    """The listener, or a loud exit. With --replace, SIGTERM the fleet
+    instance holding the port (never the kiosk) and wait up to 4s for it."""
+    for attempt in range(40):
+        try:
+            return ThreadingHTTPServer((args.host, args.port), Handler)
+        except OSError as exc:
+            held = instance.read(args.port) or {}
+            if not args.replace or not held.get("pid"):
+                raise SystemExit("cannot bind %s:%d (%s)%s"
+                                 % (args.host, args.port, exc,
+                                    "" if not held.get("pid")
+                                    else " -- fleet pid %s is there; --replace to take it over"
+                                         % held["pid"]))
+            if held.get("kiosk"):
+                raise SystemExit("refusing --replace on the kiosk instance (pid %s, port %d). "
+                                 "Stop it with launchctl if you really mean to."
+                                 % (held["pid"], args.port))
+            if attempt == 0:
+                try:
+                    os.kill(int(held["pid"]), signal.SIGTERM)
+                except OSError:
+                    pass
+            time.sleep(0.1)
+    raise SystemExit("port %d is still held after 4s; not replacing" % args.port)
+
+
 def _bounded(value, low, high, fallback):
     try:
         return max(low, min(high, int(value)))
@@ -667,23 +727,83 @@ def main():
                         help="serve a real terminal in the page (loopback only; "
                              "this is the one thing here that lets a browser "
                              "reach a shell, so it is off unless asked for)")
+    parser.add_argument("--kiosk", action="store_true",
+                        help="this is the always-on board: never idle-exit, and "
+                             "--stop-strays will refuse to touch it")
+    parser.add_argument("--replace", action="store_true",
+                        help="SIGTERM whatever holds this port, then take it")
+    parser.add_argument("--idle-exit", type=float, default=None, metavar="MINUTES",
+                        help="exit after MINUTES with no browser poll and no live "
+                             "terminal (default 30; 0 disables; --kiosk implies 0)")
+    parser.add_argument("--list", action="store_true",
+                        help="show running instances and exit")
+    parser.add_argument("--stop-strays", action="store_true",
+                        help="SIGTERM every instance except the kiosk (and this "
+                             "port), and exit")
     args = parser.parse_args()
+
+    if args.list:
+        for e in instance.running():
+            print("port %-5s pid %-7s %s  started %s  %s"
+                  % (e.get("port"), e.get("pid"), "KIOSK" if e.get("kiosk") else "     ",
+                     time.strftime("%H:%M:%S", time.localtime(e.get("started", 0))),
+                     e.get("cwd")))
+        raise SystemExit(0)
+    if args.stop_strays:
+        killed, spared = instance.stop_strays(keep_port=args.port)
+        for e in spared:
+            print("kept    port %s pid %s%s" % (e.get("port"), e.get("pid"),
+                                                " (kiosk)" if e.get("kiosk") else ""))
+        for e in killed:
+            print("stopped port %s pid %s  %s" % (e.get("port"), e.get("pid"), e.get("cwd")))
+        print("%d stopped, %d kept" % (len(killed), len(spared)))
+        raise SystemExit(0)
+
+    # Line-buffer stdout: a leaked instance whose log is empty because the
+    # startup lines never left an 8KB buffer is a leak you cannot diagnose.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
+    except AttributeError:
+        pass
 
     set_safe_origins(args.port)
     module = enable_terminal(args.host, args.port) if args.terminal else None
 
     SNAPSHOT.start()
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print("agent dashboard  ->  http://%s:%d" % (args.host, args.port))
+    # Bind first: EADDRINUSE from the kernel is the authoritative answer on the
+    # port, and a claim written for an instance that then fails to bind is
+    # worse than none.
+    server = _bind(args)
+    claim = instance.Claim(args.port, kiosk=args.kiosk).take(replace=args.replace)
+
+    idle = 0.0 if args.kiosk else (30.0 if args.idle_exit is None else args.idle_exit)
+    stop = threading.Event()
+    if idle > 0:
+        threading.Thread(target=_idle_watch, args=(idle * 60, server, stop),
+                         daemon=True, name="idle-exit").start()
+
+    # SIGTERM must run the same shutdown path as Ctrl-C, or a killed instance
+    # leaves its pty children orphaned exactly the way the instances
+    # themselves were orphaned.
+    def _bye(signum, frame):
+        stop.set()
+        threading.Thread(target=server.shutdown, daemon=True).start()
+    for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(sig, _bye)
+
+    print("agent dashboard  ->  http://%s:%d%s"
+          % (args.host, args.port, "  (kiosk)" if args.kiosk else
+             "  (exits after %g idle min)" % idle if idle else ""))
     if module:
         print("terminal         ->  on, loopback only, %d max" % module.MAX_TERMINALS)
     try:
         server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nbye")
     finally:
         if module:
             module.TERMINALS.shutdown()
+        claim.release()
+        print("bye")
 
 
 if __name__ == "__main__":

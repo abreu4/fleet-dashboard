@@ -61,6 +61,8 @@ cat > "$PLIST" <<PLISTEOF
     <string>$RUNTIME/dashboard.py</string>
     <string>--port</string>
     <string>$PORT</string>
+    <string>--terminal</string>
+    <string>--kiosk</string>
   </array>
   <key>WorkingDirectory</key><string>$RUNTIME</string>
   <key>EnvironmentVariables</key>
