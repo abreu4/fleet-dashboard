@@ -242,6 +242,28 @@ class Terminals:
         self._broadcast("open", term.meta())
         return term, ""
 
+    def open_at(self, cwd, agent, rows=24, cols=80):
+        """The + button: a fresh agent or shell in a folder of the user's choosing."""
+        script, real = actions.fresh_script(cwd, agent)
+        if not script:
+            return None, real
+        with self._lock:
+            live = [p for p in self._ptys.values() if p.exited is None]
+            if len(live) >= MAX_TERMINALS:
+                return None, "already running %d terminals" % MAX_TERMINALS
+            self._seq += 1
+            tid = "t%d" % self._seq
+        name = os.path.basename(real.rstrip(os.sep)) or "~"
+        title = name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
+        try:
+            term = Pty(tid, title, real, max(4, int(rows)), max(20, int(cols)), script)
+        except OSError as exc:
+            return None, "could not start a terminal: %s" % exc
+        with self._lock:
+            self._ptys[tid] = term
+        self._broadcast("open", term.meta())
+        return term, ""
+
     def get(self, tid):
         return self._ptys.get(tid)
 

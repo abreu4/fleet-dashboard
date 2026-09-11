@@ -297,6 +297,10 @@ class Handler(BaseHTTPRequestHandler):
         # every accented name and every glyph comes out as mojibake.
         self.send_header("Content-Type", content_type + "; charset=utf-8")
         self.send_header("X-Fleet-Boot", BOOT_ID)
+        # ui.html is read from disk per request, so an edit lands on the next
+        # load -- but a tab kept open for days never loads. Stamp the file's
+        # mtime and let the page reload itself when it moves.
+        self.send_header("X-Fleet-UI", _ui_version())
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -539,13 +543,18 @@ class Handler(BaseHTTPRequestHandler):
         reply = {"ok": False, "message": "unknown terminal"}
 
         if path == "/api/term/open":
-            # The page names a session. It never names a command: what the pty
-            # execs comes out of actions.launch_script, from the snapshot.
-            session = SNAPSHOT.session(body.get("id")) or {}
-            title = session.get("name") or "shell"
-            term, why = TERMINAL.open(session, title,
-                                      rows=_bounded(body.get("rows"), 4, 200, 24),
-                                      cols=_bounded(body.get("cols"), 20, 500, 80))
+            # The page names a session, or a folder plus an agent key. It never
+            # names a command: what the pty execs comes out of actions, from
+            # the snapshot or from the FRESH table.
+            rows = _bounded(body.get("rows"), 4, 200, 24)
+            cols = _bounded(body.get("cols"), 20, 500, 80)
+            if body.get("agent"):
+                term, why = TERMINAL.open_at(str(body.get("cwd") or ""),
+                                             str(body.get("agent")), rows=rows, cols=cols)
+            else:
+                session = SNAPSHOT.session(body.get("id")) or {}
+                title = session.get("name") or "shell"
+                term, why = TERMINAL.open(session, title, rows=rows, cols=cols)
             reply = ({"ok": True, "terminal": term.meta()} if term
                      else {"ok": False, "message": why})
 
@@ -593,6 +602,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         pass
+
+
+def _ui_version():
+    try:
+        return str(int(os.stat(os.path.join(HERE, "ui.html")).st_mtime))
+    except OSError:
+        return "0"
 
 
 def _bounded(value, low, high, fallback):

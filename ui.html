@@ -135,18 +135,22 @@
     display:grid; grid-template-columns:repeat(2, 1fr); grid-auto-rows:1fr;
     gap:7px; flex:0 0 clamp(292px, 25vw, 372px);
   }
+  /* Arc and figure read as one object: the text block hugs the arc instead of
+     stretching to the tile's edge, the word sits tight under its number, and
+     the pair is centred on the tile whatever width the HUD gives it. */
   .gauge{
     min-width:0; padding:4px 6px; border:1px solid var(--edge); border-radius:5px;
     background:var(--cell); display:flex; flex-direction:row;
-    align-items:center; justify-content:center; gap:7px;
+    align-items:center; justify-content:center; gap:8px;
   }
-  .gtxt{display:flex; flex-direction:column; min-width:0; flex:1 1 auto}
-  .gauge svg{width:clamp(48px, 4.6vw, 68px); height:auto; flex:none; overflow:visible}
-  .gauge .val{font:600 clamp(15px,2vh,20px)/1.15 var(--mono); white-space:nowrap;
-              font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis}
-  .gauge .lab{font:clamp(9.5px,1.2vh,11.5px)/1.3 var(--mono); letter-spacing:.07em;
+  .gtxt{display:flex; flex-direction:column; align-items:center; text-align:center;
+        min-width:0; flex:0 1 auto; gap:1px}
+  .gauge svg{width:clamp(44px, 4.2vw, 62px); height:auto; flex:none; overflow:visible}
+  .gauge .val{font:600 clamp(15px,2vh,20px)/1.05 var(--mono); white-space:nowrap;
+              font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+  .gauge .lab{font:clamp(9.5px,1.2vh,11.5px)/1.15 var(--mono); letter-spacing:.07em;
               color:var(--faint); text-transform:uppercase; white-space:nowrap;
-              overflow:hidden; text-overflow:ellipsis}
+              overflow:hidden; text-overflow:ellipsis; max-width:100%}
   .track{stroke:var(--edge); fill:none; stroke-width:5.5; stroke-linecap:round}
   .arc{fill:none; stroke-width:5.5; stroke-linecap:round; transition:stroke-dasharray .5s ease}
 
@@ -2137,25 +2141,58 @@ html.theme-swapping .bubble > .halo{ animation:none; }
     background:linear-gradient(180deg,var(--rail-a),var(--rail-b));
     border-bottom:1px solid var(--edge);
   }
-  .sheet .tabs{display:flex; gap:2px; overflow:hidden; flex:1; align-items:stretch}
+  /* Tabs share the row and shrink together, each keeping its own ellipsis;
+     the controls on the right are squares with tooltips, like the HUD's, so
+     nothing in the bar is ever a word cut in half. */
+  .sheet .tabs{display:flex; gap:2px; overflow:hidden; flex:1 1 0; min-width:0; align-items:stretch}
   .sheet .tab{
-    display:flex; align-items:center; gap:7px; max-width:230px; padding:0 8px 0 11px;
+    display:flex; align-items:center; gap:7px; flex:1 1 0; min-width:58px; max-width:230px; padding:0 8px 0 11px;
     border-right:1px solid var(--edge); background:transparent; cursor:pointer;
     font:11px/1 var(--mono); letter-spacing:.05em; color:var(--faint);
     border-bottom:2px solid transparent; white-space:nowrap;
   }
   .sheet .tab.sel{color:var(--accent); background:var(--cell); border-bottom-color:var(--accent)}
   .sheet .tab.dead{color:var(--unknown); text-decoration:line-through}
-  .sheet .tab .nm{overflow:hidden; text-overflow:ellipsis}
-  .sheet .tab .x{opacity:.45; font-size:13px; line-height:1}
+  .sheet .tab .nm{overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 auto}
+  .sheet .tab .x{opacity:.45; font-size:13px; line-height:1; flex:none}
   .sheet .tab .x:hover{opacity:1; color:var(--blocked)}
-  .sheet .bar .grp{display:flex; align-items:center; gap:5px}
+  .sheet .bar .grp{display:flex; align-items:center; gap:4px; flex:none; padding-left:6px}
   .sheet .bar button{
     background:transparent; border:1px solid var(--edge); color:var(--dim); border-radius:4px;
-    padding:3px 8px; cursor:pointer; font:10px/1.4 var(--mono); letter-spacing:.1em;
-    text-transform:uppercase; align-self:center;
+    width:26px; height:22px; padding:0; cursor:pointer; font:14px/1 var(--mono);
+    display:flex; align-items:center; justify-content:center; align-self:center;
   }
   .sheet .bar button:hover{color:var(--accent); border-color:var(--edge-hot)}
+  .sheet .bar button[aria-expanded="true"]{color:var(--accent); border-color:var(--edge-hot)}
+  .sheet .bar button:disabled{opacity:.35; cursor:default}
+  /* The + picker: a folder the board knows about (or one you type), and which
+     agent to start there. Hangs above the sheet, off the button that opens it. */
+  .newterm{
+    position:fixed; z-index:9; display:none; flex-direction:column; gap:7px;
+    width:min(380px, calc(100vw - 24px)); padding:9px 10px 10px;
+    border:1px solid var(--edge-hot); border-radius:7px; background:var(--panel);
+    box-shadow:0 18px 44px -18px #000; font:11px/1.4 var(--mono); letter-spacing:.06em; color:var(--dim);
+  }
+  .newterm.on{display:flex}
+  .newterm .row{display:flex; align-items:center; gap:8px; min-height:24px}
+  .newterm .row > span:first-child{flex:0 0 46px; text-transform:uppercase; color:var(--faint)}
+  .newterm select, .newterm input{
+    flex:1; min-width:0; padding:4px 7px; border-radius:5px;
+    background:var(--cell); color:var(--ink); border:1px solid var(--edge); font:11px var(--mono);
+  }
+  .newterm input::placeholder{color:var(--faint)}
+  .newterm .seg{display:flex; flex:1; gap:0; border:1px solid var(--edge); border-radius:5px; overflow:hidden}
+  .newterm .seg button{
+    flex:1; padding:5px 0; background:transparent; border:0; border-right:1px solid var(--edge);
+    color:var(--dim); font:10px/1.2 var(--mono); letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
+  }
+  .newterm .seg button:last-child{border-right:0}
+  .newterm .seg button.on{background:var(--tile-hi); color:var(--accent)}
+  .newterm .go{
+    align-self:flex-end; padding:5px 12px; border-radius:5px; cursor:pointer;
+    background:var(--tile-hi); color:var(--accent); border:1px solid var(--edge-hot);
+    font:10px/1.4 var(--mono); letter-spacing:.12em; text-transform:uppercase;
+  }
   .sheet .body{flex:1; min-height:0; position:relative; background:var(--cell)}
   .sheet .view{position:absolute; inset:0; padding:4px 2px 2px 8px}
   .sheet .view[hidden]{display:none}
@@ -3108,9 +3145,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   <div class="bar">
     <div class="tabs" id="term-tabs"></div>
     <div class="grp">
-      <button id="term-new" title="a shell in your home directory">+ shell</button>
-      <button id="term-size" title="cycle the sheet height">height</button>
-      <button id="term-hide" title="minimise the sheet — the HUD's terminal button brings it back (ctrl-`)">minimise</button>
+      <button id="term-new" title="new terminal: pick a folder and an agent" aria-label="new terminal" aria-haspopup="true" aria-expanded="false">+</button>
+      <button id="term-close" title="close this terminal" aria-label="close terminal">×</button>
+      <button id="term-size" title="cycle the sheet height" aria-label="sheet height">⇕</button>
+      <button id="term-hide" title="hide the sheet — ⌘J or ctrl-` brings it back" aria-label="hide sheet">▁</button>
     </div>
   </div>
   <div class="body" id="term-body"><div class="empty" id="term-empty"></div></div>
@@ -4422,17 +4460,24 @@ function termPost(path, body){
    the server stamps X-Fleet-Boot on every response and the poll compares it;
    and any terminal 404 is treated as the same event. Either one reloads the
    page, once, after saying so. */
-let bootSeen = null, reloading = false;
+let bootSeen = null, uiSeen = null, reloading = false;
 function watchBoot(r){
-  const b = r.headers.get('X-Fleet-Boot');
-  if(!b) return;
-  if(bootSeen === null){ bootSeen = b; return; }
-  if(b !== bootSeen) staleToken();
+  const b = r.headers.get('X-Fleet-Boot'), u = r.headers.get('X-Fleet-UI');
+  if(b){
+    if(bootSeen === null) bootSeen = b;
+    else if(b !== bootSeen) return staleToken();
+  }
+  // Same idea for the page itself: ui.html changed on disk, so the tab is
+  // running yesterday's board. Nobody should have to remember to reload.
+  if(u){
+    if(uiSeen === null) uiSeen = u;
+    else if(u !== uiSeen) staleToken('dashboard updated — reloading');
+  }
 }
-function staleToken(){
+function staleToken(why){
   if(reloading) return;
   reloading = true;
-  toast('dashboard restarted — reloading');
+  toast(why || 'dashboard restarted — reloading');
   setTimeout(() => location.reload(), 900);
 }
 
@@ -4604,8 +4649,10 @@ function drawTabs(){
   emptyEl.hidden = list.length > 0;
   if(!list.length) emptyEl.textContent = 'no terminals — open one from a session, or press + shell';
   tabsEl.innerHTML = list.map(t =>
-    '<div class="tab'+(t.id===activeTid?' sel':'')+(t.alive?'':' dead')+'" data-tid="'+t.id+'">'
+    '<div class="tab'+(t.id===activeTid?' sel':'')+(t.alive?'':' dead')+'" data-tid="'+t.id+'" title="'+esc(t.meta.cwd || t.meta.title)+'">'
     + '<span class="nm">'+esc(t.meta.title)+'</span><span class="x" data-close="'+t.id+'">×</span></div>').join('');
+  const closeBtn = document.getElementById('term-close');
+  if(closeBtn) closeBtn.disabled = !terms.has(activeTid);
   tabsEl.querySelectorAll('.tab').forEach(el => {
     el.onclick = ev => {
       if(ev.target.dataset.close){ termPost('/api/term/close', {tid:ev.target.dataset.close}); return; }
@@ -4785,8 +4832,101 @@ async function openTerminal(sessionId){
   if(!r.ok) toast(r.message || 'could not open a terminal');
 }
 
+/* The + picker. Folders come from the sessions on the board (most used first)
+   plus ~, or a path typed by hand; the agent is one of four keys the server
+   maps to a command. The last agent used is remembered. */
+const AGENT_KEY = 'fleet.term.agent';
+function knownDirs(){
+  const count = new Map();
+  (latest?.lanes || []).forEach(l => l.projects.forEach(p => p.sessions.forEach(s => {
+    if(s.cwd) count.set(s.cwd, (count.get(s.cwd) || 0) + 1);
+  })));
+  const dirs = [...count.entries()].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).map(e => e[0]);
+  if(!dirs.includes('~')) dirs.push('~');
+  return dirs;
+}
+function tilde(p){ return p.replace(/^\/Users\/[^/]+(?=\/|$)/, '~'); }
+let picker = null;
+function newTermPicker(){
+  if(picker) return picker;
+  const el = document.createElement('div');
+  el.className = 'newterm'; el.id = 'newterm'; el.setAttribute('role', 'dialog');
+  el.innerHTML =
+    '<div class="row"><span>folder</span><select data-k="dir"></select></div>'
+    + '<div class="row"><span></span><input data-k="path" spellcheck="false" placeholder="or type a path under ~"></div>'
+    + '<div class="row"><span>agent</span><div class="seg" data-k="agent">'
+    + '<button data-a="shell">shell</button><button data-a="claude">claude</button>'
+    + '<button data-a="antigravity">agy</button><button data-a="codex">codex</button></div></div>'
+    + '<div class="row"><span></span><button class="go" data-k="go">open ⏎</button></div>';
+  document.body.appendChild(el);
+  const q = k => el.querySelector('[data-k="'+k+'"]');
+  let agent = 'shell';
+  try{ agent = localStorage.getItem(AGENT_KEY) || 'shell'; }catch(e){}
+  const paint = () => q('agent').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.a === agent));
+  q('agent').onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    agent = b.dataset.a; paint();
+    try{ localStorage.setItem(AGENT_KEY, agent); }catch(e){}
+  };
+  const go = () => {
+    const typed = q('path').value.trim();
+    const cwd = typed || q('dir').value;
+    picker.hide();
+    openFresh(cwd, agent);
+  };
+  q('go').onclick = go;
+  el.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); go(); }
+    if(e.key === 'Escape'){ e.preventDefault(); picker.hide(); }
+    e.stopPropagation();
+  });
+  const btn = document.getElementById('term-new');
+  picker = {
+    el,
+    show(){
+      const dirs = knownDirs();
+      const cur = selected ? sessionById(selected)?.cwd : null;
+      const sel = dirs.includes(cur) ? cur : null;      // the session you're looking at, if any
+      q('dir').innerHTML = dirs.map(d => '<option value="'+esc(d)+'"'+(d===sel?' selected':'')+'>'+esc(tilde(d))+'</option>').join('');
+      q('path').value = '';
+      paint();
+      const r = btn.getBoundingClientRect();
+      el.style.bottom = (innerHeight - r.top + 8) + 'px';
+      el.style.right = Math.max(8, innerWidth - r.right) + 'px';
+      el.classList.add('on'); btn.setAttribute('aria-expanded', 'true');
+      q('dir').focus();
+    },
+    hide(){ el.classList.remove('on'); btn.setAttribute('aria-expanded', 'false'); },
+    on(){ return el.classList.contains('on'); },
+  };
+  document.addEventListener('click', e => {
+    if(picker.on() && !el.contains(e.target) && e.target !== btn) picker.hide();
+  });
+  return picker;
+}
+function sessionById(id){
+  let hit = null;
+  (latest?.lanes || []).forEach(l => l.projects.forEach(p => p.sessions.forEach(s => { if(s.id === id) hit = s; })));
+  return hit;
+}
+async function openFresh(cwd, agent){
+  if(!TERMCFG.enabled){ toast('terminal is off — start the server with --terminal'); return; }
+  await loadXterm();
+  showSheet(true);
+  const {rows, cols} = cellsForSheet();
+  const r = await termPost('/api/term/open', {cwd, agent, rows, cols});
+  if(!r.ok) toast(r.message || 'could not open a terminal');
+}
+
 if(TERMCFG.enabled){
-  document.getElementById('term-new').onclick = () => openTerminal('');
+  document.getElementById('term-new').onclick = e => {
+    e.stopPropagation();
+    const p = newTermPicker();
+    p.on() ? p.hide() : p.show();
+  };
+  document.getElementById('term-close').onclick = () => {
+    if(terms.has(activeTid)) termPost('/api/term/close', {tid: activeTid});
+  };
   document.getElementById('term-hide').onclick = () => showSheet(false);
   // Only revealed once the terminal is actually enabled, so a board running
   // without --terminal never shows a button that would do nothing.
@@ -4801,10 +4941,14 @@ if(TERMCFG.enabled){
     applySheet();
   };
   addEventListener('resize', () => setTimeout(refit, 60));
-  // ctrl-` the way a terminal drawer works everywhere else.
+  // ctrl-` the way a terminal drawer works everywhere else, and ⌘J the way
+  // VS Code's does. Captured on the window so the browser never sees ⌘J.
   addEventListener('keydown', e => {
-    if(e.ctrlKey && (e.key === '`' || e.code === 'Backquote')){
-      e.preventDefault(); showSheet(!sheetOn);
+    const backquote = e.ctrlKey && (e.key === '`' || e.code === 'Backquote');
+    const cmdJ = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'j' || e.key === 'J');
+    if(backquote || cmdJ){
+      e.preventDefault(); e.stopPropagation(); showSheet(!sheetOn);
+      if(sheetOn) terms.get(activeTid)?.term.focus();
     }
   }, true);
   applySheet();

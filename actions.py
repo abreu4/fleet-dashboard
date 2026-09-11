@@ -31,6 +31,10 @@ _RESUME = {
     "antigravity": ("agy --conversation %s",   "agy --continue"),
 }
 
+# A fresh conversation, by agent. The page picks a key from this table, never
+# a string of its own; "shell" is a shell and nothing else.
+FRESH = {"shell": "", "claude": "claude", "antigravity": "agy", "codex": "codex"}
+
 # Every launch writes a script, and a script has to outlive the click, so
 # nothing can delete it at the time. They went to $TMPDIR with delete=False and
 # stayed there forever. One directory per launch under a root we own instead,
@@ -182,6 +186,22 @@ def _launch_script(cwd, command, note="", suggest=""):
         fh.write(body)
     os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
     return path
+
+
+def fresh_script(cwd, agent):
+    """A new agent (or plain shell) in a directory the user picked.
+
+    The directory must exist and sit inside $HOME; the agent must be a key of
+    FRESH. Both are checked here, so the sheet's + button can offer any folder
+    the board knows about without the page ever naming a command.
+    """
+    home = os.path.realpath(os.path.expanduser("~"))
+    real = os.path.realpath(os.path.expanduser(cwd or home))
+    if not os.path.isdir(real) or not (real == home or real.startswith(home + os.sep)):
+        return None, "that folder is not under your home directory"
+    if agent not in FRESH:
+        return None, "unknown agent"
+    return _launch_script(real, FRESH[agent]), real
 
 
 def launch_script(session):
