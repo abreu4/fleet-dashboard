@@ -248,7 +248,11 @@ class Terminals:
     def close(self, tid):
         term = self._ptys.get(tid)
         if not term:
-            return False
+            # The page can hold a tab for a terminal this side has already
+            # forgotten. Answer the click anyway so the tab goes, and say yes:
+            # from where the user sits, closing something gone is a success.
+            self._broadcast("gone", {"id": tid})
+            return True
         if term.exited is not None:      # already dead: this click means "clear it"
             self.forget(tid)
             self._broadcast("gone", {"id": tid})
@@ -273,7 +277,11 @@ class Terminals:
             now = time.time()
             for tid, term in list(self._ptys.items()):
                 if term.exited is not None and now - term.last_seen > 60:
+                    # Forgetting without telling the page left a phantom tab
+                    # whose close button then hit an unknown id and did nothing:
+                    # the "shell I cannot close". The page hears about it now.
                     self.forget(tid)
+                    self._broadcast("gone", {"id": tid})
                 elif term.exited is None and not term._subs \
                         and now - term.last_seen > IDLE_KILL_SECONDS:
                     term.kill()

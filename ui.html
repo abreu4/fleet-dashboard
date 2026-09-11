@@ -4608,6 +4608,14 @@ function writeOut(tid, u8){
 
 async function handleFrame(event, payload){
   if(event === 'hello'){
+    // Reconcile, not just add: after a server restart the page may still hold
+    // tabs for terminals that died with the old process.
+    const live = new Set(payload.terminals.map(m => m.id));
+    for(const t of [...terms.values()]){
+      if(!live.has(t.id)){ t.term?.dispose(); t.view?.remove(); terms.delete(t.id); }
+    }
+    if(activeTid && !live.has(activeTid)) activeTid = null;
+    drawTabs();
     if(payload.terminals.length){
       await loadXterm();
       payload.terminals.forEach(m => ensureTerm(m));

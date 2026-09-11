@@ -98,7 +98,7 @@ def suggest_for(session, fell_back=False):
     return forms[0] % shlex.quote(sid)
 
 
-def _sweep_launches(keep_seconds=36 * 3600):
+def _sweep_launches(keep_seconds=6 * 3600):
     """Drop launch dirs nothing can still be using.
 
     Sweeping on the way past the next launch, rather than at exit, is what keeps
