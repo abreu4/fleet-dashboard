@@ -164,16 +164,24 @@
               letter-spacing:.09em; color:var(--faint); text-transform:uppercase}
   .trace svg{flex:1; width:100%; min-height:0}
 
+  /* Six readings as a 3x2 of small stats, each figure centred over its own
+     word. As a two-column list the words sat on the left edge and the numbers
+     on the right, further apart the wider the HUD got. */
   .readout{
-    flex:1 1 196px; min-width:172px; border:1px solid var(--edge); border-radius:5px;
-    background:var(--cell); padding:6px 11px; margin:0; display:grid;
-    grid-template-columns:auto 1fr; align-content:center;
-    gap:3px 12px; font:clamp(12px,1.5vh,13.5px)/1.55 var(--mono);
+    flex:1 1 196px; min-width:172px; max-width:340px; border:1px solid var(--edge); border-radius:5px;
+    background:var(--cell); padding:6px 7px; margin:0; display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr)); grid-auto-rows:1fr; align-content:stretch;
+    gap:5px; font:clamp(12px,1.5vh,13.5px)/1.3 var(--mono);
   }
-  .readout dt{color:var(--faint); letter-spacing:.04em; white-space:nowrap}
-  .readout dd{margin:0; text-align:right; color:var(--dim); white-space:nowrap;
-              font-variant-numeric:tabular-nums}
-  .readout dd b{color:var(--ink); font-weight:600}
+  .readout > div{
+    display:flex; flex-direction:column-reverse; align-items:center; justify-content:center;
+    gap:2px; min-width:0; padding:3px 2px; border-radius:4px;
+    background:color-mix(in srgb, var(--tile) 55%, transparent);
+  }
+  .readout dt{color:var(--faint); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap}
+  .readout dd{margin:0; text-align:center; color:var(--dim); white-space:nowrap; max-width:100%;
+              overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
+  .readout dd b{color:var(--ink); font-weight:600; font-size:1.1em}
 
   .tally{display:grid; grid-template-columns:1fr 1fr; gap:4px; width:204px}
   .chip{
@@ -362,6 +370,10 @@
   }
   .brand b::after{content:var(--sigil); margin-left:7px; font-size:13px; opacity:.85}
   @media (max-width:1120px){.readout{display:none}}
+  /* Panels that come and go with the width arrive, they do not pop: a short
+     rise-and-fade the first time they are laid out. */
+  .trace, .readout{transition:opacity .28s ease, transform .28s ease}
+  @starting-style{ .trace, .readout{opacity:0; transform:translateY(6px)} }
   /* fleet.command opens a 900px-wide kiosk window. At that width the original
      minimums added up to more than the viewport, and the controls were clipped
      by .hud's overflow. Keep all five HUD regions in the row, but let the
@@ -704,11 +716,25 @@
   .stat .k{font:10px/1.4 var(--mono); letter-spacing:.11em; text-transform:uppercase; color:var(--faint)}
   .stat .v{font:600 15px/1.25 var(--mono); color:var(--ink); font-variant-numeric:tabular-nums;
            overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .acts{display:flex; flex-wrap:wrap; gap:6px}
+  /* Three tiers, not seven equal buttons: the one thing you nearly always
+     want (a shell right here), then the other places it can open, then the
+     utilities pushed to the right with the destructive one last. */
+  .acts{display:flex; flex-direction:column; gap:7px}
+  .acts .row{display:flex; align-items:center; gap:6px; flex-wrap:wrap}
+  .acts .row .lbl{flex:none; font:10px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+  .acts .row.tail{justify-content:flex-end; padding-top:2px}
   .acts button{
     background:var(--cell); border:1px solid var(--edge-hot); color:var(--accent); border-radius:4px;
     padding:6px 11px; cursor:pointer; font:11px/1.5 var(--mono); letter-spacing:.09em; text-transform:uppercase;
   }
+  .acts .main button{padding:8px 15px; font-weight:600; font-size:12px}
+  .acts .seg{display:flex; border:1px solid var(--edge); border-radius:5px; overflow:hidden}
+  .acts .seg button{
+    border:0; border-right:1px solid var(--edge); border-radius:0; background:transparent;
+    color:var(--dim); padding:5px 10px;
+  }
+  .acts .seg button:last-child{border-right:0}
+  .acts .seg button:hover{color:var(--accent)}
   .acts button:hover{background:#12283a; box-shadow:0 0 14px -4px var(--accent)}
   .acts button.plain{color:var(--dim); border-color:var(--edge)}
   .path{font:11px/1.6 var(--mono); color:var(--faint); word-break:break-all; white-space:pre-wrap}
@@ -3629,13 +3655,14 @@ function drawHud(d){
   const power = pw.pct==null ? '—'
     : '<b'+(onBat && pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '
       + (pw.charging ? 'chg' : onBat ? 'batt' : 'AC');
+  const cell = (k, v) => '<div><dt>'+k+'</dt><dd>'+v+'</dd></div>';
   document.getElementById('readout').innerHTML =
-      '<dt>load</dt><dd><b>'+(cpu.load1??'—')+'</b></dd>'
-    + '<dt>procs</dt><dd><b>'+(h.agentProcs??'—')+'</b> '+(h.agentCpu??0)+'%</dd>'
-    + '<dt>swap</dt><dd><b>'+Math.round(sw.usedMb||0)+'</b>M</dd>'
-    + '<dt>power</dt><dd>'+power+'</dd>'
-    + '<dt>tokens</dt><dd><b>'+tk+'</b></dd>'
-    + '<dt>uptime</dt><dd><b>'+dur(h.uptime)+'</b></dd>';
+      cell('load',   '<b>'+(cpu.load1??'—')+'</b>')
+    + cell('procs',  '<b>'+(h.agentProcs??'—')+'</b> '+(h.agentCpu??0)+'%')
+    + cell('swap',   '<b>'+Math.round(sw.usedMb||0)+'</b>M')
+    + cell('power',  power)
+    + cell('tokens', '<b>'+tk+'</b>')
+    + cell('uptime', '<b>'+dur(h.uptime)+'</b>');
 
   document.getElementById('tally').innerHTML = STATES.filter(s=>d.tally[s])
     .map(s=>'<span class="chip" title="'+s+'"><i class="dot s-'+s+'"></i>'+esc(voice(s))+'<b>'+d.tally[s]+'</b></span>').join('');
@@ -3981,8 +4008,8 @@ function select(id){
   // `reveal` looks for the iTerm tab this session is already living in and
   // brings that forward, rather than opening a second window onto it.
   const here = (window.FLEET_TERM || {}).enabled
-    ? '<button data-here="1">' + verb + ' here</button>' : '';
-  const reveal = targets.iterm ? '<button class="plain" data-target="reveal">its iTerm tab</button>' : '';
+    ? '<div class="row main"><button data-here="1">' + verb + ' here</button></div>' : '';
+  if(targets.iterm) buttons.push(['reveal','its iTerm tab']);
   // Close ends the process behind the tile (Claude: `claude stop <job>`, which
   // keeps the conversation attachable). Two clicks, three seconds apart at
   // most -- a dialog would block the page, a single click is too easy from a
@@ -3990,11 +4017,12 @@ function select(id){
   const closable = !!(s.pid || s.jobId || s.state === 'running');
   const close = closable ? '<button class="plain warn" data-close="1">close session</button>' : '';
   document.getElementById('p-acts').innerHTML = here
-    + buttons.map(([t,l]) =>
-        '<button data-target="'+t+'">'+(t==='vscode' ? 'open in ' : verb + ' in ')+l+'</button>').join('')
-    + reveal
-    + '<button class="plain" data-copy="1">copy command</button>'
-    + close;
+    + '<div class="row"><span class="lbl">' + (here ? 'or ' : '') + verb + ' in</span><div class="seg">'
+    + buttons.map(([t,l]) => '<button data-target="'+t+'" title="'
+        + (t==='vscode' ? 'open the folder in VS Code' : t==='reveal' ? 'bring forward the iTerm tab it is already in' : verb + ' in ' + l)
+        + '">'+l+'</button>').join('')
+    + '</div></div>'
+    + '<div class="row tail"><button class="plain" data-copy="1">copy command</button>' + close + '</div>';
   document.getElementById('p-acts').querySelectorAll('button').forEach(b => {
     b.onclick = () => b.dataset.copy ? copyCommand(s)
                     : b.dataset.here ? openTerminal(s.id)
