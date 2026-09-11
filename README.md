@@ -190,6 +190,36 @@ same safe script in Terminal. When a disposable worktree has already been
 removed, the action lands in its surviving project root and still offers the
 session resume command.
 
+"Reveal in iTerm" focuses the tab a session is already running in. That one
+does script iTerm, so the first click asks macOS for Automation permission
+(Python → iTerm). Allow it once; if you clicked Don't Allow, re-enable it in
+System Settings → Privacy & Security → Automation.
+
+## The terminal sheet
+
+Start with `--terminal` (the installer does) and a real shell opens inside the
+page, in a sheet that docks to the bottom. `⌘J` or `ctrl-\`` toggles it. Every
+tile's drawer has a "shell here" button; the sheet's `+` opens a picker — any
+folder the board knows about, or one typed under `~`, and shell / claude / agy /
+codex — and `×` closes the active one. The page sends a session id, or a folder
+plus an agent key; the server maps the key through a fixed table, so no command
+string ever comes from the browser. Mac editing keys work as in iTerm's Natural
+Text Editing preset (⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K) and Shift-Enter inserts a newline.
+
+The terminal is loopback-only and gated by a per-process token, so it is off
+when the server binds anything but 127.0.0.1.
+
+## Reaching it from another machine
+
+The board itself is plain HTTP and can be served on the LAN:
+
+    python3 dashboard.py --host 0.0.0.0 --port 8787      # no --terminal: it refuses off-loopback
+    ipconfig getifaddr en0                                # this Mac's address, e.g. 192.168.1.23
+
+then open `http://<that address>:8787` on the other device. The LaunchAgent
+installed by `install.sh` binds 127.0.0.1 with the terminal on; run a second
+copy by hand for the LAN, or edit the plist's `--host` and drop `--terminal`.
+
 ## YouTube Music
 
 The floating player uses YouTube's visible iframe player for playback. Fleet
