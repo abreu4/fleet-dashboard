@@ -584,6 +584,46 @@
                at(0.1, S('sine', 1568, { a: 0.001, d: 0.3, g: 0.26 })), at(0.1, S('sine', 4330, { a: 0.001, d: 0.08, g: 0.08 })), thump({ f: 90, g: 0.5 })]
     },
 
+    /* Black terminal, phosphor mint (matrix): hard square chip-tones an octave
+     * apart with a dry click, the way a serial terminal beeps. The alert is a
+     * trace call -- a fast rising trill that breaks off -- and done is a
+     * three-note descending resolve that lands on the octave. Dry: there is
+     * no room, only the tube. */
+    matrix: {
+      drive: { type: 'hard', k: 4.5 }, verb: { time: 0.08, mix: 0.04 },
+      tap:    [click({ hp: 3500, g: 0.5 }), S('square', 1480, { a: 0.0005, d: 0.014, g: 0.26, hard: true }), thump({ f: 110, g: 0.6 })],
+      tile:   [click({ hp: 2600, g: 0.45 }), S('square', 740, { a: 0.0005, d: 0.018, g: 0.28, hard: true }),
+               at(0.022, S('square', 1480, { a: 0.0005, d: 0.012, g: 0.2, hard: true })), thump({ f: 150, g: 0.7 })],
+      switch: seq([370, 740, 1480, 2960], 0.028, function (f) { return S('square', f, { a: 0.0005, d: 0.024, g: 0.24, hard: true }); })
+              .concat([click({ g: 0.35 }), thump({ g: 0.5 })]),
+      alert:  seq([880, 1109, 1319, 1760, 2217], 0.05, function (f) { return S('square', f, { a: 0.0005, d: 0.04, g: 0.28, hard: true }); })
+              .concat([thump({ f: 160, g: 0.7 }), at(0.3, N({ hp: 3000, a: 0.0005, d: 0.05, g: 0.45 })), at(0.3, thump({ f: 130, g: 0.6 }))]),
+      done:   seq([1760, 1319, 880], 0.07, function (f, i) { return S('square', f, { a: 0.0005, d: i === 2 ? 0.22 : 0.05, g: 0.26, hard: i !== 2 }); })
+              .concat([click({ g: 0.3 }), thump({ g: 0.5 }), at(0.14, S('sine', 1760, { a: 0.001, d: 0.2, g: 0.1 }))])
+    },
+
+    /* Wrist terminal, yellow-green tube (fallout): a warmer, rounder chip
+     * voice -- triangle-heavy, low-passed, a soft thump under every press
+     * like a real key on a heavy case. The alert is a Geiger burst, three
+     * dry noise ticks quickening into a low two-tone. Done is a rising
+     * fourth with a tube hum under it. */
+    pipboy: {
+      drive: { type: 'soft', k: 2.8 }, verb: { time: 0.14, mix: 0.08 },
+      tap:    [click({ hp: 2400, g: 0.45 }), S('triangle', 660, { lp: 2600, a: 0.001, d: 0.03, g: 0.3 }), thump({ f: 95, g: 0.75 })],
+      tile:   [click({ hp: 1900, g: 0.42 }), S('triangle', 495, { lp: 2200, a: 0.001, d: 0.04, g: 0.32 }),
+               at(0.03, S('triangle', 660, { lp: 2200, a: 0.001, d: 0.03, g: 0.2 })), thump({ f: 140, g: 0.85 })],
+      switch: [click({ g: 0.35 }), S('triangle', 330, { f2: 990, slide: 0.12, lp: 2400, a: 0.002, d: 0.16, g: 0.28 }),
+               at(0.05, N({ hp: 1200, lp: 4000, a: 0.0005, d: 0.02, g: 0.3 })), thump({ g: 0.6 })],
+      alert:  seq([0, 0, 0, 0], 0.045, function () { return N({ bp: 3200, q: 3, a: 0.0004, d: 0.012, g: 0.75 }); })
+              .concat([thump({ f: 150, g: 0.6 }),
+                       at(0.2, S('triangle', 392, { lp: 1800, a: 0.003, d: 0.2, g: 0.3 })), at(0.2, S('square', 196, { lp: 700, a: 0.003, d: 0.2, g: 0.12 })),
+                       at(0.36, S('triangle', 330, { lp: 1800, a: 0.003, d: 0.26, g: 0.3 })), at(0.36, S('square', 165, { lp: 700, a: 0.003, d: 0.26, g: 0.12 }))]),
+      done:   [click({ g: 0.3 }), thump({ f: 120, g: 0.6 }),
+               S('triangle', 523.3, { lp: 2400, a: 0.002, d: 0.14, g: 0.3 }),
+               at(0.12, S('triangle', 698.5, { lp: 2600, a: 0.002, d: 0.3, g: 0.3 })), at(0.12, S('sine', 1397, { a: 0.002, d: 0.18, g: 0.08 })),
+               at(0.12, S('sawtooth', 87.3, { lp: 320, a: 0.01, d: 0.34, g: 0.12 }))]
+    },
+
     /* Void indigo and bone white (Hollow Knight): glassy, echoing, minor-key;
      * a distant soft bell for done. */
     chitin: {

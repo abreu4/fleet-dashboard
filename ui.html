@@ -3009,6 +3009,185 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   :root[data-theme="staunton"] .project > header::before{animation:none}
 }
 
+/* ============================================================================
+   MATRIX  --  a black terminal with the rain behind the glass
+   Not a screen-green primary. P31 phosphor mint on a void that is actually
+   black; the body text is a pale phosphor so it reads at arm's length, and the
+   hot #39ff7a is kept for the accent and for what is running. Blocked is a
+   warm white -- red on green is the one collision this palette refuses, and a
+   burnt-out column in the film goes white, not red.
+   ========================================================================== */
+:root[data-theme="matrix"]{
+  --void:#000000; --panel:#030603; --cell:#05100a; --tile:#08150b; --tile-hi:#0d2212;
+  --edge:#123d1c; --edge-hot:#2ba852;
+  --ink:#a4f7c4; --dim:#6fd08e; --faint:#3f8f5a;
+  --accent:#39ff7a;
+  --blocked:#ffe6b0; --running:#39ff7a; --idle:#5c8f6a; --done:#d2ffe1; --unknown:#62886c;
+  --good:#39ff7a; --warn:#ffcf6e;
+  --waiting:#ffb454;
+  --glow:.9; --sigil:"\FF82";                        /* ﾂ -- halfwidth, like the rain */
+  --scan:rgba(57,255,122,.035); --halo:rgba(57,255,122,.05);
+  --grain:repeating-linear-gradient(0deg, rgba(57,255,122,.028) 0 1px, transparent 1px 3px);
+  --hud-a:#04110a; --hud-b:#010402; --rail-a:#051408; --rail-b:#020803;
+  /* Two sheets of rain, generated (tmp/rain.py): half-width katakana and
+     digits in columns, each drop a run of glyphs fading up from a near-white
+     head. The tiles repeat exactly once per animation cycle, so the fall is
+     seamless. */
+  --rain-near:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='528' height='720' font-family='Menlo,monospace' font-size='13'%3E%3Cg fill='%2339ff7a' opacity='0.22'%3E%3Ctext x='12.9' y='284.3'%3E%EF%BD%AC%3C/text%3E%3Ctext x='45.9' y='301.1'%3E%EF%BE%84%3C/text%3E%3Ctext x='78.9' y='103.9'%3E%EF%BD%B5%3C/text%3E%3Ctext x='111.9' y='335.2'%3E3%3C/text%3E%3Ctext x='144.9' y='705.7'%3E%EF%BD%B5%3C/text%3E%3Ctext x='177.9' y='341.4'%3E%EF%BD%AE%3C/text%3E%3Ctext x='210.9' y='355.5'%3E%EF%BE%81%3C/text%3E%3Ctext x='210.9' y='323.4'%3E-%3C/text%3E%3Ctext x='243.9' y='59.7'%3E%EF%BD%B9%3C/text%3E%3Ctext x='276.9' y='384.9'%3E%EF%BE%8E%3C/text%3E%3Ctext x='309.9' y='709'%3E1%3C/text%3E%3Ctext x='342.9' y='683.2'%3E%EF%BD%A9%3C/text%3E%3Ctext x='342.9' y='88.4'%3E7%3C/text%3E%3Ctext x='375.9' y='260.5'%3E%2B%3C/text%3E%3Ctext x='408.9' y='441.5'%3E%EF%BD%BE%3C/text%3E%3Ctext x='408.9' y='340'%3E%EF%BD%BE%3C/text%3E%3Ctext x='441.9' y='347.5'%3E%EF%BD%A6%3C/text%3E%3Ctext x='474.9' y='62.5'%3E%EF%BE%99%3C/text%3E%3Ctext x='474.9' y='112.3'%3E-%3C/text%3E%3Ctext x='507.9' y='360.8'%3E%EF%BE%8F%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.23'%3E%3Ctext x='45.9' y='316.1'%3E%EF%BD%B1%3C/text%3E%3Ctext x='78.9' y='118.9'%3E%EF%BE%8D%3C/text%3E%3Ctext x='144.9' y='0.7'%3EZ%3C/text%3E%3Ctext x='276.9' y='399.9'%3E%EF%BD%B6%3C/text%3E%3Ctext x='342.9' y='103.4'%3E4%3C/text%3E%3Ctext x='375.9' y='275.5'%3E%EF%BD%A9%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.24'%3E%3Ctext x='111.9' y='350.2'%3E%EF%BE%95%3C/text%3E%3Ctext x='177.9' y='356.4'%3E%EF%BD%AD%3C/text%3E%3Ctext x='408.9' y='456.5'%3E%EF%BE%84%3C/text%3E%3Ctext x='408.9' y='355'%3E%EF%BE%93%3C/text%3E%3Ctext x='441.9' y='362.5'%3E6%3C/text%3E%3Ctext x='474.9' y='77.5'%3E4%3C/text%3E%3Ctext x='474.9' y='127.3'%3E%EF%BD%B6%3C/text%3E%3Ctext x='507.9' y='375.8'%3E%EF%BE%87%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.25'%3E%3Ctext x='12.9' y='299.3'%3E%EF%BD%AF%3C/text%3E%3Ctext x='144.9' y='15.7'%3E%EF%BE%9C%3C/text%3E%3Ctext x='210.9' y='370.5'%3E%EF%BE%8A%3C/text%3E%3Ctext x='210.9' y='338.4'%3E%EF%BE%89%3C/text%3E%3Ctext x='243.9' y='74.7'%3E%EF%BE%83%3C/text%3E%3Ctext x='309.9' y='4'%3E%EF%BD%BA%3C/text%3E%3Ctext x='342.9' y='698.2'%3E%EF%BD%AF%3C/text%3E%3Ctext x='375.9' y='290.5'%3E=%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.26'%3E%3Ctext x='45.9' y='331.1'%3E-%3C/text%3E%3Ctext x='78.9' y='133.9'%3E%EF%BD%BD%3C/text%3E%3Ctext x='276.9' y='414.9'%3EZ%3C/text%3E%3Ctext x='342.9' y='118.4'%3E6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.27'%3E%3Ctext x='111.9' y='365.2'%3E%EF%BE%8C%3C/text%3E%3Ctext x='474.9' y='92.5'%3E%EF%BE%9A%3C/text%3E%3Ctext x='474.9' y='142.3'%3E%EF%BD%A8%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.28'%3E%3Ctext x='144.9' y='30.7'%3E%EF%BD%BB%3C/text%3E%3Ctext x='177.9' y='371.4'%3E%EF%BE%8D%3C/text%3E%3Ctext x='408.9' y='370'%3E2%3C/text%3E%3Ctext x='507.9' y='390.8'%3E%2B%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.29'%3E%3Ctext x='342.9' y='133.4'%3E6%3C/text%3E%3Ctext x='375.9' y='305.5'%3E%EF%BE%8C%3C/text%3E%3Ctext x='408.9' y='471.5'%3E%EF%BE%9A%3C/text%3E%3Ctext x='441.9' y='377.5'%3E%EF%BE%93%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.3'%3E%3Ctext x='12.9' y='314.3'%3E*%3C/text%3E%3Ctext x='45.9' y='346.1'%3E%EF%BE%9D%3C/text%3E%3Ctext x='78.9' y='148.9'%3E%EF%BD%B3%3C/text%3E%3Ctext x='210.9' y='353.4'%3E%EF%BD%B7%3C/text%3E%3Ctext x='243.9' y='89.7'%3E%EF%BE%83%3C/text%3E%3Ctext x='276.9' y='429.9'%3E%EF%BD%AC%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.31'%3E%3Ctext x='144.9' y='45.7'%3E%EF%BE%91%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.32'%3E%3Ctext x='111.9' y='380.2'%3E%EF%BE%85%3C/text%3E%3Ctext x='474.9' y='107.5'%3E%EF%BD%B0%3C/text%3E%3Ctext x='474.9' y='157.3'%3E%EF%BD%A7%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.33'%3E%3Ctext x='177.9' y='386.4'%3E2%3C/text%3E%3Ctext x='210.9' y='385.5'%3E%EF%BD%B6%3C/text%3E%3Ctext x='309.9' y='19'%3E%EF%BD%B4%3C/text%3E%3Ctext x='342.9' y='713.2'%3E%EF%BE%80%3C/text%3E%3Ctext x='375.9' y='320.5'%3E%EF%BD%B1%3C/text%3E%3Ctext x='408.9' y='385'%3E%EF%BE%93%3C/text%3E%3Ctext x='507.9' y='405.8'%3E%EF%BE%9C%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.34'%3E%3Ctext x='342.9' y='148.4'%3E%EF%BE%8D%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.35'%3E%3Ctext x='45.9' y='361.1'%3E%EF%BD%AD%3C/text%3E%3Ctext x='78.9' y='163.9'%3E%EF%BD%BE%3C/text%3E%3Ctext x='144.9' y='60.7'%3E%EF%BD%B9%3C/text%3E%3Ctext x='276.9' y='444.9'%3E3%3C/text%3E%3Ctext x='408.9' y='486.5'%3E%EF%BE%83%3C/text%3E%3Ctext x='441.9' y='392.5'%3E%EF%BD%B0%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.37'%3E%3Ctext x='111.9' y='395.2'%3E%EF%BD%BD%3C/text%3E%3Ctext x='375.9' y='335.5'%3E%EF%BE%87%3C/text%3E%3Ctext x='474.9' y='122.5'%3E%EF%BD%BA%3C/text%3E%3Ctext x='474.9' y='172.3'%3E%EF%BD%B3%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.38'%3E%3Ctext x='12.9' y='329.3'%3E%EF%BD%B2%3C/text%3E%3Ctext x='210.9' y='368.4'%3E0%3C/text%3E%3Ctext x='243.9' y='104.7'%3E%EF%BD%A7%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.39'%3E%3Ctext x='342.9' y='163.4'%3E%EF%BD%B0%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.4'%3E%3Ctext x='144.9' y='75.7'%3E7%3C/text%3E%3Ctext x='177.9' y='401.4'%3E%EF%BE%8A%3C/text%3E%3Ctext x='408.9' y='400'%3E%EF%BE%95%3C/text%3E%3Ctext x='507.9' y='420.8'%3E%EF%BD%B6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.41'%3E%3Ctext x='45.9' y='376.1'%3E%EF%BD%B5%3C/text%3E%3Ctext x='78.9' y='178.9'%3E%EF%BE%96%3C/text%3E%3Ctext x='276.9' y='459.9'%3E%EF%BE%99%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.42'%3E%3Ctext x='210.9' y='400.5'%3E%EF%BE%85%3C/text%3E%3Ctext x='309.9' y='34'%3E%EF%BE%91%3C/text%3E%3Ctext x='342.9' y='8.2'%3E%EF%BE%97%3C/text%3E%3Ctext x='375.9' y='350.5'%3E:%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.43'%3E%3Ctext x='408.9' y='501.5'%3E%EF%BD%BF%3C/text%3E%3Ctext x='441.9' y='407.5'%3E%EF%BD%B5%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.44'%3E%3Ctext x='111.9' y='410.2'%3E%EF%BE%85%3C/text%3E%3Ctext x='474.9' y='137.5'%3E%EF%BD%BB%3C/text%3E%3Ctext x='474.9' y='187.3'%3E=%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.45'%3E%3Ctext x='144.9' y='90.7'%3E%EF%BE%9C%3C/text%3E%3Ctext x='342.9' y='178.4'%3E%EF%BD%B8%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.48'%3E%3Ctext x='12.9' y='344.3'%3E%EF%BE%95%3C/text%3E%3Ctext x='45.9' y='391.1'%3E%EF%BE%82%3C/text%3E%3Ctext x='78.9' y='193.9'%3E%EF%BD%B2%3C/text%3E%3Ctext x='177.9' y='416.4'%3E%EF%BE%98%3C/text%3E%3Ctext x='210.9' y='383.4'%3E-%3C/text%3E%3Ctext x='243.9' y='119.7'%3E7%3C/text%3E%3Ctext x='276.9' y='474.9'%3E%EF%BE%99%3C/text%3E%3Ctext x='375.9' y='365.5'%3E%EF%BE%95%3C/text%3E%3Ctext x='408.9' y='415'%3E%EF%BD%B0%3C/text%3E%3Ctext x='507.9' y='435.8'%3E%EF%BD%AD%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.51'%3E%3Ctext x='144.9' y='105.7'%3E%EF%BD%AB%3C/text%3E%3Ctext x='342.9' y='193.4'%3E%EF%BD%B3%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.52'%3E%3Ctext x='111.9' y='425.2'%3E%EF%BD%B0%3C/text%3E%3Ctext x='408.9' y='516.5'%3E:%3C/text%3E%3Ctext x='441.9' y='422.5'%3E%EF%BE%98%3C/text%3E%3Ctext x='474.9' y='152.5'%3E%EF%BD%B6%3C/text%3E%3Ctext x='474.9' y='202.3'%3E%EF%BD%B7%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.54'%3E%3Ctext x='210.9' y='415.5'%3E%EF%BE%99%3C/text%3E%3Ctext x='309.9' y='49'%3E%EF%BD%AC%3C/text%3E%3Ctext x='342.9' y='23.2'%3E%EF%BD%B9%3C/text%3E%3Ctext x='375.9' y='380.5'%3E%EF%BD%BB%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.55'%3E%3Ctext x='45.9' y='406.1'%3E%EF%BD%AD%3C/text%3E%3Ctext x='78.9' y='208.9'%3E-%3C/text%3E%3Ctext x='276.9' y='489.9'%3E%EF%BE%9A%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.56'%3E%3Ctext x='144.9' y='120.7'%3E%EF%BD%AF%3C/text%3E%3Ctext x='177.9' y='431.4'%3E%EF%BE%93%3C/text%3E%3Ctext x='408.9' y='430'%3E%EF%BE%82%3C/text%3E%3Ctext x='507.9' y='450.8'%3E%EF%BE%94%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.58'%3E%3Ctext x='342.9' y='208.4'%3E%EF%BE%91%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.59'%3E%3Ctext x='12.9' y='359.3'%3E%EF%BD%AD%3C/text%3E%3Ctext x='210.9' y='398.4'%3E%EF%BE%89%3C/text%3E%3Ctext x='243.9' y='134.7'%3E%EF%BD%BD%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.6'%3E%3Ctext x='111.9' y='440.2'%3E%EF%BE%8C%3C/text%3E%3Ctext x='375.9' y='395.5'%3E%EF%BE%94%3C/text%3E%3Ctext x='474.9' y='167.5'%3E%EF%BD%A9%3C/text%3E%3Ctext x='474.9' y='217.3'%3E0%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.63'%3E%3Ctext x='45.9' y='421.1'%3E%EF%BE%99%3C/text%3E%3Ctext x='78.9' y='223.9'%3E%EF%BD%AE%3C/text%3E%3Ctext x='144.9' y='135.7'%3E%EF%BE%8E%3C/text%3E%3Ctext x='276.9' y='504.9'%3E%EF%BE%99%3C/text%3E%3Ctext x='408.9' y='531.5'%3E8%3C/text%3E%3Ctext x='441.9' y='437.5'%3E%EF%BD%BF%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.65'%3E%3Ctext x='342.9' y='223.4'%3E%EF%BE%87%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.66'%3E%3Ctext x='177.9' y='446.4'%3E%EF%BD%A8%3C/text%3E%3Ctext x='408.9' y='445'%3E%EF%BD%B3%3C/text%3E%3Ctext x='507.9' y='465.8'%3E3%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.68'%3E%3Ctext x='210.9' y='430.5'%3E%EF%BE%99%3C/text%3E%3Ctext x='309.9' y='64'%3E%EF%BD%B3%3C/text%3E%3Ctext x='342.9' y='38.2'%3E%EF%BE%86%3C/text%3E%3Ctext x='375.9' y='410.5'%3E%EF%BE%82%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.69'%3E%3Ctext x='111.9' y='455.2'%3E=%3C/text%3E%3Ctext x='144.9' y='150.7'%3E%EF%BE%91%3C/text%3E%3Ctext x='474.9' y='182.5'%3E%EF%BD%B9%3C/text%3E%3Ctext x='474.9' y='232.3'%3E%EF%BD%BE%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.71'%3E%3Ctext x='12.9' y='374.3'%3E9%3C/text%3E%3Ctext x='45.9' y='436.1'%3E%EF%BD%AC%3C/text%3E%3Ctext x='78.9' y='238.9'%3E%EF%BD%AD%3C/text%3E%3Ctext x='210.9' y='413.4'%3E%EF%BE%9C%3C/text%3E%3Ctext x='243.9' y='149.7'%3E%EF%BE%87%3C/text%3E%3Ctext x='276.9' y='519.9'%3E%EF%BD%B3%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.73'%3E%3Ctext x='342.9' y='238.4'%3E6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.74'%3E%3Ctext x='408.9' y='546.5'%3E%EF%BE%94%3C/text%3E%3Ctext x='441.9' y='452.5'%3E6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.75'%3E%3Ctext x='375.9' y='425.5'%3E*%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.77'%3E%3Ctext x='144.9' y='165.7'%3E%EF%BE%93%3C/text%3E%3Ctext x='177.9' y='461.4'%3E4%3C/text%3E%3Ctext x='408.9' y='460'%3E%EF%BE%83%3C/text%3E%3Ctext x='507.9' y='480.8'%3E:%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.79'%3E%3Ctext x='111.9' y='470.2'%3E8%3C/text%3E%3Ctext x='474.9' y='197.5'%3E4%3C/text%3E%3Ctext x='474.9' y='247.3'%3E%EF%BE%81%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.8'%3E%3Ctext x='45.9' y='451.1'%3E%EF%BE%82%3C/text%3E%3Ctext x='78.9' y='253.9'%3E%EF%BE%80%3C/text%3E%3Ctext x='276.9' y='534.9'%3E6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.82'%3E%3Ctext x='342.9' y='253.4'%3E%EF%BD%BA%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.83'%3E%3Ctext x='210.9' y='445.5'%3E8%3C/text%3E%3Ctext x='309.9' y='79'%3E%EF%BD%A6%3C/text%3E%3Ctext x='342.9' y='53.2'%3E%EF%BE%93%3C/text%3E%3Ctext x='375.9' y='440.5'%3E%2B%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.84'%3E%3Ctext x='144.9' y='180.7'%3E8%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.85'%3E%3Ctext x='12.9' y='389.3'%3E%EF%BE%81%3C/text%3E%3Ctext x='210.9' y='428.4'%3E%EF%BE%94%3C/text%3E%3Ctext x='243.9' y='164.7'%3E%EF%BE%8A%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.87'%3E%3Ctext x='408.9' y='561.5'%3E%EF%BD%A9%3C/text%3E%3Ctext x='441.9' y='467.5'%3E%EF%BD%BC%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.88'%3E%3Ctext x='177.9' y='476.4'%3E%EF%BE%94%3C/text%3E%3Ctext x='408.9' y='475'%3E5%3C/text%3E%3Ctext x='507.9' y='495.8'%3E%EF%BE%9C%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.89'%3E%3Ctext x='111.9' y='485.2'%3E%EF%BE%91%3C/text%3E%3Ctext x='474.9' y='212.5'%3E%EF%BD%B8%3C/text%3E%3Ctext x='474.9' y='262.3'%3E%EF%BD%A9%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.9'%3E%3Ctext x='45.9' y='466.1'%3E%EF%BD%AB%3C/text%3E%3Ctext x='78.9' y='268.9'%3E8%3C/text%3E%3Ctext x='276.9' y='549.9'%3E%EF%BE%9A%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.91'%3E%3Ctext x='342.9' y='268.4'%3E:%3C/text%3E%3Ctext x='375.9' y='455.5'%3E9%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.92'%3E%3Ctext x='144.9' y='195.7'%3E3%3C/text%3E%3C/g%3E%3Cg fill='%23e9fff1' opacity='1'%3E%3Ctext x='12.9' y='404.3'%3E%EF%BD%AA%3C/text%3E%3Ctext x='45.9' y='481.1'%3E%EF%BD%B7%3C/text%3E%3Ctext x='78.9' y='283.9'%3E*%3C/text%3E%3Ctext x='111.9' y='500.2'%3E2%3C/text%3E%3Ctext x='144.9' y='210.7'%3E%EF%BD%AE%3C/text%3E%3Ctext x='177.9' y='491.4'%3E%EF%BD%BB%3C/text%3E%3Ctext x='210.9' y='460.5'%3E%EF%BD%B0%3C/text%3E%3Ctext x='210.9' y='443.4'%3E%EF%BE%97%3C/text%3E%3Ctext x='243.9' y='179.7'%3E%EF%BD%A6%3C/text%3E%3Ctext x='276.9' y='564.9'%3E%EF%BD%AD%3C/text%3E%3Ctext x='309.9' y='94'%3E%EF%BD%B9%3C/text%3E%3Ctext x='342.9' y='68.2'%3E%EF%BE%95%3C/text%3E%3Ctext x='342.9' y='283.4'%3E%EF%BD%A8%3C/text%3E%3Ctext x='375.9' y='470.5'%3E%EF%BE%90%3C/text%3E%3Ctext x='408.9' y='576.5'%3E%EF%BD%A9%3C/text%3E%3Ctext x='408.9' y='490'%3E%EF%BD%BF%3C/text%3E%3Ctext x='441.9' y='482.5'%3E0%3C/text%3E%3Ctext x='474.9' y='227.5'%3E5%3C/text%3E%3Ctext x='474.9' y='277.3'%3E%EF%BE%86%3C/text%3E%3Ctext x='507.9' y='510.8'%3E9%3C/text%3E%3C/g%3E%3C/svg%3E");
+  --rain-far:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='408' height='560' font-family='Menlo,monospace' font-size='9'%3E%3Cg fill='%2339ff7a' opacity='0.22'%3E%3Ctext x='9.5' y='439.6'%3E:%3C/text%3E%3Ctext x='9.5' y='327.4'%3E%EF%BE%87%3C/text%3E%3Ctext x='33.5' y='492.3'%3E%EF%BD%BF%3C/text%3E%3Ctext x='33.5' y='324.3'%3E%EF%BE%9D%3C/text%3E%3Ctext x='57.5' y='448.8'%3E%EF%BE%98%3C/text%3E%3Ctext x='81.5' y='3.9'%3E3%3C/text%3E%3Ctext x='81.5' y='14.5'%3E%EF%BE%97%3C/text%3E%3Ctext x='105.5' y='164.1'%3E%EF%BD%BB%3C/text%3E%3Ctext x='129.5' y='283.2'%3E%EF%BD%A8%3C/text%3E%3Ctext x='153.5' y='492.1'%3E%EF%BD%AE%3C/text%3E%3Ctext x='153.5' y='34.5'%3E%EF%BE%89%3C/text%3E%3Ctext x='177.5' y='358.9'%3E=%3C/text%3E%3Ctext x='201.5' y='145.9'%3E4%3C/text%3E%3Ctext x='225.5' y='356.1'%3E=%3C/text%3E%3Ctext x='249.5' y='256.4'%3E%EF%BE%95%3C/text%3E%3Ctext x='273.5' y='397.5'%3EZ%3C/text%3E%3Ctext x='297.5' y='155.2'%3E%EF%BD%B8%3C/text%3E%3Ctext x='321.5' y='173.9'%3E%EF%BE%9A%3C/text%3E%3Ctext x='345.5' y='69.1'%3E%EF%BD%BE%3C/text%3E%3Ctext x='345.5' y='322.7'%3E%EF%BE%8D%3C/text%3E%3Ctext x='369.5' y='87.5'%3E%EF%BD%BD%3C/text%3E%3Ctext x='369.5' y='152'%3E7%3C/text%3E%3Ctext x='393.5' y='53.3'%3E%EF%BE%9D%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.23'%3E%3Ctext x='81.5' y='14.9'%3E6%3C/text%3E%3Ctext x='129.5' y='294.2'%3E%EF%BD%BC%3C/text%3E%3Ctext x='153.5' y='503.1'%3E%EF%BE%9D%3C/text%3E%3Ctext x='321.5' y='184.9'%3E%EF%BE%82%3C/text%3E%3Ctext x='345.5' y='80.1'%3E%EF%BD%AE%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.24'%3E%3Ctext x='9.5' y='338.4'%3E%EF%BD%B3%3C/text%3E%3Ctext x='105.5' y='175.1'%3E4%3C/text%3E%3Ctext x='153.5' y='45.5'%3E%EF%BE%80%3C/text%3E%3Ctext x='177.5' y='369.9'%3E%EF%BE%8A%3C/text%3E%3Ctext x='249.5' y='267.4'%3E%EF%BD%AB%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.25'%3E%3Ctext x='33.5' y='503.3'%3E%EF%BD%B4%3C/text%3E%3Ctext x='369.5' y='98.5'%3E6%3C/text%3E%3Ctext x='393.5' y='64.3'%3E%EF%BD%A8%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.26'%3E%3Ctext x='33.5' y='335.3'%3E%EF%BE%99%3C/text%3E%3Ctext x='57.5' y='459.8'%3E%EF%BD%BE%3C/text%3E%3Ctext x='81.5' y='25.9'%3E%EF%BD%B5%3C/text%3E%3Ctext x='81.5' y='25.5'%3E2%3C/text%3E%3Ctext x='129.5' y='305.2'%3E0%3C/text%3E%3Ctext x='153.5' y='514.1'%3E%EF%BD%B9%3C/text%3E%3Ctext x='201.5' y='156.9'%3E%EF%BE%97%3C/text%3E%3Ctext x='225.5' y='367.1'%3E2%3C/text%3E%3Ctext x='273.5' y='408.5'%3E%EF%BD%B1%3C/text%3E%3Ctext x='321.5' y='195.9'%3E%EF%BE%94%3C/text%3E%3Ctext x='345.5' y='91.1'%3E8%3C/text%3E%3Ctext x='369.5' y='163'%3E%EF%BD%BA%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.27'%3E%3Ctext x='105.5' y='186.1'%3E1%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.28'%3E%3Ctext x='9.5' y='450.6'%3E%EF%BD%B5%3C/text%3E%3Ctext x='153.5' y='56.5'%3E%EF%BD%AE%3C/text%3E%3Ctext x='249.5' y='278.4'%3E%EF%BE%8B%3C/text%3E%3Ctext x='297.5' y='166.2'%3E%EF%BE%85%3C/text%3E%3Ctext x='345.5' y='333.7'%3E%EF%BE%85%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.29'%3E%3Ctext x='9.5' y='349.4'%3E%EF%BE%87%3C/text%3E%3Ctext x='177.5' y='380.9'%3E9%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.3'%3E%3Ctext x='33.5' y='514.3'%3E%2B%3C/text%3E%3Ctext x='81.5' y='36.9'%3E:%3C/text%3E%3Ctext x='129.5' y='316.2'%3E%EF%BE%89%3C/text%3E%3Ctext x='153.5' y='525.1'%3E%EF%BD%A7%3C/text%3E%3Ctext x='321.5' y='206.9'%3E%EF%BD%B3%3C/text%3E%3Ctext x='345.5' y='102.1'%3E%EF%BD%B6%3C/text%3E%3Ctext x='369.5' y='109.5'%3E%EF%BD%B1%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.32'%3E%3Ctext x='105.5' y='197.1'%3E%EF%BE%8C%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.33'%3E%3Ctext x='153.5' y='67.5'%3E%EF%BD%BF%3C/text%3E%3Ctext x='249.5' y='289.4'%3E%EF%BE%87%3C/text%3E%3Ctext x='393.5' y='75.3'%3E%EF%BE%88%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.35'%3E%3Ctext x='9.5' y='360.4'%3E%EF%BE%9B%3C/text%3E%3Ctext x='33.5' y='346.3'%3E1%3C/text%3E%3Ctext x='57.5' y='470.8'%3E%EF%BD%B7%3C/text%3E%3Ctext x='81.5' y='47.9'%3E6%3C/text%3E%3Ctext x='81.5' y='36.5'%3E%EF%BD%B4%3C/text%3E%3Ctext x='129.5' y='327.2'%3E%EF%BD%AF%3C/text%3E%3Ctext x='153.5' y='536.1'%3E%EF%BE%98%3C/text%3E%3Ctext x='177.5' y='391.9'%3E%EF%BE%9D%3C/text%3E%3Ctext x='201.5' y='167.9'%3E%EF%BE%8F%3C/text%3E%3Ctext x='225.5' y='378.1'%3E%EF%BE%9B%3C/text%3E%3Ctext x='273.5' y='419.5'%3E%EF%BD%AA%3C/text%3E%3Ctext x='321.5' y='217.9'%3E%EF%BE%84%3C/text%3E%3Ctext x='345.5' y='113.1'%3E%EF%BE%98%3C/text%3E%3Ctext x='369.5' y='174'%3E:%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.37'%3E%3Ctext x='105.5' y='208.1'%3E%EF%BE%8D%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.38'%3E%3Ctext x='33.5' y='525.3'%3E3%3C/text%3E%3Ctext x='369.5' y='120.5'%3E%EF%BE%89%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.4'%3E%3Ctext x='9.5' y='461.6'%3EZ%3C/text%3E%3Ctext x='153.5' y='78.5'%3E%EF%BE%8B%3C/text%3E%3Ctext x='249.5' y='300.4'%3E%EF%BE%89%3C/text%3E%3Ctext x='297.5' y='177.2'%3E%EF%BE%8B%3C/text%3E%3Ctext x='345.5' y='344.7'%3E%EF%BD%B3%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.41'%3E%3Ctext x='81.5' y='58.9'%3E9%3C/text%3E%3Ctext x='129.5' y='338.2'%3E%EF%BD%B0%3C/text%3E%3Ctext x='153.5' y='547.1'%3E%EF%BE%8B%3C/text%3E%3Ctext x='321.5' y='228.9'%3E%EF%BE%87%3C/text%3E%3Ctext x='345.5' y='124.1'%3E:%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.42'%3E%3Ctext x='393.5' y='86.3'%3E7%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.43'%3E%3Ctext x='9.5' y='371.4'%3E%EF%BE%8F%3C/text%3E%3Ctext x='177.5' y='402.9'%3E6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.44'%3E%3Ctext x='105.5' y='219.1'%3E%EF%BD%AB%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.48'%3E%3Ctext x='33.5' y='536.3'%3E%EF%BE%98%3C/text%3E%3Ctext x='33.5' y='357.3'%3E%EF%BE%8C%3C/text%3E%3Ctext x='57.5' y='481.8'%3E%EF%BD%B7%3C/text%3E%3Ctext x='81.5' y='69.9'%3E8%3C/text%3E%3Ctext x='81.5' y='47.5'%3E%EF%BE%87%3C/text%3E%3Ctext x='129.5' y='349.2'%3E%EF%BD%B6%3C/text%3E%3Ctext x='153.5' y='558.1'%3E%EF%BD%AB%3C/text%3E%3Ctext x='153.5' y='89.5'%3E=%3C/text%3E%3Ctext x='201.5' y='178.9'%3E%EF%BE%90%3C/text%3E%3Ctext x='225.5' y='389.1'%3E%EF%BD%AB%3C/text%3E%3Ctext x='249.5' y='311.4'%3E%EF%BD%B1%3C/text%3E%3Ctext x='273.5' y='430.5'%3E0%3C/text%3E%3Ctext x='321.5' y='239.9'%3E%EF%BD%B7%3C/text%3E%3Ctext x='345.5' y='135.1'%3E%EF%BE%89%3C/text%3E%3Ctext x='369.5' y='131.5'%3E%EF%BE%9A%3C/text%3E%3Ctext x='369.5' y='185'%3E%EF%BE%99%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.52'%3E%3Ctext x='9.5' y='382.4'%3E%EF%BE%88%3C/text%3E%3Ctext x='105.5' y='230.1'%3E%EF%BD%AF%3C/text%3E%3Ctext x='177.5' y='413.9'%3E%EF%BD%AD%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.54'%3E%3Ctext x='393.5' y='97.3'%3E%EF%BE%90%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.55'%3E%3Ctext x='81.5' y='80.9'%3E%EF%BE%96%3C/text%3E%3Ctext x='129.5' y='360.2'%3E%EF%BD%BB%3C/text%3E%3Ctext x='153.5' y='9.1'%3E%2B%3C/text%3E%3Ctext x='321.5' y='250.9'%3E%EF%BE%93%3C/text%3E%3Ctext x='345.5' y='146.1'%3E7%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.56'%3E%3Ctext x='9.5' y='472.6'%3E%EF%BD%BF%3C/text%3E%3Ctext x='153.5' y='100.5'%3E4%3C/text%3E%3Ctext x='249.5' y='322.4'%3E%EF%BE%82%3C/text%3E%3Ctext x='297.5' y='188.2'%3E%EF%BD%B5%3C/text%3E%3Ctext x='345.5' y='355.7'%3E%EF%BE%9A%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.59'%3E%3Ctext x='33.5' y='547.3'%3E%EF%BD%AF%3C/text%3E%3Ctext x='369.5' y='142.5'%3E1%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.6'%3E%3Ctext x='105.5' y='241.1'%3E%EF%BE%80%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.63'%3E%3Ctext x='9.5' y='393.4'%3E%EF%BD%B3%3C/text%3E%3Ctext x='33.5' y='368.3'%3E9%3C/text%3E%3Ctext x='57.5' y='492.8'%3E8%3C/text%3E%3Ctext x='81.5' y='91.9'%3E%EF%BE%9D%3C/text%3E%3Ctext x='81.5' y='58.5'%3E%EF%BD%B6%3C/text%3E%3Ctext x='129.5' y='371.2'%3E0%3C/text%3E%3Ctext x='153.5' y='20.1'%3E%EF%BE%94%3C/text%3E%3Ctext x='177.5' y='424.9'%3E%EF%BE%82%3C/text%3E%3Ctext x='201.5' y='189.9'%3E%EF%BE%96%3C/text%3E%3Ctext x='225.5' y='400.1'%3E%EF%BE%95%3C/text%3E%3Ctext x='273.5' y='441.5'%3E%EF%BD%AB%3C/text%3E%3Ctext x='321.5' y='261.9'%3E3%3C/text%3E%3Ctext x='345.5' y='157.1'%3E%EF%BE%93%3C/text%3E%3Ctext x='369.5' y='196'%3E%EF%BE%87%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.66'%3E%3Ctext x='153.5' y='111.5'%3E9%3C/text%3E%3Ctext x='249.5' y='333.4'%3E%EF%BE%99%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.68'%3E%3Ctext x='393.5' y='108.3'%3E%EF%BE%85%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.69'%3E%3Ctext x='105.5' y='252.1'%3E%EF%BE%8D%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.71'%3E%3Ctext x='33.5' y='558.3'%3E%EF%BD%B2%3C/text%3E%3Ctext x='81.5' y='102.9'%3E%2B%3C/text%3E%3Ctext x='129.5' y='382.2'%3E%EF%BE%8A%3C/text%3E%3Ctext x='153.5' y='31.1'%3E%EF%BE%86%3C/text%3E%3Ctext x='321.5' y='272.9'%3E%EF%BE%82%3C/text%3E%3Ctext x='345.5' y='168.1'%3E2%3C/text%3E%3Ctext x='369.5' y='153.5'%3E%EF%BD%AE%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.74'%3E%3Ctext x='9.5' y='404.4'%3E%EF%BE%8F%3C/text%3E%3Ctext x='177.5' y='435.9'%3E%EF%BD%B9%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.77'%3E%3Ctext x='9.5' y='483.6'%3E%EF%BE%99%3C/text%3E%3Ctext x='153.5' y='122.5'%3E%EF%BD%B7%3C/text%3E%3Ctext x='249.5' y='344.4'%3E%EF%BD%AA%3C/text%3E%3Ctext x='297.5' y='199.2'%3E1%3C/text%3E%3Ctext x='345.5' y='366.7'%3E%EF%BE%9C%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.79'%3E%3Ctext x='105.5' y='263.1'%3E%EF%BE%9C%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.8'%3E%3Ctext x='33.5' y='379.3'%3E%EF%BD%BA%3C/text%3E%3Ctext x='57.5' y='503.8'%3E%EF%BD%B3%3C/text%3E%3Ctext x='81.5' y='113.9'%3E%EF%BD%BD%3C/text%3E%3Ctext x='81.5' y='69.5'%3E5%3C/text%3E%3Ctext x='129.5' y='393.2'%3E4%3C/text%3E%3Ctext x='153.5' y='42.1'%3E%EF%BE%80%3C/text%3E%3Ctext x='201.5' y='200.9'%3E%EF%BD%BD%3C/text%3E%3Ctext x='225.5' y='411.1'%3E%EF%BD%B1%3C/text%3E%3Ctext x='273.5' y='452.5'%3E%EF%BD%B7%3C/text%3E%3Ctext x='321.5' y='283.9'%3E2%3C/text%3E%3Ctext x='345.5' y='179.1'%3E%EF%BD%AC%3C/text%3E%3Ctext x='369.5' y='207'%3E4%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.83'%3E%3Ctext x='393.5' y='119.3'%3E%EF%BE%8D%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.85'%3E%3Ctext x='33.5' y='9.3'%3E%EF%BE%9C%3C/text%3E%3Ctext x='369.5' y='164.5'%3E%EF%BD%A6%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.87'%3E%3Ctext x='9.5' y='415.4'%3E%EF%BE%8D%3C/text%3E%3Ctext x='177.5' y='446.9'%3E%EF%BD%AB%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.88'%3E%3Ctext x='153.5' y='133.5'%3E%EF%BE%8F%3C/text%3E%3Ctext x='249.5' y='355.4'%3E%EF%BD%BB%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.89'%3E%3Ctext x='105.5' y='274.1'%3E%EF%BD%B2%3C/text%3E%3C/g%3E%3Cg fill='%2339ff7a' opacity='0.9'%3E%3Ctext x='81.5' y='124.9'%3E%EF%BD%A6%3C/text%3E%3Ctext x='129.5' y='404.2'%3E%EF%BD%B4%3C/text%3E%3Ctext x='153.5' y='53.1'%3E%EF%BE%87%3C/text%3E%3Ctext x='321.5' y='294.9'%3E%EF%BE%8C%3C/text%3E%3Ctext x='345.5' y='190.1'%3E=%3C/text%3E%3C/g%3E%3Cg fill='%23e9fff1' opacity='1'%3E%3Ctext x='9.5' y='494.6'%3E%EF%BE%93%3C/text%3E%3Ctext x='9.5' y='426.4'%3E%EF%BD%A8%3C/text%3E%3Ctext x='33.5' y='20.3'%3E%EF%BD%A8%3C/text%3E%3Ctext x='33.5' y='390.3'%3E%EF%BE%9B%3C/text%3E%3Ctext x='57.5' y='514.8'%3E-%3C/text%3E%3Ctext x='81.5' y='135.9'%3E%EF%BE%85%3C/text%3E%3Ctext x='81.5' y='80.5'%3E%EF%BE%8A%3C/text%3E%3Ctext x='105.5' y='285.1'%3E4%3C/text%3E%3Ctext x='129.5' y='415.2'%3E%EF%BD%BF%3C/text%3E%3Ctext x='153.5' y='64.1'%3EZ%3C/text%3E%3Ctext x='153.5' y='144.5'%3EZ%3C/text%3E%3Ctext x='177.5' y='457.9'%3E3%3C/text%3E%3Ctext x='201.5' y='211.9'%3E1%3C/text%3E%3Ctext x='225.5' y='422.1'%3E%EF%BE%8E%3C/text%3E%3Ctext x='249.5' y='366.4'%3E%EF%BD%BB%3C/text%3E%3Ctext x='273.5' y='463.5'%3E%EF%BE%8F%3C/text%3E%3Ctext x='297.5' y='210.2'%3E%EF%BD%B6%3C/text%3E%3Ctext x='321.5' y='305.9'%3E%EF%BD%AD%3C/text%3E%3Ctext x='345.5' y='201.1'%3E%EF%BE%9D%3C/text%3E%3Ctext x='345.5' y='377.7'%3E%EF%BD%B7%3C/text%3E%3Ctext x='369.5' y='175.5'%3E%EF%BE%84%3C/text%3E%3Ctext x='369.5' y='218'%3E%EF%BE%9D%3C/text%3E%3Ctext x='393.5' y='130.3'%3E%EF%BD%BD%3C/text%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-theme="matrix"]{
+  --face-data:   ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  ui-monospace, "SF Mono", Menlo, monospace;
+  --face-chrome: ui-monospace, "SF Mono", Menlo, monospace;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --tr-chrome: 1.1;
+}
+/* THE TELL -- the rain. Painted above the lanes (z 2, where the vignette
+   lives) or the opaque panels would hide all of it but the gutters; screen
+   blend so it only ever lightens what it crosses and never dims a line of
+   text. Near sheet falls a third faster than the far one, which is what makes
+   it depth rather than wallpaper. */
+:root[data-theme="matrix"] body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:2;
+  mix-blend-mode:screen; opacity:.22;
+  background:var(--rain-near) 0 0/528px 720px repeat, var(--rain-far) 37px 0/408px 560px repeat;
+  animation:mtx-rain 30s linear infinite;
+}
+@keyframes mtx-rain{from{background-position:0 0, 37px 0} to{background-position:0 720px, 37px 560px}}
+/* Terminal furniture: hard corners, a phosphor rule under the HUD, column
+   ruling behind the trace to echo the rain, bracket ticks at the lane corners
+   left to the base bevel because they already read as terminal brackets. */
+:root[data-theme="matrix"] .lane, :root[data-theme="matrix"] .project,
+:root[data-theme="matrix"] .bubble, :root[data-theme="matrix"] .chip{border-radius:2px}
+:root[data-theme="matrix"] .hud{
+  border-bottom:1px solid rgba(57,255,122,.55);
+  box-shadow:0 0 18px -6px rgba(57,255,122,.45);
+}
+:root[data-theme="matrix"] .project > header{
+  color:#7fe39e; text-transform:uppercase;
+  background-image:var(--grain), linear-gradient(90deg,#06180c,#020803);
+  border-bottom-color:#134a22;
+}
+:root[data-theme="matrix"] .rail .vlabel,
+:root[data-theme="matrix"] .hrail .who{color:#6fd08e}
+:root[data-theme="matrix"] .bubble{background-image:linear-gradient(180deg, rgba(57,255,122,.045), transparent 46%)}
+:root[data-theme="matrix"] .bubble:hover{box-shadow:0 0 0 1px rgba(57,255,122,.5), 0 0 16px -4px rgba(57,255,122,.35)}
+:root[data-theme="matrix"] .trace{background-image:linear-gradient(90deg, rgba(57,255,122,.06) 1px, transparent 1px); background-size:9px 100%}
+/* Phosphor bloom on what emits: the numerals and the wordmark. */
+:root[data-theme="matrix"] .gauge .val,
+:root[data-theme="matrix"] .rail .rcount{text-shadow:0 0 7px rgba(57,255,122,.45)}
+:root[data-theme="matrix"] .brand b{color:#c8ffd9; text-shadow:0 0 12px rgba(57,255,122,.75), 0 0 2px rgba(57,255,122,.9)}
+/* The sigil is a cursor, so it blinks -- slowly, it sits in your periphery all day. */
+:root[data-theme="matrix"] .brand b::after{color:var(--accent); animation:mtx-blink 1.4s steps(1,end) infinite}
+@keyframes mtx-blink{50%{opacity:0}}
+:root[data-theme="matrix"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 rgba(57,255,122,.35), -26px 0 60px -30px #000}
+:root[data-theme="matrix"] .toast{background:#03100a; border-color:rgba(57,255,122,.55)}
+:root[data-theme="matrix"] .scrim{background:rgba(0,0,0,.72)}
+:root[data-theme="matrix"] .acts button:hover{background:#0b2213; box-shadow:0 0 0 1px rgba(57,255,122,.55)}
+/* EGG: point at the wordmark and it decodes -- the letters go to the white of
+   a column head and the cursor settles on a different glyph. */
+:root[data-theme="matrix"] .brand:hover b{color:#f2fff6; text-shadow:0 0 16px rgba(57,255,122,.95)}
+:root[data-theme="matrix"] .brand:hover b::after{animation:none; content:"\FF71"}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="matrix"] body::after,
+  :root[data-theme="matrix"] .brand b::after{animation:none}
+}
+
+/* ============================================================================
+   PIP-BOY  --  a wrist terminal's tube behind curved glass
+   Olive-black glass and P1 phosphor in the yellow-green, a clear step yellower
+   than the matrix mint and nowhere near the console teal. The whole board is
+   read through the raster: heavy dark scanlines, a vignette that pulls the
+   corners into the bezel, bloom on everything that emits. Amber is the other
+   Pip-Boy colour, so amber is what needs you.
+   ========================================================================== */
+:root[data-theme="pipboy"]{
+  --void:#0b1a0f; --panel:#0d2413; --cell:#112b18; --tile:#14321c; --tile-hi:#1a4024;
+  --edge:#245a30; --edge-hot:#3fbf5a;
+  --ink:#9dff8f; --dim:#7ad976; --faint:#5aa860;
+  --accent:#35eb52;
+  --blocked:#ff9f3a; --running:#35eb52; --idle:#5e9a66; --done:#e6ffb3; --unknown:#6c8f6e;
+  --good:#35eb52; --warn:#ffb641;
+  --waiting:#ffd866;
+  --glow:1.1; --sigil:"\2622";                       /* the trefoil */
+  --scan:rgba(53,235,82,.05); --halo:rgba(53,235,82,.09);
+  /* No raster on the surfaces themselves -- the scanlines live on one overlay
+     so two offset rasters never moire. The material is a phosphor glow that
+     pools at the top of every panel. */
+  --grain:linear-gradient(180deg, rgba(53,235,82,.045), transparent 62%);
+  --hud-a:#123019; --hud-b:#0b1d10; --rail-a:#12301a; --rail-b:#0c2011;
+}
+:root[data-theme="pipboy"]{
+  --face-data:   "Share Tech Mono", Monaco, ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  "Share Tech Mono", Monaco, ui-monospace, "SF Mono", Menlo, monospace;
+  --face-chrome: "Share Tech Mono", Monaco, ui-monospace, "SF Mono", Menlo, monospace;
+  --face-code:   "Share Tech Mono", Monaco, ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:1.06; --fs-data:1.04; --fs-prose:1.06; --tr-chrome:1.15;
+}
+:root[data-theme="pipboy"] .brand b, :root[data-theme="pipboy"] .rail .vlabel,
+:root[data-theme="pipboy"] .hrail .who, :root[data-theme="pipboy"] .project > header,
+:root[data-theme="pipboy"] .gauge .lab, :root[data-theme="pipboy"] .trace .cap,
+:root[data-theme="pipboy"] .panel section h3, :root[data-theme="pipboy"] .stat .k,
+:root[data-theme="pipboy"] .acts button, :root[data-theme="pipboy"] button.ghost{text-transform:uppercase}
+/* THE TELL -- the tube. Scanlines over everything at z 2 so they cross the
+   panels and not just the gutters, and a soft phosphor bloom at the centre of
+   the glass. */
+:root[data-theme="pipboy"] body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:2;
+  background:
+    repeating-linear-gradient(0deg, rgba(3,12,5,.30) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 45%, rgba(53,235,82,.06), transparent 55%);
+}
+/* The vignette is the bezel: corners fall into olive-black. */
+:root[data-theme="pipboy"] .wrap::after{
+  background:radial-gradient(115% 92% at 50% 45%, transparent 48%, rgba(3,12,5,.58) 100%);
+}
+/* Bezel radii on the lanes and the HUD, and a curved-glass inset shadow on
+   every lane so the panels sit behind the tube rather than on it. */
+:root[data-theme="pipboy"] .lane{
+  border-radius:12px;
+  box-shadow:inset 0 0 28px rgba(3,12,5,.45), inset 0 0 0 1px rgba(53,235,82,.10);
+}
+:root[data-theme="pipboy"] .hud{
+  border-radius:0 0 14px 14px; border-bottom:1px solid rgba(53,235,82,.45);
+  box-shadow:inset 0 -22px 30px -24px rgba(3,12,5,.7), 0 6px 22px -14px rgba(53,235,82,.5);
+}
+:root[data-theme="pipboy"] .bubble{border-radius:7px; background-image:linear-gradient(180deg, rgba(53,235,82,.06), transparent 48%)}
+:root[data-theme="pipboy"] .bubble:hover{box-shadow:0 0 0 1px rgba(53,235,82,.5), 0 0 18px -4px rgba(53,235,82,.4)}
+:root[data-theme="pipboy"] .project > header{
+  color:#8fe884; background-image:var(--grain), linear-gradient(90deg,#143520,#0d2213);
+  border-bottom-color:#2a6a38;
+}
+:root[data-theme="pipboy"] .rail .vlabel,
+:root[data-theme="pipboy"] .hrail .who{color:#7ad976; text-shadow:0 0 6px rgba(53,235,82,.4)}
+/* The stat-screen grid behind the trace. */
+:root[data-theme="pipboy"] .trace{background-image:linear-gradient(rgba(53,235,82,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(53,235,82,.05) 1px, transparent 1px); background-size:100% 8px, 24px 100%}
+/* Phosphor bloom on everything that emits. */
+:root[data-theme="pipboy"] .brand b, :root[data-theme="pipboy"] .gauge .val,
+:root[data-theme="pipboy"] .rail .rcount, :root[data-theme="pipboy"] .project > header,
+:root[data-theme="pipboy"] .readout dd b, :root[data-theme="pipboy"] .chip b{
+  text-shadow:0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+:root[data-theme="pipboy"] .bubble .nm{text-shadow:0 0 5px rgba(53,235,82,.28)}
+:root[data-theme="pipboy"] .brand b{color:#b9ffa8}
+/* A tube never quite holds its brightness. .96 to 1, a few times a cycle, on
+   the wordmark and the counts only -- never on a number you are reading. */
+:root[data-theme="pipboy"] .brand b,
+:root[data-theme="pipboy"] .rail .rcount{animation:pip-flicker 4.6s steps(1,end) infinite}
+@keyframes pip-flicker{0%,100%{opacity:1} 7%{opacity:.965} 9%{opacity:1} 41%{opacity:.975} 43%{opacity:1} 68%{opacity:.96} 70%{opacity:1}}
+:root[data-theme="pipboy"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 rgba(53,235,82,.3), -26px 0 60px -30px rgba(3,12,5,.95)}
+:root[data-theme="pipboy"] .toast{background:#0f2a16; border-color:rgba(53,235,82,.55)}
+:root[data-theme="pipboy"] .scrim{background:rgba(5,16,8,.7)}
+:root[data-theme="pipboy"] .acts button:hover{background:#1b4526; box-shadow:0 0 0 1px rgba(53,235,82,.55)}
+/* EGG: point at the wordmark and the tube switches to the amber Pip-Boy. */
+:root[data-theme="pipboy"] .brand:hover b{color:#ffcf7a; text-shadow:0 0 12px rgba(255,182,65,.8)}
+:root[data-theme="pipboy"] .brand:hover b::after{color:#ffb641}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="pipboy"] .brand b,
+  :root[data-theme="pipboy"] .rail .rcount{animation:none}
+}
+
   /* Renaming a session is a property of this board, not of the agent: nothing is
      written back to the CLI. The row hides itself for a tile that has no session
      id yet, because there is nothing stable to attach a name to. */
@@ -3228,6 +3407,21 @@ const THEME_MARKS = {
     claude:'<path d="M2.3 4.6 L4.4 8.3 L6.2 3.9 L8 8.5 L9.8 3.9 L11.6 8.3 L13.7 4.6 L12.5 11.2 L3.5 11.2 Z" fill="currentColor"/><path d="M3.3 12.1h9.4v1.4H3.3zM2.9 13.9h10.2v1.5H2.9z" fill="currentColor"/><circle cx="2.3" cy="3.8" r=".95" fill="currentColor"/><circle cx="6.2" cy="3.1" r=".95" fill="currentColor"/><circle cx="8" cy="2.6" r="1" fill="currentColor"/><circle cx="9.8" cy="3.1" r=".95" fill="currentColor"/><circle cx="13.7" cy="3.8" r=".95" fill="currentColor"/>',
     antigravity:'<path d="M8 1.9 L10.5 6.4 L5.5 6.4 Z" fill="currentColor"/><circle cx="8" cy="1.5" r=".95" fill="currentColor"/><path d="M5 6.9h6v1.3H5z" fill="currentColor"/><path d="M5.7 8.6 L10.3 8.6 L11.5 12.3 L4.5 12.3 Z" fill="currentColor"/><path d="M3.4 12.8h9.2v1.3H3.4zM3 14.2h10v1.4H3z" fill="currentColor"/>',
     codex:'<path d="M3.3 2.4h2.2v2.4H3.3zM6.9 2.4h2.2v2.4H6.9zM10.5 2.4h2.2v2.4H10.5zM3.3 4.8h9.4v1.5H3.3zM4.5 6.3h7v6.1h-7zM3.2 12.4h9.6v1.5H3.2zM2.8 13.9h10.4v1.5H2.8z" fill="currentColor"/>',
+  },
+  /* matrix -- glyphs from the rain: square-capped dashes and pixel blocks,
+     the way a monospaced face draws a symbol at low resolution. Every shaft is
+     broken into a column of dashes, because in this world a line is a stream. */
+  matrix:{
+    claude:'<path d="M8 1.4v2.6M8 5.2v1.4M8 9.4v1.4M8 12v2.6M1.4 8h2.6M5.2 8h1.4M9.4 8h1.4M12 8h2.6M3.3 3.3l1.9 1.9M10.8 10.8l1.9 1.9M12.7 3.3l-1.9 1.9M5.2 10.8l-1.9 1.9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/><rect x="7.1" y="7.1" width="1.8" height="1.8" fill="currentColor"/>',
+    antigravity:'<path d="M8 2.2L3.7 6.5M8 2.2l4.3 4.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/><path d="M7.2 3.2h1.6v2.2H7.2zM7.2 6.4h1.6v2.2H7.2zM7.2 9.6h1.6v2.2H7.2zM7.2 12.8h1.6v1.8H7.2z" fill="currentColor"/>',
+    codex:'<path d="M5.8 3.2L2.4 8l3.4 4.8M10.2 3.2L13.6 8l-3.4 4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"/><path d="M7.2 3.4h1.6v1.8H7.2zM7.2 6.4h1.6v1.8H7.2zM7.2 9.4h1.6v1.8H7.2zM7.2 12.4h1.6v1.8H7.2z" fill="currentColor" fill-opacity=".7"/>',
+  },
+  /* fallout -- the Pip-Boy's chunky vector icons: one stroke weight, round
+     ends, a solid hub, drawn to survive a raster three lines tall. */
+  pipboy:{
+    claude:'<circle cx="8" cy="8" r="2.3" fill="currentColor"/><path d="M8 1.5v2.7M8 11.8v2.7M1.5 8h2.7M11.8 8h2.7M3.4 3.4l1.9 1.9M10.7 10.7l1.9 1.9M12.6 3.4l-1.9 1.9M5.3 10.7l-1.9 1.9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+    antigravity:'<path d="M8 13.2V3.2M3.9 7.3L8 3.2l4.1 4.1" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14.6h8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+    codex:'<path d="M5.6 3.2L2.4 8l3.2 4.8M10.4 3.2L13.6 8l-3.2 4.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.4" fill="currentColor"/>',
   },
 };
 
