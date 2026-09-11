@@ -37,12 +37,20 @@
 
   var LS_MUTED = 'fleet.sound.muted';
   var LS_VOLUME = 'fleet.sound.volume';
-  var DEFAULT_VOLUME = 0.45;
+  var LS_CLICKS = 'fleet.sound.clicks';           // tap / tile / switch on your own actions
+  var LS_PACK   = 'fleet.sound.pack';             // 'theme' = follow the theme, else a pack key
+  var LS_SOFT   = 'fleet.sound.soft';             // cap drive + lowpass the master
+  var DEFAULT_VOLUME = 0.28;
+  // What this board is for is ambient awareness, so the defaults are the quiet
+  // ones: a sound when something needs you (blocked / waiting) or finishes, and
+  // nothing for your own clicks unless you ask. 'soft' caps every pack's drive
+  // and rolls off the top end, because a square wave through a hard clipper is
+  // an alarm, not a cue.
   var VOLUME_STEPS = [0.2, 0.45, 0.65];     // shift+click on the toggle cycles these
   var ALERT_GAP_MS = 1500;                  // never more than one alert per 1.5 s
   var DONE_GAP_MS = 800;
   var MAX_VOICES = 24;                      // concurrent oscillators/buffers, hard cap
-  var FALLBACK_PACK = 'console';
+  var FALLBACK_PACK = 'quiet';
   var CONTROL_SEL = 'button, select, .bubble';
 
   function readLS(key, fallback) {
@@ -58,6 +66,9 @@
 
   var muted = readLS(LS_MUTED, true) !== false;             // default: muted
   var volume = clamp(Number(readLS(LS_VOLUME, DEFAULT_VOLUME)) || DEFAULT_VOLUME, 0, 1);
+  var clicks = readLS(LS_CLICKS, false) === true;             // default: off
+  var fixedPack = readLS(LS_PACK, 'theme') || 'theme';
+  var soft = readLS(LS_SOFT, true) !== false;                 // default: on
 
   /* ------------------------------------------------------------------ */
   /* Audio graph                                                         */
@@ -71,6 +82,7 @@
   var noiseBuf = null;
   var activeVoices = 0;
   var curveCache = {}, impulseCache = {}, pluckCache = {};
+  var tilt = null;
 
   function ensureCtx() {
     if (ctx) {
@@ -90,7 +102,14 @@
     comp.ratio.value = 5;
     comp.attack.value = 0.001;
     comp.release.value = 0.1;
-    comp.connect(master);
+    // Soft mode: nothing above ~3.4kHz reaches the speaker. Every pack keeps
+    // its character below that; what goes is the glassy edge that made the
+    // clicks fatiguing on a board you sit beside all day.
+    tilt = ctx.createBiquadFilter();
+    tilt.type = 'lowpass'; tilt.Q.value = 0.5;
+    tilt.frequency.value = soft ? 3400 : 20000;
+    comp.connect(tilt);
+    tilt.connect(master);
     master.connect(ctx.destination);
 
     // 1 s of white noise, shared by every noise burst (random start offset).
@@ -112,7 +131,9 @@
     var p = PACKS[packKey];
     packBus = ctx.createGain();
     packShaper = ctx.createWaveShaper();
-    packShaper.curve = shapeCurve(p.drive || { type: 'soft', k: 1.5 });
+    var drive = p.drive || { type: 'soft', k: 1.5 };
+    if (soft) drive = { type: 'soft', k: Math.min(drive.k || 1.5, 1.8) };
+    packShaper.curve = shapeCurve(drive);
     packShaper.oversample = '2x';
     packBus.connect(packShaper);
     packShaper.connect(comp);
@@ -329,6 +350,19 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* quiet -- the pack for someone who does not want a pack. Sine and triangle
+     * only, short envelopes, a small room, no drive to speak of. The alert is a
+     * two-note descending chime ("your move"), done is the same two notes the
+     * other way up, and the UI cues are barely there. Fallback for every theme
+     * without a voice of its own, and selectable for all of them. */
+    quiet: {
+      drive: { type: 'soft', k: 1.1 }, verb: { time: 0.22, mix: 0.16 },
+      tap:    [click({ hp: 4000, g: 0.16, d: 0.006 })],
+      tile:   [click({ hp: 3200, g: 0.18, d: 0.007 }), S('sine', 660, { a: 0.002, d: 0.06, g: 0.10 })],
+      switch: [S('triangle', 523, { a: 0.004, d: 0.14, g: 0.16 }), at(0.11, S('triangle', 784, { a: 0.004, d: 0.18, g: 0.14 }))],
+      alert:  [S('sine', 880, { a: 0.004, d: 0.22, g: 0.30 }), at(0.16, S('sine', 659, { a: 0.004, d: 0.30, g: 0.26 }))],
+      done:   [S('triangle', 659, { a: 0.004, d: 0.18, g: 0.20 }), at(0.14, S('triangle', 880, { a: 0.004, d: 0.28, g: 0.18 }))]
+    },
 
     /* Orbital command deck, cyan vector glass: clean sine ticks with a glass
      * transient, radar ping for alerts. */
@@ -569,7 +603,10 @@
   var born = Date.now();                        // theme mutations right after load are not switches
   var lastAlert = 0, lastDone = 0;
 
-  function resolvePack(key) { return PACKS.hasOwnProperty(key) ? key : FALLBACK_PACK; }
+  function resolvePack(key) {
+    if (fixedPack !== 'theme' && PACKS.hasOwnProperty(fixedPack)) return fixedPack;
+    return PACKS.hasOwnProperty(key) ? key : FALLBACK_PACK;
+  }
 
   function play(name) {
     var p = PACKS[packKey], layers = p && p[name];
@@ -585,7 +622,7 @@
     if (changed && ctx) buildPackChain();
     if (announce && key !== announced && Date.now() - born > 1200) {
       announced = key;
-      play('switch');
+      if (clicks) play('switch');
     } else if (!announce) announced = key;
   }
 
@@ -658,7 +695,7 @@
   document.addEventListener('click', function (e) {
     var el = e.target && e.target.closest ? e.target.closest(CONTROL_SEL) : null;
     if (!el || el.id === 'snd' || el.disabled) return;
-    if (!ensureCtx() || muted) return;              // create/resume on any gesture, even muted
+    if (!ensureCtx() || muted || !clicks) return;   // create/resume on any gesture, even muted
     play(el.classList.contains('bubble') ? 'tile' : 'tap');
   }, true);
 
@@ -720,6 +757,18 @@
     volume: function (v) { if (v !== undefined) setVolume(v); return volume; },
     /** Mute or unmute, persisted. */
     mute: function (on) { setMuted(on === undefined ? true : on); return muted; },
-    muted: function () { return muted; }
+    muted: function () { return muted; },
+    /** UI click cues on/off (default off), persisted. */
+    clicks: function (on) { if (on !== undefined) { clicks = !!on; writeLS(LS_CLICKS, clicks); } return clicks; },
+    /** Pin one pack for every theme, or 'theme' to follow the theme. Persisted. */
+    fixed: function (key) {
+      if (key !== undefined) { fixedPack = (key === 'theme' || PACKS.hasOwnProperty(key)) ? key : 'theme'; writeLS(LS_PACK, fixedPack); switchTo(document.documentElement.getAttribute('data-theme'), false); }
+      return fixedPack;
+    },
+    /** Soft mode: capped drive and a 3.4kHz roll-off (default on). Persisted. */
+    soft: function (on) {
+      if (on !== undefined) { soft = !!on; writeLS(LS_SOFT, soft); if (tilt) tilt.frequency.value = soft ? 3400 : 20000; if (ctx) buildPackChain(); }
+      return soft;
+    }
   };
 })();
