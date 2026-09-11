@@ -20,15 +20,22 @@ ITERM = "/Applications/iTerm.app"
 VSCODE_BINS = ("/usr/local/bin/code", "/opt/homebrew/bin/code",
                "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code")
 
-# How each agent comes back to a conversation. The first form targets one exact
-# session; the second continues the most recent conversation in this directory,
-# which is all that is left when the id cannot be used. Antigravity was missing
-# from here entirely, so every `agy` tile opened a bare shell whatever its state.
-# Adding a fourth agent is one line.
+# How each agent comes back to a conversation, always by its own id. The
+# `--continue` / `--last` forms that used to stand in when an id "could not be
+# used" picked the most recent conversation in the directory -- which, with
+# five sessions in ~, was reliably somebody else's. Two facts retire them:
+# `claude --resume <id>` resolves the id wherever the transcript lives (checked
+# against 2.1.268 from a different cwd than the transcript's), and a Claude
+# session that is still running is joined, not resumed: `claude attach <job>`
+# opens it in this terminal and leaves it running. Adding a fourth agent is
+# one line.
 _RESUME = {
-    "claude":      ("claude --resume %s",     "claude --continue"),
-    "codex":       ("codex resume %s",         "codex resume --last"),
-    "antigravity": ("agy --conversation %s",   "agy --continue"),
+    "claude":      "claude --resume %s",
+    "codex":       "codex resume %s",
+    "antigravity": "agy --conversation %s",
+}
+_ATTACH = {
+    "claude":      "claude attach %s",       # the roster's short job id
 }
 
 # A fresh conversation, by agent. The page picks a key from this table, never
@@ -59,47 +66,50 @@ def _vscode_bin():
 
 def command_for(session, fell_back=False):
     """The shell line a terminal should land on, or '' for a plain shell."""
+    del fell_back                      # ids resolve from any directory now
     kind = session.get("resume")
     sid = session.get("sessionId") or ""
     # Resuming a session that is mid-turn would start a second copy of it, so
-    # a live session only ever gets a shell in the right directory.
+    # a live session only ever gets a shell in the right directory -- with the
+    # attach command waiting on the prompt (see suggest_for).
     if session.get("state") == "running" or not sid:
         return ""
-    # Claude scopes a transcript by the directory it ran in: the session lives
-    # at ~/.claude/projects/<encoded cwd>/<id>.jsonl. Once the recorded cwd is
-    # gone and we have landed somewhere else, `claude --resume <id>` looks under
-    # the NEW directory's encoding and cannot find it -- verified against
-    # base-remota, whose transcript sits under the worktree encoding and is
-    # absent from the project root's. Offering the command anyway is exactly
-    # what made a tile click report success and then fail inside the window.
-    if fell_back and kind == "claude":
+    form = _RESUME.get(kind or "")
+    return (form % shlex.quote(sid)) if form else ""
+
+
+def attach_for(session):
+    """`claude attach <job>` for a running session the roster knows, else ''."""
+    if session.get("state") != "running":
         return ""
-    forms = _RESUME.get(kind or "")
-    return (forms[0] % shlex.quote(sid)) if forms else ""
+    form = _ATTACH.get(session.get("provider") or "")
+    job = session.get("jobId") or ""
+    return (form % shlex.quote(job)) if form and job else ""
 
 
 def suggest_for(session, fell_back=False):
     """The command to leave sitting ON the prompt, unrun.
 
     command_for() refuses to start anything for a live session, because that
-    would be a second copy of it, and it had nothing at all to say about
-    Antigravity. Both cases still have exactly one obvious next move, and having
-    to remember which of three CLIs spells it which way -- and type it -- is the
+    would be a second copy of it. A live Claude session still has exactly one
+    right move -- attach to it by its id -- and the others have theirs; having
+    to remember which of three CLIs spells it which way, and type it, is the
     actual complaint. Offering it unexecuted keeps the safety property intact:
     the decision is still a keypress, made by someone who can see the screen.
     """
-    if command_for(session, fell_back):
+    del fell_back
+    if command_for(session):
         return ""                      # it is being run; nothing to suggest
-    forms = _RESUME.get(session.get("resume") or "")
-    if not forms:
-        return ""
+    attach = attach_for(session)
+    if attach:
+        return attach
+    form = _RESUME.get(session.get("resume") or "")
     sid = session.get("sessionId") or ""
-    # A live session is mid-turn and a moved worktree cannot resolve its id, so
-    # neither may target one: --continue picks up the most recent conversation
-    # here, which is the one being looked at.
-    if session.get("state") == "running" or not sid or fell_back:
-        return forms[1]
-    return forms[0] % shlex.quote(sid)
+    if not form or not sid:
+        return ""
+    # A live Codex or Antigravity session has no attach; the id form would
+    # open a second copy, so it is offered but never run.
+    return form % shlex.quote(sid)
 
 
 def _sweep_launches(keep_seconds=6 * 3600):
@@ -237,12 +247,9 @@ def open_session(session, target):
         return True, "opened %s in VS Code%s" % (os.path.basename(cwd), where)
 
     command = command_for(session, moved)
-    note = ""
-    if moved and not command and session.get("resume") == "claude" \
-            and session.get("sessionId") and session.get("state") != "running":
-        note = ("the recorded worktree is gone, so this session cannot be "
-                "resumed from here; this is a shell in the project root")
-        where += "; cannot resume, worktree removed"
+    # The recorded worktree may be gone; the id still resolves from wherever
+    # we landed, so the command runs -- the note just says where that is.
+    note = "worktree gone; landed in %s" % cwd if moved else ""
     script = _launch_script(cwd, command, note,
                             suggest=suggest_for(session, moved))
     if target == "iterm" and os.path.isdir(ITERM):

@@ -144,6 +144,21 @@ class Dismissed:
                 self._save()
             return n
 
+    def dismiss(self, session):
+        """Dismiss one tile, whatever its state. Used after closing a session:
+        the process is gone but its transcript is still on disk, so the tile
+        would otherwise sit there as idle until the next flush. Like every
+        dismissal it lifts by itself the moment the session writes again."""
+        with self._lock:
+            self._load()
+            self._data[key_for(session)] = {
+                "updated": session.get("updated") or 0,
+                "name": session.get("name") or "",
+                "provider": session.get("provider") or "",
+                "at": int(time.time()),
+            }
+            self._save()
+
     def restore(self):
         """Bring everything back. The undo for a flush pressed too eagerly."""
         with self._lock:

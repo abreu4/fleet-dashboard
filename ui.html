@@ -449,6 +449,22 @@
      Fading text put the foot line at 1.86:1 and made idle unreadable. */
   .bubble[data-state="done"]{opacity:.94}
   .bubble[data-state="done"]:hover, .bubble[data-state="done"].sel{opacity:1}
+  /* the close control: invisible until the tile is hovered, then a small ×
+     in the top-right; armed, it spells out what the second click does */
+  .bubble .x{
+    position:absolute; top:4px; right:5px; z-index:3; width:18px; height:18px;
+    display:flex; align-items:center; justify-content:center; border-radius:4px;
+    font:15px/1 var(--mono); font-style:normal; color:var(--faint); opacity:0;
+    transition:opacity .12s, color .12s, background .12s; cursor:pointer;
+  }
+  .bubble:hover .x, .bubble.sel .x, .bubble .x.armed{opacity:1}
+  .bubble .x:hover{color:var(--blocked); background:color-mix(in srgb, var(--blocked) 16%, transparent)}
+  .bubble .x.armed{
+    width:auto; padding:0 7px; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink); background:var(--blocked);
+  }
+  .acts button.plain.warn{color:var(--blocked); border-color:color-mix(in srgb, var(--blocked) 45%, var(--edge))}
+  .acts button.plain.warn.armed{background:var(--blocked); color:var(--void); border-color:var(--blocked); font-weight:700}
   .bubble .nm{
     font:600 13px/1.3 var(--mono); color:var(--ink); word-break:break-word;
     display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;
@@ -3725,6 +3741,8 @@ function paintBoard(d){
   board.querySelectorAll('.bubble').forEach(el => {
     el.onclick = () => select(el.dataset.id);
     if(el.dataset.id === selected) el.classList.add('sel');
+    const x = el.querySelector('.x');
+    if(x) x.onclick = ev => { ev.stopPropagation(); const s = find(el.dataset.id); if(s) closeSession(s, x); };
   });
   fit();
 }
@@ -3754,6 +3772,8 @@ function tile(s){
     + (stale ? ' data-stale="'+stale+'"' : '')
     + ' style="--rib:var(--'+s.state+')'+vt+'" title="'+esc(s.name)+' — '+esc(s.state)+'&#10;'+esc(where||'')+'&#10;'+esc(gist)+'">'
     + '<i class="halo" aria-hidden="true"></i>'
+    + ((s.pid || s.jobId || s.state === 'running')
+        ? '<i class="x" role="button" tabindex="-1" title="close this session" aria-label="close session">\u00d7</i>' : '')
     + '<span class="nm">'+esc(s.name)+'</span>'
     + '<span class="gist'+(blank?' none':'')+(s.note?' said':'')+'">'
     + esc(blank ? voice('blank') : gist)+'</span>'
@@ -3899,20 +3919,30 @@ function select(id){
   if(targets.iterm) buttons.push(['iterm','iTerm']);
   buttons.push(['terminal','Terminal']);
   if(targets.vscode) buttons.push(['vscode','VS Code']);
-  const resumes = s.resume && s.state !== 'running';
+  // Three verbs, by id: a running Claude session is *attached* to, a session
+  // with an id that is not running is *resumed*, anything else gets a shell.
+  const verb = attachable(s) ? 'attach' : (s.resume && s.sessionId && s.state !== 'running') ? 'resume' : 'shell';
   // `reveal` looks for the iTerm tab this session is already living in and
   // brings that forward, rather than opening a second window onto it.
   const here = (window.FLEET_TERM || {}).enabled
-    ? '<button data-here="1">' + (resumes ? 'resume here' : 'shell here') + '</button>' : '';
+    ? '<button data-here="1">' + verb + ' here</button>' : '';
   const reveal = targets.iterm ? '<button class="plain" data-target="reveal">its iTerm tab</button>' : '';
+  // Close ends the process behind the tile (Claude: `claude stop <job>`, which
+  // keeps the conversation attachable). Two clicks, three seconds apart at
+  // most -- a dialog would block the page, a single click is too easy from a
+  // metre away.
+  const closable = !!(s.pid || s.jobId || s.state === 'running');
+  const close = closable ? '<button class="plain warn" data-close="1">close session</button>' : '';
   document.getElementById('p-acts').innerHTML = here
     + buttons.map(([t,l]) =>
-        '<button data-target="'+t+'">'+(t==='vscode' ? 'open in ' : (resumes ? 'resume in ' : 'shell in '))+l+'</button>').join('')
+        '<button data-target="'+t+'">'+(t==='vscode' ? 'open in ' : verb + ' in ')+l+'</button>').join('')
     + reveal
-    + '<button class="plain" data-copy="1">copy command</button>';
+    + '<button class="plain" data-copy="1">copy command</button>'
+    + close;
   document.getElementById('p-acts').querySelectorAll('button').forEach(b => {
     b.onclick = () => b.dataset.copy ? copyCommand(s)
                     : b.dataset.here ? openTerminal(s.id)
+                    : b.dataset.close ? closeSession(s, b)
                     : open_(s.id, b.dataset.target);
   });
 
@@ -3930,12 +3960,18 @@ function select(id){
     (s.cwd || '—') + (s.sessionId ? '\n' + s.sessionId : '');
 }
 
+/* The line "copy command" hands over: always by the session's own id. A
+   running Claude session is joined with `attach` (it keeps running; ← in the
+   agent view or Ctrl+Z hands the terminal back). Any other id resumes it. */
 function shellCommand(s){
   const cd = 'cd ' + (s.cwd || '~');
-  if(s.resume === 'claude' && s.state !== 'running') return cd + ' && claude --resume ' + s.sessionId;
-  if(s.resume === 'codex' && s.state !== 'running') return cd + ' && codex resume ' + s.sessionId;
+  if(attachable(s)) return cd + ' && claude attach ' + s.jobId;
+  if(s.sessionId && s.resume === 'claude')      return cd + ' && claude --resume ' + s.sessionId;
+  if(s.sessionId && s.resume === 'codex')       return cd + ' && codex resume ' + s.sessionId;
+  if(s.sessionId && s.resume === 'antigravity') return cd + ' && agy --conversation ' + s.sessionId;
   return cd;
 }
+const attachable = s => s.provider === 'claude' && !!s.jobId && s.state === 'running';
 
 function toast(msg){
   const el = document.getElementById('toast');
@@ -3943,6 +3979,32 @@ function toast(msg){
   el.classList.add('on');
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+/* Arm on the first click, act on the second within a short window. The
+   armed button says what it will do; leaving it alone disarms it. Works for
+   the drawer button and for the × on a tile alike. */
+function closeSession(s, btn){
+  if(!btn.dataset.armed){
+    btn.dataset.armed = '1';
+    btn.dataset.label = btn.textContent;
+    btn.textContent = 'close ' + s.name + '?';
+    btn.classList.add('armed');
+    clearTimeout(btn._disarm);
+    btn._disarm = setTimeout(() => {
+      delete btn.dataset.armed; btn.textContent = btn.dataset.label || 'close session';
+      btn.classList.remove('armed');
+    }, 3200);
+    return;
+  }
+  clearTimeout(btn._disarm);
+  btn.textContent = 'closing\u2026'; btn.disabled = true;
+  termPost('/api/close', {id: s.id}).then(d => {
+    toast(d.message || (d.ok ? 'closed' : 'could not close'));
+    if(d.ok){ if(selected === s.id) deselect(); boardSig = ''; }
+    else { btn.disabled = false; delete btn.dataset.armed; btn.classList.remove('armed');
+           btn.textContent = btn.dataset.label || 'close session'; }
+  });
 }
 
 async function copyCommand(s){

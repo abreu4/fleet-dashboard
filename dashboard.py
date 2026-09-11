@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlparse
 import actions
 import aliases
 import flush as flushmod
+import sunset
 import collectors
 import metrics
 import notes
@@ -440,7 +441,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path not in ("/api/open", "/api/music/auth", "/api/music/forget",
                         "/api/music/play", "/api/music/cmd",
-                        "/api/music/seek", "/api/name", "/api/flush"):
+                        "/api/music/seek", "/api/name", "/api/flush",
+                        "/api/close"):
             self.send_error(404)
             return
         # Opening a shell window and driving the music tab are both actions on
@@ -508,6 +510,24 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         session = SNAPSHOT.session(body.get("id"))
+        # Closing ends a process on this machine, so it carries the terminal's
+        # per-page token on top of the Host/Origin gate whenever one is minted
+        # (it always is under --terminal). The page sends it through termPost.
+        if path == "/api/close":
+            if TERMINAL_TOKEN and not self._terminal_ok(need_origin=False):
+                self.send_error(403)
+                return
+            if not session:
+                self._json({"ok": False, "message": "unknown session"})
+                return
+            try:
+                ok, message = sunset.close_session(session)
+            except Exception as exc:
+                ok, message = False, "%s: %s" % (type(exc).__name__, str(exc)[:160])
+            if ok:
+                DISMISSED.dismiss(session)     # off the board now, not next flush
+            self._json({"ok": ok, "message": message})
+            return
         if path == "/api/name":
             if not session:
                 self._json({"ok": False, "message": "unknown session"})

@@ -569,6 +569,11 @@ def collect_claude(transcripts):
             "resume": "claude" if session_id else "",
             "started": agent.get("startedAt"),
             "updated": last_activity,
+            # The roster's own handle on this session: `claude attach <jobId>`
+            # joins it while it runs, `claude stop <jobId>` ends it, and the pid
+            # is what /api/close signals when the CLI has no such handle.
+            "jobId": job_id or "",
+            "pid": agent.get("pid"),
         })
     return sessions
 
@@ -753,9 +758,11 @@ def collect_antigravity():
             "turns": steps,
             "cwd": workspace or HOME,
             "sessionId": cid,
-            "resume": "",
+            "resume": "antigravity" if cid else "",   # agy --conversation <id>
             "started": None,
             "updated": int(updated),
+            "jobId": "",
+            "pid": None,
         })
 
     # A running `agy` with no fresh presence lock is still a live session: give
@@ -963,5 +970,7 @@ def merge_live(sessions, provider, label):
             "resume": "",
             "started": proc["started"],
             "updated": int(time.time() * 1000),
+            "jobId": "",
+            "pid": proc["pid"],
         })
     return sessions
