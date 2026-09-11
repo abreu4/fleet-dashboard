@@ -231,15 +231,62 @@
     font-size:12px; text-align:left; white-space:nowrap;
   }
   .more-menu button span{display:inline}
-  /* Sound lives in the menu too: the square in the row is mute/unmute, this is
-     everything else — volume, which pack, click cues, soft mode, a test. */
+  /* Settings: one card over a scrim, sections for colours, tiles, sound and
+     motion. Every knob applies as you move it and persists; the theme's own
+     values are one click away. The sound section is the same panel the ⋯
+     menu used to carry. */
+  .settings{
+    position:fixed; inset:0; z-index:10; display:none; align-items:center; justify-content:center;
+    padding:4vh 4vw; background:rgb(0 0 0 / .55); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+  }
+  .settings.on{display:flex}
+  .settings .card{
+    width:min(600px, 100%); max-height:92vh; overflow:auto; scrollbar-width:thin;
+    background:var(--panel); border:1px solid var(--edge-hot); border-radius:10px;
+    box-shadow:0 30px 80px -30px #000; padding:14px 18px 16px;
+    font:11px/1.4 var(--mono); letter-spacing:.06em; color:var(--dim);
+  }
+  .settings .card > header{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .settings .card > header b{font:600 13px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase; color:var(--accent)}
+  .settings .card > header .theme{color:var(--faint)}
+  .settings .card > header .x{margin-left:auto; width:26px; height:24px; padding:0; font-size:14px}
+  .settings section{padding:10px 0 12px; border-top:1px solid var(--edge)}
+  .settings section h3{
+    margin:0 0 8px; font:11px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--faint);
+    display:flex; align-items:center; gap:10px;
+  }
+  .settings section h3 .hint{flex:1; text-transform:none; letter-spacing:.04em; color:var(--faint); font-size:10.5px}
+  .settings section h3 button.ghost{padding:3px 8px; font-size:9.5px}
+  .settings .sw-row{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px}
+  .settings .sw{
+    display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 6px 7px;
+    border:1px solid var(--edge); border-radius:7px; background:var(--cell); cursor:pointer;
+  }
+  .settings .sw input[type=color]{
+    -webkit-appearance:none; appearance:none; width:100%; height:26px; padding:0; border:0;
+    border-radius:5px; background:transparent; cursor:pointer;
+  }
+  .settings .sw input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  .settings .sw input[type=color]::-webkit-color-swatch{border:1px solid rgb(255 255 255 / .18); border-radius:5px}
+  .settings .sw span{text-transform:uppercase; letter-spacing:.1em; font-size:10px}
+  .settings .sw.tinted span::after{content:" •"; color:var(--accent)}
+  .settings .row{display:flex; align-items:center; gap:10px; min-height:24px}
+  .settings .row > span:first-child{flex:0 0 64px; text-transform:uppercase; color:var(--faint)}
+  .settings input[type=range]{flex:1; min-width:0; accent-color:var(--accent); cursor:pointer}
+  .settings .pct{flex:0 0 40px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
+  .settings label.chk{display:flex; align-items:center; gap:7px; cursor:pointer}
+  .settings input[type=checkbox]{accent-color:var(--accent); margin:0}
+  /* motion off, by choice rather than by OS: everything that moves stops */
+  :root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after{
+    animation-duration:0s !important; animation-iteration-count:1 !important; transition-duration:0s !important;
+  }
+  /* The sound panel: mute, volume, which pack, click cues, soft mode, a test. */
   .snd-panel{
     display:flex; flex-direction:column; gap:7px;
-    margin-top:3px; padding:8px 4px 3px; border-top:1px solid var(--edge);
     font:11px/1.4 var(--mono); letter-spacing:.06em; color:var(--dim);
   }
   .snd-panel .row{display:flex; align-items:center; gap:8px; min-height:22px}
-  .snd-panel .row > span:first-child{flex:0 0 46px; text-transform:uppercase; color:var(--faint)}
+  .snd-panel .row > span:first-child{flex:0 0 64px; text-transform:uppercase; color:var(--faint)}
   .snd-panel input[type=range]{flex:1; min-width:0; accent-color:var(--accent); cursor:pointer}
   .snd-panel select{
     flex:1; min-width:0; padding:3px 6px; border-radius:5px;
@@ -3489,7 +3536,8 @@ const GAP = 7;
    made coarser or denser with one value instead of re-tuning all nine. Scaling
    the clamp is the same as scaling its floor, its ceiling and its share of the
    viewport, since the factor is positive -- so the relationships hold. */
-const TILE_SCALE = 1.4;
+const SCALE_KEY = 'fleet.tile.scale';
+let TILE_SCALE = (() => { try{ const v = parseFloat(localStorage.getItem(SCALE_KEY)); return v >= 1 && v <= 2 ? v : 1.4; }catch(e){ return 1.4; } })();
 const TILE_CEIL = 128;    // px: name x2 (34) + gist x3 (50) + foot (15) + gaps and padding
 
 function bounds(){
@@ -4146,10 +4194,30 @@ const themePicker = document.getElementById('theme');
    runs once at load before any of that has been evaluated. */
 let retintTerms = null;
 
+/* Per-theme colour overrides from the settings card. Five tokens everything
+   else derives from -- accent and the four states -- stored per theme, laid
+   over :root as inline properties so the theme's own block stays untouched
+   and "reset" is just removing them. */
+const TINT_KEY = 'fleet.tint';
+const TINT_VARS = ['accent', 'blocked', 'running', 'done', 'waiting'];
+function tints(){ try{ return JSON.parse(localStorage.getItem(TINT_KEY) || '{}') || {}; }catch(e){ return {}; } }
+function applyTint(theme){
+  const root = document.documentElement.style, t = tints()[theme] || {};
+  TINT_VARS.forEach(v => t[v] ? root.setProperty('--' + v, t[v]) : root.removeProperty('--' + v));
+}
+function setTint(theme, v, hex){
+  const all = tints(); const t = all[theme] = all[theme] || {};
+  if(hex) t[v] = hex; else delete t[v];
+  if(!Object.keys(t).length) delete all[theme];
+  try{ localStorage.setItem(TINT_KEY, JSON.stringify(all)); }catch(e){}
+  applyTint(theme);
+  if(retintTerms) retintTerms();
+}
 function setTheme(name){
   const moved = document.documentElement.dataset.theme !== name;
   const apply = () => {
     document.documentElement.dataset.theme = name;
+    applyTint(name);
     themePicker.value = name;
     try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
     if(latest) drawTrace(latest.history || []);   // the trace is drawn, not styled
@@ -4228,58 +4296,165 @@ themePicker.addEventListener('change', () => { themeBefore = null; });
     const b = document.getElementById(id);
     if(b) menu.appendChild(b);
   });
-  /* The sound panel. fleet-sounds.js loads after this script, so it is built
-     the first time the menu opens, from whatever the engine exposes. */
-  const soundPanel = () => {
-    const FS = window.FleetSounds;
-    if(!FS || menu.querySelector('.snd-panel')) return;
-    const el = document.createElement('div');
-    el.className = 'snd-panel';
-    const opts = ['<option value="theme">follow the theme</option>']
-      .concat(FS.packs().map(k => '<option value="'+k+'">'+k+'</option>')).join('');
-    el.innerHTML =
-      '<div class="row"><span>sound</span><button class="ghost" data-k="mute"></button>'
-      + '<button class="ghost" data-k="test" title="play the alert, then the done cue">test</button></div>'
-      + '<div class="row"><span>volume</span><input type="range" min="0" max="100" step="5" data-k="vol"><b class="pct"></b></div>'
-      + '<div class="row"><span>pack</span><select data-k="pack">'+opts+'</select></div>'
-      + '<div class="row"><label><input type="checkbox" data-k="clicks"> click cues</label>'
-      + '<label><input type="checkbox" data-k="soft"> soft</label></div>';
-    const q = k => el.querySelector('[data-k="'+k+'"]');
-    const sync = () => {
-      const m = FS.muted();
-      q('mute').textContent = m ? '🔇 off' : '🔊 on';
-      q('test').disabled = m;
-      q('vol').value = Math.round(FS.volume()*100); q('vol').disabled = m;
-      el.querySelector('.pct').textContent = Math.round(FS.volume()*100)+'%';
-      q('pack').value = FS.fixed();
-      q('clicks').checked = FS.clicks(); q('soft').checked = FS.soft();
-    };
-    q('mute').onclick = () => { FS.mute(!FS.muted()); sync(); if(!FS.muted()) FS.play('tap'); };
-    q('test').onclick = () => { FS.play('alert'); setTimeout(() => FS.play('done'), 900); };
-    q('vol').oninput = () => { FS.volume(q('vol').value/100); sync(); };
-    q('vol').onchange = () => FS.play('tap');
-    q('pack').onchange = () => { FS.fixed(q('pack').value); sync(); FS.play('alert'); };
-    q('clicks').onchange = () => { FS.clicks(q('clicks').checked); if(FS.clicks()) FS.play('tap'); };
-    q('soft').onchange = () => { FS.soft(q('soft').checked); FS.play('done'); };
-    sync();
-    menu.appendChild(el);
-    document.getElementById('snd')?.addEventListener('click', () => setTimeout(sync, 0));
-  };
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'ghost'; settingsBtn.id = 'settings';
+  settingsBtn.innerHTML = '\u2699<span> settings\u2026</span>';
+  settingsBtn.onclick = () => openSettings();
+  menu.appendChild(settingsBtn);
   const setOpen = on => {
-    if(on){ soundPanel(); place(); }
+    if(on) place();
     menu.classList.toggle('on', on);
     more.setAttribute('aria-expanded', on ? 'true' : 'false');
   };
   more.onclick = e => { e.stopPropagation(); setOpen(!menu.classList.contains('on')); };
-  menu.addEventListener('click', e => {
-    if(e.target.closest('button') && !e.target.closest('.snd-panel')) setOpen(false);
-  });
+  menu.addEventListener('click', e => { if(e.target.closest('button')) setOpen(false); });
   document.addEventListener('click', e => {
     if(!ctl.contains(e.target) && !menu.contains(e.target)) setOpen(false);
   });
   addEventListener('resize', () => { if(menu.classList.contains('on')) place(); });
   document.addEventListener('keydown', e => { if(e.key === 'Escape') setOpen(false); });
 })();
+
+/* ---------------- settings ---------------- */
+/* The sound panel. fleet-sounds.js loads after this script, so it is built
+   the first time the card opens, from whatever the engine exposes. */
+function soundPanel(){
+  const FS = window.FleetSounds;
+  if(!FS) return null;
+  const el = document.createElement('div');
+  el.className = 'snd-panel';
+  const opts = ['<option value="theme">follow the theme</option>']
+    .concat(FS.packs().map(k => '<option value="'+k+'">'+k+'</option>')).join('');
+  el.innerHTML =
+    '<div class="row"><span>sound</span><button class="ghost" data-k="mute"></button>'
+    + '<button class="ghost" data-k="test" title="play the alert, then the done cue">test</button></div>'
+    + '<div class="row"><span>volume</span><input type="range" min="0" max="100" step="5" data-k="vol"><b class="pct"></b></div>'
+    + '<div class="row"><span>pack</span><select data-k="pack">'+opts+'</select></div>'
+    + '<div class="row"><label><input type="checkbox" data-k="clicks"> click cues</label>'
+    + '<label><input type="checkbox" data-k="soft"> soft</label></div>';
+  const q = k => el.querySelector('[data-k="'+k+'"]');
+  const sync = () => {
+    const m = FS.muted();
+    q('mute').textContent = m ? '🔇 off' : '🔊 on';
+    q('test').disabled = m;
+    q('vol').value = Math.round(FS.volume()*100); q('vol').disabled = m;
+    el.querySelector('.pct').textContent = Math.round(FS.volume()*100)+'%';
+    q('pack').value = FS.fixed();
+    q('clicks').checked = FS.clicks(); q('soft').checked = FS.soft();
+  };
+  q('mute').onclick = () => { FS.mute(!FS.muted()); sync(); if(!FS.muted()) FS.play('tap'); };
+  q('test').onclick = () => { FS.play('alert'); setTimeout(() => FS.play('done'), 900); };
+  q('vol').oninput = () => { FS.volume(q('vol').value/100); sync(); };
+  q('vol').onchange = () => FS.play('tap');
+  q('pack').onchange = () => { FS.fixed(q('pack').value); sync(); FS.play('alert'); };
+  q('clicks').onchange = () => { FS.clicks(q('clicks').checked); if(FS.clicks()) FS.play('tap'); };
+  q('soft').onchange = () => { FS.soft(q('soft').checked); FS.play('done'); };
+  sync();
+  document.getElementById('snd')?.addEventListener('click', () => setTimeout(sync, 0));
+  return el;
+}
+
+const MOTION_KEY = 'fleet.motion';
+function applyMotion(){
+  let off = false; try{ off = localStorage.getItem(MOTION_KEY) === 'off'; }catch(e){}
+  if(off) document.documentElement.dataset.motion = 'off'; else delete document.documentElement.dataset.motion;
+}
+applyMotion();
+
+/* Whatever a theme wrote -- hex, rgb(), oklch() -- the colour input wants
+   #rrggbb; let the engine resolve it. */
+let hexCanvas = null;
+function toHex(css){
+  hexCanvas = hexCanvas || document.createElement('canvas').getContext('2d', {willReadFrequently:true});
+  hexCanvas.clearRect(0, 0, 1, 1);
+  hexCanvas.fillStyle = '#888888'; hexCanvas.fillStyle = css;    // an invalid value leaves the grey
+  hexCanvas.fillRect(0, 0, 1, 1);
+  const [r, g, b] = hexCanvas.getImageData(0, 0, 1, 1).data;
+  return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+function themeValue(v){
+  // the theme's own value, not the override: read it with the inline property lifted
+  const root = document.documentElement.style, was = root.getPropertyValue('--' + v);
+  root.removeProperty('--' + v);
+  const val = getComputedStyle(document.documentElement).getPropertyValue('--' + v).trim();
+  if(was) root.setProperty('--' + v, was);
+  return val;
+}
+
+let settingsEl = null;
+function openSettings(){
+  if(!settingsEl){
+    settingsEl = document.createElement('div');
+    settingsEl.className = 'settings'; settingsEl.setAttribute('role', 'dialog'); settingsEl.setAttribute('aria-label', 'settings');
+    settingsEl.innerHTML =
+      '<div class="card">'
+      + '<header><b>settings</b><span class="theme" data-k="theme"></span><button class="ghost x" data-k="close" title="close (esc)">×</button></header>'
+      + '<section><h3>colours <span class="hint">this theme\u2019s accent and state colours \u2014 every tile, gauge and shell follows</span>'
+      +   '<button class="ghost" data-k="reset-tint">theme\u2019s own</button></h3>'
+      +   '<div class="sw-row" data-k="sw"></div></section>'
+      + '<section><h3>tiles <span class="hint">how large the board draws them</span></h3>'
+      +   '<div class="row"><span>scale</span><input type="range" min="100" max="200" step="5" data-k="scale"><b class="pct" data-k="scale-pct"></b></div></section>'
+      + '<section><h3>sound</h3><div data-k="snd"></div></section>'
+      + '<section><h3>motion</h3>'
+      +   '<div class="row"><label class="chk"><input type="checkbox" data-k="motion"> stop every animation (pulses, halos, rain, roulette)</label></div></section>'
+      + '</div>';
+    document.body.appendChild(settingsEl);
+    const q = k => settingsEl.querySelector('[data-k="'+k+'"]');
+    q('close').onclick = closeSettings;
+    settingsEl.addEventListener('click', e => { if(e.target === settingsEl) closeSettings(); });
+    settingsEl.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.preventDefault(); closeSettings(); } e.stopPropagation(); });
+    // colours
+    q('sw').innerHTML = TINT_VARS.map(v =>
+      '<label class="sw" data-v="'+v+'"><input type="color" data-var="'+v+'"><span>'+v+'</span></label>').join('');
+    q('sw').addEventListener('input', e => {
+      const v = e.target.dataset.var; if(!v) return;
+      setTint(document.documentElement.dataset.theme, v, e.target.value);
+      e.target.closest('.sw').classList.add('tinted');
+    });
+    q('reset-tint').onclick = () => {
+      const theme = document.documentElement.dataset.theme;
+      TINT_VARS.forEach(v => setTint(theme, v, ''));
+      fillSettings();
+    };
+    // tiles
+    q('scale').oninput = () => {
+      TILE_SCALE = q('scale').value / 100;
+      q('scale-pct').textContent = q('scale').value + '%';
+      try{ localStorage.setItem(SCALE_KEY, TILE_SCALE); }catch(e){}
+      fit();
+    };
+    // sound
+    const snd = soundPanel();
+    if(snd) q('snd').appendChild(snd);
+    else q('snd').textContent = 'sound engine not loaded';
+    // motion
+    q('motion').onchange = () => {
+      try{ localStorage.setItem(MOTION_KEY, q('motion').checked ? 'off' : 'on'); }catch(e){}
+      applyMotion();
+    };
+  }
+  fillSettings();
+  settingsEl.classList.add('on');
+  settingsEl.querySelector('[data-k="close"]').focus();
+}
+function fillSettings(){
+  const q = k => settingsEl.querySelector('[data-k="'+k+'"]');
+  const theme = document.documentElement.dataset.theme, t = tints()[theme] || {};
+  q('theme').textContent = '\u2014 ' + theme;
+  TINT_VARS.forEach(v => {
+    const sw = settingsEl.querySelector('.sw[data-v="'+v+'"]');
+    sw.querySelector('input').value = t[v] || toHex(themeValue(v));
+    sw.classList.toggle('tinted', !!t[v]);
+  });
+  q('scale').value = Math.round(TILE_SCALE * 100);
+  q('scale-pct').textContent = Math.round(TILE_SCALE * 100) + '%';
+  q('motion').checked = document.documentElement.dataset.motion === 'off';
+}
+function closeSettings(){ settingsEl?.classList.remove('on'); }
+document.addEventListener('keydown', e => {
+  // ⌘, opens settings the way every Mac app does
+  if(e.metaKey && !e.ctrlKey && !e.altKey && e.key === ','){ e.preventDefault(); openSettings(); }
+}, true);
 setInterval(() => {
   document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
 }, 1000);
