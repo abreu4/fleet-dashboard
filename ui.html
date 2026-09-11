@@ -529,8 +529,14 @@
     transition:bottom .18s ease;
   }
   .player.on{display:flex}
+  /* Minimised: one strip, title and four controls. Hardened so nothing can
+     leave the screen: the strip never grows taller than its content needs,
+     the control column is sized to its buttons and cannot wrap, and with the
+     terminal sheet up the strip is pinned below the top edge rather than
+     riding --taken off the viewport. */
   .player.min{
-    width:min(360px,calc(100vw - 28px)); height:58px; border-radius:7px;
+    width:min(360px,calc(100vw - 28px)); height:auto; min-height:58px; border-radius:7px;
+    bottom:min(calc(14px + var(--taken,0px)), calc(100vh - 80px));
   }
   .player.min .screen{
     position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;
@@ -539,13 +545,16 @@
   .player.min .seek,.player.min .times,
   .player.min .bar #mprev,.player.min .bar #mback,.player.min .bar #mcrate{display:none}
   .player.min .side{
-    display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:1fr 1fr;
-    column-gap:9px; padding:7px 8px 7px 11px;
+    display:grid; grid-template-columns:minmax(0,1fr) max-content; grid-template-rows:auto auto;
+    align-items:center; column-gap:9px; padding:7px 8px 7px 11px; overflow:hidden;
   }
-  .player.min .np{grid-column:1;grid-row:1;font-size:11.5px;white-space:nowrap;display:block;text-overflow:ellipsis}
+  .player.min .np{grid-column:1;grid-row:1;font-size:11.5px;line-height:1.35;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis}
   .player.min .by{grid-column:1;grid-row:2;margin:0;font-size:10px}
-  .player.min .bar{grid-column:2;grid-row:1/3;margin:0;gap:3px}
-  .player.min .bar button{flex:0 0 34px;height:34px;padding:0}
+  .player.min .bar{grid-column:2;grid-row:1/3;margin:0;gap:3px;flex-wrap:nowrap;align-self:center}
+  .player.min .bar button{
+    flex:0 0 32px; width:32px; height:32px; padding:0; display:inline-flex; align-items:center;
+    justify-content:center; font-size:13px; line-height:1;
+  }
   .player .screen{width:200px; height:200px; flex:none; background:#000;
                   border-right:1px solid var(--edge)}
   .player .screen iframe{width:200px; height:200px; border:0; display:block}
@@ -3804,7 +3813,7 @@ const VOICE = {
   chequer:   {blocked:'stuck', waiting:'waiting', running:'speeding', idle:'idle', done:'act clear', unknown:'lost',
               blank:'no rings collected yet', quiet:'no one in this zone', offline:'GAME OVER'},
   /* team fortress 2 */
-  ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'captured', unknown:'spy?',
+  ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'won', unknown:'spy?',
               blank:'nothing in the loadout', quiet:'ceasefire'},
   /* chess */
   staunton:  {blocked:'in check', waiting:'your move', running:'thinking', idle:'adjourned', done:'checkmate', unknown:'off board',
@@ -4265,7 +4274,7 @@ function select(id){
     [s.provider, s.project, s.place, s.kind].filter(Boolean).join(' · ');
 
   document.getElementById('p-stats').innerHTML =
-      stat('state', s.state)
+      stat('state', voice(s.state))
     + stat('up', s.started ? age(s.started) : '—')
     + stat('quiet', s.updated ? age(s.updated) : '—')
     + stat('turns', s.turns ? num(s.turns) : '—')
@@ -4890,7 +4899,7 @@ function minimizePlayer(on){
   if(!playerEl.classList.contains('on')) return;
   playerEl.classList.toggle('min', on);
   if(on) crateEl.classList.remove('on');
-  minBtn.textContent = on ? '\u25a1' : '\u2014';
+  minBtn.textContent = on ? '\u2922' : '\u2014';
   minBtn.title = on ? 'expand player' : 'minimize without pausing';
   minBtn.setAttribute('aria-label', on ? 'expand player' : 'minimize player');
   remember();
