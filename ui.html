@@ -227,6 +227,25 @@
     font-size:12px; text-align:left; white-space:nowrap;
   }
   .more-menu button span{display:inline}
+  /* Sound lives in the menu too: the square in the row is mute/unmute, this is
+     everything else — volume, which pack, click cues, soft mode, a test. */
+  .snd-panel{
+    display:flex; flex-direction:column; gap:7px;
+    margin-top:3px; padding:8px 4px 3px; border-top:1px solid var(--edge);
+    font:11px/1.4 var(--mono); letter-spacing:.06em; color:var(--dim);
+  }
+  .snd-panel .row{display:flex; align-items:center; gap:8px; min-height:22px}
+  .snd-panel .row > span:first-child{flex:0 0 46px; text-transform:uppercase; color:var(--faint)}
+  .snd-panel input[type=range]{flex:1; min-width:0; accent-color:var(--accent); cursor:pointer}
+  .snd-panel select{
+    flex:1; min-width:0; padding:3px 6px; border-radius:5px;
+    background:var(--cell); color:var(--ink); border:1px solid var(--edge);
+    font:11px var(--mono);
+  }
+  .snd-panel label{display:flex; align-items:center; gap:6px; cursor:pointer}
+  .snd-panel input[type=checkbox]{accent-color:var(--accent); margin:0}
+  .snd-panel button.ghost{width:auto; padding:4px 9px}
+  .snd-panel .pct{flex:0 0 34px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
 
 
   /* The theme control wears the theme: its own accent, and four of the palette's
@@ -3907,13 +3926,52 @@ themePicker.addEventListener('change', () => { themeBefore = null; });
     const b = document.getElementById(id);
     if(b) menu.appendChild(b);
   });
+  /* The sound panel. fleet-sounds.js loads after this script, so it is built
+     the first time the menu opens, from whatever the engine exposes. */
+  const soundPanel = () => {
+    const FS = window.FleetSounds;
+    if(!FS || menu.querySelector('.snd-panel')) return;
+    const el = document.createElement('div');
+    el.className = 'snd-panel';
+    const opts = ['<option value="theme">follow the theme</option>']
+      .concat(FS.packs().map(k => '<option value="'+k+'">'+k+'</option>')).join('');
+    el.innerHTML =
+      '<div class="row"><span>sound</span><button class="ghost" data-k="mute"></button>'
+      + '<button class="ghost" data-k="test" title="play the alert, then the done cue">test</button></div>'
+      + '<div class="row"><span>volume</span><input type="range" min="0" max="100" step="5" data-k="vol"><b class="pct"></b></div>'
+      + '<div class="row"><span>pack</span><select data-k="pack">'+opts+'</select></div>'
+      + '<div class="row"><label><input type="checkbox" data-k="clicks"> click cues</label>'
+      + '<label><input type="checkbox" data-k="soft"> soft</label></div>';
+    const q = k => el.querySelector('[data-k="'+k+'"]');
+    const sync = () => {
+      const m = FS.muted();
+      q('mute').textContent = m ? '🔇 off' : '🔊 on';
+      q('test').disabled = m;
+      q('vol').value = Math.round(FS.volume()*100); q('vol').disabled = m;
+      el.querySelector('.pct').textContent = Math.round(FS.volume()*100)+'%';
+      q('pack').value = FS.fixed();
+      q('clicks').checked = FS.clicks(); q('soft').checked = FS.soft();
+    };
+    q('mute').onclick = () => { FS.mute(!FS.muted()); sync(); if(!FS.muted()) FS.play('tap'); };
+    q('test').onclick = () => { FS.play('alert'); setTimeout(() => FS.play('done'), 900); };
+    q('vol').oninput = () => { FS.volume(q('vol').value/100); sync(); };
+    q('vol').onchange = () => FS.play('tap');
+    q('pack').onchange = () => { FS.fixed(q('pack').value); sync(); FS.play('alert'); };
+    q('clicks').onchange = () => { FS.clicks(q('clicks').checked); if(FS.clicks()) FS.play('tap'); };
+    q('soft').onchange = () => { FS.soft(q('soft').checked); FS.play('done'); };
+    sync();
+    menu.appendChild(el);
+    document.getElementById('snd')?.addEventListener('click', () => setTimeout(sync, 0));
+  };
   const setOpen = on => {
-    if(on) place();
+    if(on){ soundPanel(); place(); }
     menu.classList.toggle('on', on);
     more.setAttribute('aria-expanded', on ? 'true' : 'false');
   };
   more.onclick = e => { e.stopPropagation(); setOpen(!menu.classList.contains('on')); };
-  menu.addEventListener('click', e => { if(e.target.closest('button')) setOpen(false); });
+  menu.addEventListener('click', e => {
+    if(e.target.closest('button') && !e.target.closest('.snd-panel')) setOpen(false);
+  });
   document.addEventListener('click', e => {
     if(!ctl.contains(e.target) && !menu.contains(e.target)) setOpen(false);
   });
@@ -4587,8 +4645,9 @@ function ensureTerm(meta){
   return t;
 }
 
-/* iTerm's "Natural Text Editing" keys. xterm.js drops every Cmd chord on the
-   floor (macOS reserves them), so Cmd-Backspace did nothing and Cmd-arrows
+/* iTerm's "Natural Text Editing" keys, plus Shift-Enter as a newline the way
+   Claude Code's /terminal-setup binds it. xterm.js drops every Cmd chord on
+   the floor (macOS reserves them), so Cmd-Backspace did nothing and Cmd-arrows
    went nowhere. Translate the ones a Mac hand expects into the bytes readline,
    zle and Claude Code already understand; leave Cmd-C/V to the browser. */
 const MAC_KEYS = {
@@ -4596,11 +4655,15 @@ const MAC_KEYS = {
   'Meta Backspace': '\x15',  'Alt Backspace': '\x17',    // kill line / kill word
   'Alt ArrowLeft': '\x1bb',  'Alt ArrowRight': '\x1bf',  // word back / forward
   'Meta Delete': '\x0b',                                  // kill to line end
+  'Shift Enter': '\\\r',                                 // newline, not send: "\ + Enter"
 };
 function macKeys(e, tid){
-  if(e.type !== 'keydown' || e.ctrlKey || e.shiftKey) return true;
+  if(e.type !== 'keydown' || e.ctrlKey) return true;
+  if(e.shiftKey) return macKey(e, tid, e.metaKey || e.altKey ? null : 'Shift');
   if(e.metaKey && e.key === 'k'){ e.preventDefault(); terms.get(tid)?.term.clear(); return false; }
-  const mod = e.metaKey && !e.altKey ? 'Meta' : e.altKey && !e.metaKey ? 'Alt' : null;
+  return macKey(e, tid, e.metaKey && !e.altKey ? 'Meta' : e.altKey && !e.metaKey ? 'Alt' : null);
+}
+function macKey(e, tid, mod){
   const seq = mod && MAC_KEYS[mod + ' ' + e.key];
   if(!seq) return true;
   e.preventDefault();

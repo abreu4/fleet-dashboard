@@ -40,13 +40,15 @@
   var LS_CLICKS = 'fleet.sound.clicks';           // tap / tile / switch on your own actions
   var LS_PACK   = 'fleet.sound.pack';             // 'theme' = follow the theme, else a pack key
   var LS_SOFT   = 'fleet.sound.soft';             // cap drive + lowpass the master
-  var DEFAULT_VOLUME = 0.28;
+  var DEFAULT_VOLUME = 0.6;
   // What this board is for is ambient awareness, so the defaults are the quiet
   // ones: a sound when something needs you (blocked / waiting) or finishes, and
   // nothing for your own clicks unless you ask. 'soft' caps every pack's drive
   // and rolls off the top end, because a square wave through a hard clipper is
   // an alarm, not a cue.
-  var VOLUME_STEPS = [0.2, 0.45, 0.65];     // shift+click on the toggle cycles these
+  var VOLUME_STEPS = [0.35, 0.6, 0.85, 1];  // shift+click on the toggle cycles these
+  var MAKEUP = 1.8;                         // after the compressor: 1.0 is loud on laptop speakers
+  var SOFT_HZ = 5600;                       // soft mode roll-off; 3.4k dulled the chimes to nothing
   var ALERT_GAP_MS = 1500;                  // never more than one alert per 1.5 s
   var DONE_GAP_MS = 800;
   var MAX_VOICES = 24;                      // concurrent oscillators/buffers, hard cap
@@ -64,7 +66,7 @@
   }
   function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
 
-  var muted = readLS(LS_MUTED, true) !== false;             // default: muted
+  var muted = readLS(LS_MUTED, false) === true;             // default: on (a sound when you're needed)
   var volume = clamp(Number(readLS(LS_VOLUME, DEFAULT_VOLUME)) || DEFAULT_VOLUME, 0, 1);
   var clicks = readLS(LS_CLICKS, false) === true;             // default: off
   var fixedPack = readLS(LS_PACK, 'theme') || 'theme';
@@ -107,9 +109,12 @@
     // clicks fatiguing on a board you sit beside all day.
     tilt = ctx.createBiquadFilter();
     tilt.type = 'lowpass'; tilt.Q.value = 0.5;
-    tilt.frequency.value = soft ? 3400 : 20000;
+    tilt.frequency.value = soft ? SOFT_HZ : 20000;
+    var makeup = ctx.createGain();
+    makeup.gain.value = MAKEUP;
     comp.connect(tilt);
-    tilt.connect(master);
+    tilt.connect(makeup);
+    makeup.connect(master);
     master.connect(ctx.destination);
 
     // 1 s of white noise, shared by every noise burst (random start offset).
@@ -610,7 +615,12 @@
 
   function play(name) {
     var p = PACKS[packKey], layers = p && p[name];
-    if (!layers || muted || !ctx || ctx.state !== 'running') return false;
+    if (!layers || muted || !ctx) return false;
+    if (ctx.state !== 'running') {
+      // Suspended until a gesture: ask, and play if the browser lets us.
+      try { ctx.resume().then(function () { if (ctx.state === 'running') trigger(layers); }); } catch (e) { /* no */ }
+      return false;
+    }
     trigger(layers);
     return true;
   }
@@ -652,8 +662,8 @@
   function label() {
     if (!btn) return;
     btn.innerHTML = muted ? '🔇<span> off</span>' : '🔊<span> on</span>';
-    btn.title = 'ui sounds ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
-              + '\nclick: mute / unmute · shift+click: cycle volume';
+    btn.title = 'sound ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
+              + '\nclick: mute / unmute · shift+click: cycle volume · volume, pack and cues under \u22ef';
     btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
   }
   function mount() {
@@ -765,9 +775,9 @@
       if (key !== undefined) { fixedPack = (key === 'theme' || PACKS.hasOwnProperty(key)) ? key : 'theme'; writeLS(LS_PACK, fixedPack); switchTo(document.documentElement.getAttribute('data-theme'), false); }
       return fixedPack;
     },
-    /** Soft mode: capped drive and a 3.4kHz roll-off (default on). Persisted. */
+    /** Soft mode: capped drive and a 5.6kHz roll-off (default on). Persisted. */
     soft: function (on) {
-      if (on !== undefined) { soft = !!on; writeLS(LS_SOFT, soft); if (tilt) tilt.frequency.value = soft ? 3400 : 20000; if (ctx) buildPackChain(); }
+      if (on !== undefined) { soft = !!on; writeLS(LS_SOFT, soft); if (tilt) tilt.frequency.value = soft ? SOFT_HZ : 20000; if (ctx) buildPackChain(); }
       return soft;
     }
   };
