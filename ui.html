@@ -2929,7 +2929,11 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .wrap::before{
   content:""; position:fixed; left:-104px; bottom:-104px;
   width:320px; height:320px; border-radius:50%;
-  pointer-events:none; z-index:0; opacity:.15;
+  /* Above the lanes, not under them: at z-index 0 it was first in tree order
+     and every opaque lane panel painted over it, so it only ever showed in the
+     gaps. Screen blending lightens whatever it crosses, which is how an inlay
+     under a lamp reads, and leaves any text over it legible. */
+  pointer-events:none; z-index:2; opacity:.24; mix-blend-mode:screen;
   background:
     radial-gradient(circle, rgba(251,243,200,.95) 0 5%, rgba(201,162,39,.9) 5% 7%, transparent 8%),
     radial-gradient(circle, transparent 19%, rgba(201,162,39,.85) 20% 22%, transparent 23%),
