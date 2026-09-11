@@ -427,8 +427,13 @@
   .empty{padding:12px; font:11px/1.6 var(--mono); color:var(--faint); letter-spacing:.07em}
 
   /* ===================== tiles ===================== */
+  /* A tile is as tall as what it says, up to the row's ceiling (--h, set by
+     fit()). Tiles sharing a grid row stretch to the tallest of them, so rows
+     stay ruled; a row of one-line summaries is a short row, not a tall one
+     with air in it. Collapsed boards keep fixed rows -- those tiles are
+     essentials only and read as a list. */
   .bubble{
-    height:var(--h,86px); min-width:0; position:relative; overflow:hidden;
+    height:auto; min-height:0; max-height:var(--h,86px); min-width:0; position:relative; overflow:hidden;
     border:1px solid var(--edge); border-radius:8px; background:var(--tile);
     padding:7px 9px 7px 12px; display:flex; flex-direction:column; gap:3px;
     cursor:pointer; text-align:left; color:inherit; font:inherit;
@@ -478,7 +483,7 @@
   .board.compact .lane{flex:0 0 auto !important; min-height:0 !important}
   .board.compact .bubbles{flex:0 0 auto; overflow:visible}
   /* collapsed: essentials only, whatever height the tile happened to get */
-  .board.compact .bubble{padding:5px 8px 5px 11px; justify-content:center}
+  .board.compact .bubble{height:var(--h,52px); padding:5px 8px 5px 11px; justify-content:center}
   .board.compact .bubble .gist{display:none}
   .board.compact .bubble .nm{-webkit-line-clamp:1}
   .board.compact .bubble .foot{margin-top:2px}
@@ -3469,6 +3474,7 @@ const GAP = 7;
    the clamp is the same as scaling its floor, its ceiling and its share of the
    viewport, since the factor is positive -- so the relationships hold. */
 const TILE_SCALE = 1.4;
+const TILE_CEIL = 128;    // px: name x2 (34) + gist x3 (50) + foot (15) + gaps and padding
 
 function bounds(){
   const w = innerWidth, h = innerHeight, k = TILE_SCALE;
@@ -3480,7 +3486,9 @@ function bounds(){
   return {
     minW: Math.round(k * Math.max(126, Math.min(196, w / 8.2))),
     minH: Math.round(k * Math.max(56,  Math.min(84,  h / 12.0))),
-    maxH: Math.round(k * Math.max(112, Math.min(214, h / 4.2))),
+    // Nothing a tile can show needs more than TILE_CEIL: a two-line name, a
+    // three-line summary and the foot. Height past that was only air.
+    maxH: Math.min(TILE_CEIL, Math.round(k * Math.max(112, Math.min(214, h / 4.2)))),
   };
 }
 
