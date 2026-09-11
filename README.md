@@ -209,6 +209,23 @@ Text Editing preset (⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K) and Shift-Ent
 The terminal is loopback-only and gated by a per-process token, so it is off
 when the server binds anything but 127.0.0.1.
 
+## One board, no strays
+
+Every instance registers itself under `~/.config/fleet/run/` (an `flock` for
+liveness, JSON for description), and an instance nobody polls for 30 minutes
+exits on its own — unless it is the kiosk (`--kiosk`, which the installer sets)
+or has a live shell open. Fifteen forgotten dev copies once took 28% of the
+machine; this is the fix.
+
+    python3 dashboard.py --list                   # who is running, on which port, from where
+    python3 dashboard.py --stop-strays            # SIGTERM everything except the kiosk
+    python3 dashboard.py --port 8802 --replace    # take a port over from a stray
+    python3 dashboard.py --port 8802 --idle-exit 0   # a dev copy that must not idle-exit
+
+A second bind on a taken port fails loudly and names the holder. SIGTERM runs
+the same shutdown as Ctrl-C, so a killed instance closes its shells instead of
+orphaning them.
+
 ## Reaching it from another machine
 
 The board itself is plain HTTP and can be served on the LAN:
