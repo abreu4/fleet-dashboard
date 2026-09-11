@@ -123,7 +123,7 @@
     border-bottom:1px solid var(--edge); background:linear-gradient(180deg,var(--hud-a),var(--hud-b));
   }
   .brand{display:flex; flex-direction:column; justify-content:center; gap:9px;
-         flex:0 0 212px; padding-right:2px}
+         flex:0 0 236px; padding-right:2px}
   .brand b{font:600 17px/1 var(--mono); letter-spacing:.24em; color:var(--accent);
            text-shadow:0 0 calc(var(--glow)*15px) var(--accent)}
   .brand span{font:11px/1.7 var(--mono); letter-spacing:.12em; color:var(--faint)}
@@ -172,14 +172,21 @@
               font-variant-numeric:tabular-nums}
   .readout dd b{color:var(--ink); font-weight:600}
 
-  .tally{display:grid; grid-template-columns:1fr 1fr; gap:4px; width:204px}
+  .tally{display:grid; grid-template-columns:1fr 1fr; gap:4px; width:228px}
   .chip{
-    display:flex; align-items:center; gap:7px; padding:3px 9px; border-radius:4px;
+    display:flex; align-items:center; gap:6px; padding:3px 7px; border-radius:4px;
     border:1px solid var(--edge); background:var(--cell);
     font:11px/1.5 var(--mono); letter-spacing:.04em; color:var(--dim);
     text-transform:uppercase; white-space:nowrap; overflow:hidden;
   }
-  .chip b{margin-left:auto; color:var(--ink); font-size:13px}
+  /* The label ellipsizes and the count never does. Tracking is capped on the
+     label and zeroed on the count: a wide display face (console's Copperplate
+     runs .28em) was spending the chip's width on air. */
+  .chip .lb{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; letter-spacing:.06em}
+  /* A span, not a <b>: the tally sits inside .brand, and `.brand b` is the
+     wordmark -- 17px, .24em tracking, a sigil appended -- which every count
+     was silently inheriting. */
+  .chip .n{margin-left:auto; flex:none; color:var(--ink); font-size:13px; letter-spacing:0; font-weight:600}
   .dot{width:7px; height:7px; border-radius:50%; flex:none}
   .s-blocked{background:var(--blocked); box-shadow:0 0 calc(var(--glow)*7px) var(--blocked)}
   .s-running{background:var(--running); box-shadow:0 0 calc(var(--glow)*7px) var(--running)}
@@ -792,7 +799,7 @@
 .bubble .foot{ font:11.5px/1.3 var(--mono); letter-spacing:.03em; }
 .project > header{ font:12px/1.55 var(--mono); letter-spacing:.06em; }
 .chip{ font:12px/1.45 var(--mono); }
-.chip b{ font-size:15px; }
+.chip .n{ font-size:14px; }
 .gauge .lab{ font-size:clamp(10.5px,1.25vh,12px); }
 .rail .vlabel{ font-size:12px; letter-spacing:.12em; }
 
@@ -1750,8 +1757,6 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   --hud-a:#2b343d; --hud-b:#151b21; --rail-a:#2a343e; --rail-b:#171d23;
 }
 
-:root[data-theme="vellum"] .chip b::after,
-:root[data-theme="hoarstone"] .chip b::after{content:none}
 
 /* ===== VELLUM ornament ===================================== */
 /* candle above the desk, soot in the corners */
@@ -2221,6 +2226,287 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   .xterm-viewport::-webkit-scrollbar{width:9px}
   .xterm-viewport::-webkit-scrollbar-thumb{background:var(--edge-hot); border-radius:5px}
 
+
+/* ============================================================================
+   IDENTITY PASS II -- worlds you can name from the door.
+   The first pass gave each theme its palette and a few tells at reading
+   distance. This one is calibrated at the thumbnail: what does the board look
+   like from across the room, and can you name the world before you can read a
+   word on it? Each theme gets at most three things -- ONE structural tell that
+   changes what a tile or lane IS, ONE diegetic object (the way the chess board
+   has its wheel), and its vocabulary (VOICE, in the script). Everything here
+   is background-image, pseudo-elements and opacity; the only animations are
+   slow, composited and gated behind prefers-reduced-motion.
+   ========================================================================== */
+
+/* ---------- CONSOLE -- the admiralty chart --------------------------------
+   The default theme, the most-seen thing in the file, and until now a dark
+   rectangle with a cyan accent. The chart-table idea in its comment never
+   reached the page. Now it does: a lat/long graticule under the lanes, and a
+   radar sweep set into the bottom-right corner of the deck -- range rings,
+   a bearing line that turns once every twelve seconds, nothing that repaints
+   but one rotating layer. */
+:root[data-theme="console"] .board::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    repeating-linear-gradient(0deg,  color-mix(in oklab, var(--accent) 9%, transparent) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(90deg, color-mix(in oklab, var(--accent) 9%, transparent) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(0deg,  color-mix(in oklab, var(--accent) 16%, transparent) 0 1px, transparent 1px 320px),
+    repeating-linear-gradient(90deg, color-mix(in oklab, var(--accent) 16%, transparent) 0 1px, transparent 1px 320px);
+}
+:root[data-theme="console"] .board::after{
+  content:""; position:fixed; right:-120px; bottom:-120px; width:380px; height:380px;
+  border-radius:50%; pointer-events:none; z-index:2; opacity:.26; mix-blend-mode:screen;
+  background:
+    radial-gradient(circle, rgba(56,226,208,.9) 0 2px, transparent 3px),
+    repeating-radial-gradient(circle, transparent 0 46px, rgba(56,226,208,.55) 46px 47px),
+    linear-gradient(rgba(56,226,208,.55), rgba(56,226,208,.55)) 50% 0/1px 100% no-repeat,
+    linear-gradient(rgba(56,226,208,.55), rgba(56,226,208,.55)) 0 50%/100% 1px no-repeat,
+    conic-gradient(from 0deg, rgba(56,226,208,.75) 0deg, rgba(56,226,208,.18) 40deg, transparent 90deg 360deg);
+  animation:sweep 12s linear infinite;
+}
+@keyframes sweep{from{transform:rotate(0)} to{transform:rotate(360deg)}}
+:root[data-theme="console"] .wrap:hover .board::after{animation-duration:4s}
+:root[data-theme="console"] .rail .rcount{font-variant-numeric:tabular-nums}
+
+/* ---------- CYBER -- Cinestill 800T ----------------------------------------
+   The two colour casts were filmic; what was missing was the thing that makes
+   Cinestill Cinestill: halation, the red bloom around every highlight, and the
+   orange edge markings of the negative itself. The status rib is the only
+   highlight on a tile, so it gets the bloom; the film rebate runs along the
+   foot of the screen with sprocket holes above it. */
+:root[data-theme="cyber"] .bubble[data-state="running"]::before,
+:root[data-theme="cyber"] .bubble[data-state="blocked"]::before,
+:root[data-theme="cyber"] .bubble[data-state="waiting"]::before{
+  filter:drop-shadow(0 0 6px color-mix(in oklab, var(--rib) 55%, transparent))
+         drop-shadow(0 0 14px rgba(255,79,184,.35));
+}
+:root[data-theme="cyber"] .board::after{
+  content:"\25C2 800T  35 \25B8 35A   36 \25B8 36A   37 \25B8 37A   38 \25B8 38A   39 \25B8 39A   40 \25B8 40A   41 \25B8 41A   42 \25B8 42A  \25C2 CINESTILL";
+  position:fixed; left:0; right:0; bottom:0; height:22px; pointer-events:none; z-index:2;
+  padding:11px 14px 0; white-space:nowrap; overflow:hidden;
+  font:9px/1 "Share Tech Mono", ui-monospace, monospace; letter-spacing:.32em; color:#ff9a3c; opacity:.62;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 9px, rgba(255,154,60,.55) 9px 15px, transparent 15px 24px) 0 2px/100% 5px no-repeat,
+    linear-gradient(180deg, transparent, rgba(16,4,25,.85) 40%);
+}
+:root[data-theme="cyber"] .brand b{animation:neon-on 2.4s steps(1,end) 1}
+@keyframes neon-on{0%,9%{opacity:.35} 10%,14%{opacity:1} 15%,22%{opacity:.4} 23%,60%{opacity:1} 61%,63%{opacity:.5} 64%,100%{opacity:1}}
+
+/* ---------- EARTH -- the forest floor --------------------------------------
+   The pigment story was in the palette but the page had no organic geometry:
+   every corner was a machined 5px radius. Tiles are now cut the way a leaf is,
+   no two corners alike; a fern frond grows out of the bottom-left of the
+   board; and the rails carry lichen. Silhouette survives peripheral vision
+   where texture does not. */
+:root[data-theme="earth"] .bubble{border-radius:11px 4px 10px 5px / 5px 10px 4px 11px}
+:root[data-theme="earth"] .project{border-radius:9px 4px 8px 5px / 4px 8px 5px 9px}
+:root[data-theme="earth"] .lane{border-radius:10px 5px 9px 6px / 6px 9px 5px 10px}
+:root[data-theme="earth"] .board::after{
+  content:""; position:fixed; left:-22px; bottom:-26px; width:260px; height:300px;
+  pointer-events:none; z-index:2; opacity:.16; mix-blend-mode:screen;
+  background:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='260'%20height='300'%20viewBox='0%200%20260%20300'%3E%3Cpath%20d='M28%20296%20Q70%20150%20190%2026'%20fill='none'%20stroke='%239fd27a'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3Cpath%20d='M35.2%20272.8%20Q52.0%20273.8%2075.7%20265.4%20Q61.1%20257.9%2035.2%20272.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M35.2%20272.8%20Q21.2%20263.5%207.3%20242.6%20Q23.5%20245.3%2035.2%20272.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M40.8%20257.0%20Q59.4%20258.7%2086.1%20250.1%20Q70.1%20241.2%2040.8%20257.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M40.8%20257.0%20Q25.4%20246.2%2010.7%20222.4%20Q28.6%20226.0%2040.8%20257.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M46.8%20241.3%20Q67.3%20243.8%2097.0%20235.2%20Q79.6%20224.9%2046.8%20241.3Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M46.8%20241.3%20Q30.2%20229.0%2014.7%20202.2%20Q34.4%20206.7%2046.8%20241.3Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M53.3%20225.8%20Q75.6%20229.1%20108.4%20220.6%20Q89.7%20208.8%2053.3%20225.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M53.3%20225.8%20Q35.6%20211.7%2019.4%20182.0%20Q40.8%20187.6%2053.3%20225.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M60.2%20210.4%20Q84.4%20214.7%20120.2%20206.5%20Q100.3%20193.1%2060.2%20210.4Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M60.2%20210.4%20Q41.5%20194.6%2024.8%20161.8%20Q47.9%20168.5%2060.2%20210.4Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M67.6%20195.1%20Q93.5%20200.5%20132.5%20192.8%20Q111.4%20177.7%2067.6%20195.1Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M67.6%20195.1%20Q47.9%20177.5%2031.0%20141.6%20Q55.6%20149.6%2067.6%20195.1Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M75.6%20180.0%20Q103.2%20186.6%20145.1%20179.4%20Q123.0%20162.7%2075.6%20180.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M75.6%20180.0%20Q54.9%20160.5%2037.8%20121.5%20Q64.0%20130.8%2075.6%20180.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M83.9%20165.0%20Q112.2%20172.6%20155.7%20166.4%20Q133.3%20148.5%2083.9%20165.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M83.9%20165.0%20Q63.2%20144.3%2046.7%20103.6%20Q73.4%20113.9%2083.9%20165.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M92.8%20150.1%20Q119.0%20157.9%20159.7%20153.3%20Q139.3%20136.0%2092.8%20150.1Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M92.8%20150.1%20Q73.9%20130.3%2059.6%2091.9%20Q84.3%20102.2%2092.8%20150.1Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M102.1%20135.4%20Q126.2%20143.3%20164.2%20140.0%20Q145.7%20123.4%20102.1%20135.4Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M102.1%20135.4%20Q85.1%20116.5%2072.8%2080.5%20Q95.4%2090.7%20102.1%20135.4Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M111.9%20120.8%20Q134.0%20128.7%20169.1%20126.6%20Q152.4%20110.8%20111.9%20120.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M111.9%20120.8%20Q96.6%20102.9%2086.1%2069.3%20Q106.8%2079.3%20111.9%20120.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M122.1%20106.3%20Q142.2%20114.1%20174.5%20113.0%20Q159.6%2098.1%20122.1%20106.3Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M122.1%20106.3%20Q108.6%2089.6%2099.8%2058.5%20Q118.5%2068.2%20122.1%20106.3Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M132.9%2092.0%20Q151.0%2099.5%20180.3%2099.3%20Q167.1%2085.4%20132.9%2092.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M132.9%2092.0%20Q120.9%2076.4%20113.6%2048.0%20Q130.4%2057.2%20132.9%2092.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M144.1%2077.8%20Q160.2%2085.0%20186.7%2085.4%20Q175.1%2072.6%20144.1%2077.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M144.1%2077.8%20Q133.7%2063.5%20127.7%2037.7%20Q142.7%2046.4%20144.1%2077.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M155.8%2063.7%20Q170.0%2070.5%20193.5%2071.4%20Q183.5%2059.8%20155.8%2063.7Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M155.8%2063.7%20Q146.8%2050.8%20142.1%2027.7%20Q155.2%2035.7%20155.8%2063.7Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M167.9%2049.8%20Q180.2%2056.0%20200.8%2057.3%20Q192.3%2046.9%20167.9%2049.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M167.9%2049.8%20Q160.3%2038.2%20156.7%2017.9%20Q168.0%2025.2%20167.9%2049.8Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M180.5%2036.0%20Q191.0%2041.6%20208.7%2043.1%20Q201.5%2034.0%20180.5%2036.0Z'%20fill='%239fd27a'/%3E%3Cpath%20d='M180.5%2036.0%20Q174.3%2025.9%20171.5%208.4%20Q181.1%2014.9%20180.5%2036.0Z'%20fill='%239fd27a'/%3E%3C/svg%3E") 0 0/260px 300px no-repeat;
+  transform-origin:12% 98%; animation:fernsway 9s ease-in-out infinite alternate;
+}
+@keyframes fernsway{from{transform:rotate(-1.2deg)} to{transform:rotate(1.6deg)}}
+:root[data-theme="earth"] .rail{
+  background-image:
+    radial-gradient(circle at 6px 40%, rgba(190,228,150,.16) 0 3px, transparent 4px),
+    radial-gradient(circle at 24px 62%, rgba(224,189,79,.14) 0 2px, transparent 3px),
+    radial-gradient(circle at 14px 81%, rgba(190,228,150,.12) 0 2.5px, transparent 3.5px),
+    var(--grain), linear-gradient(180deg,var(--rail-a),var(--rail-b));
+}
+
+/* ---------- NEUTRAL -- graphite ---------------------------------------------
+   Thinness is the point here: the "survive a bright room, distract me with
+   nothing" option. Its one gap was that body::after{display:none} killed the
+   only ground treatment, so the screen emitted instead of being lit. One
+   vignette, nothing else, on purpose. */
+:root[data-theme="neutral"] .wrap::after{
+  background:radial-gradient(120% 95% at 50% 42%, transparent 60%, rgb(0 0 0 / .14) 100%);
+}
+
+/* ---------- PAPER -- the editorial desk -------------------------------------
+   Tiles sit ON ruled stock now, the margin rule is printed red, and a proof
+   stamp sits skewed in the corner the way one lands when the desk is busy. */
+:root[data-theme="paper"] .bubbles{
+  background-image:repeating-linear-gradient(0deg, transparent 0 21px, rgba(49,95,124,.10) 21px 22px);
+}
+:root[data-theme="paper"] .board::after{
+  content:"PROOF \00b7 NOT FOR PUBLICATION"; position:fixed; right:22px; bottom:26px;
+  pointer-events:none; z-index:2; padding:6px 12px 5px;
+  font:700 13px/1 "Hoefler Text", Baskerville, Georgia, serif; letter-spacing:.22em;
+  color:#d94e3f; border:3px double #d94e3f; border-radius:3px; opacity:.42;
+  transform:rotate(-9deg); mix-blend-mode:multiply;
+}
+
+/* ---------- MIAMI86 -- Hotline Miami ----------------------------------------
+   Third-generation VHS dub: the names split into their cyan and magenta
+   plates (the technique cyber uses on its wordmark, and this is where it
+   belongs most), and the VCR's on-screen display sits in the corner of the
+   tape. */
+:root[data-theme="miami86"] .bubble .nm{
+  text-shadow:1.2px 0 0 rgba(49,223,235,.55), -1.2px 0 0 rgba(255,79,184,.55);
+}
+:root[data-theme="miami86"] .board::after{
+  content:"\25B6 PLAY   SP   0:00:00"; position:fixed; left:18px; bottom:16px;
+  pointer-events:none; z-index:2; opacity:.72;
+  font:700 15px/1 "Silkscreen", Krungthep, ui-monospace, monospace; letter-spacing:.1em;
+  color:#fff; text-shadow:0 0 6px rgba(255,255,255,.55), 2px 0 0 rgba(255,79,184,.6), -2px 0 0 rgba(49,223,235,.6);
+  animation:vcr-blink 1.6s steps(1,end) infinite;
+}
+@keyframes vcr-blink{0%,55%{opacity:.72} 56%,100%{opacity:.72; text-shadow:0 0 6px rgba(255,255,255,.55), 2.6px 0 0 rgba(255,79,184,.6), -2.6px 0 0 rgba(49,223,235,.6)}}
+
+/* ---------- SIGNAL -- acid yellow on soot ------------------------------------
+   The missing brutalist move: stencil numerals, hard-edged and slashed, and
+   the hazard chevrons the game paints on every edge that matters. */
+:root[data-theme="signal"] .chip .n,
+:root[data-theme="signal"] .project > header .ct,
+:root[data-theme="signal"] .rail .rcount{
+  font-variant-numeric:tabular-nums slashed-zero; -webkit-text-stroke:.35px currentColor;
+}
+:root[data-theme="signal"] .lane{
+  background-image:
+    repeating-linear-gradient(45deg, #ecdd2b 0 9px, #0b0c07 9px 18px) 0 0/100% 4px no-repeat,
+    var(--grain);
+}
+:root[data-theme="signal"] .lane.flat{background-image:var(--grain)}
+:root[data-theme="signal"] .board::after{
+  content:"2077"; position:fixed; right:-6px; bottom:-30px; pointer-events:none; z-index:0;
+  font:900 190px/1 "Rajdhani", "Chakra Petch", "Avenir Next Condensed", sans-serif;
+  color:transparent; -webkit-text-stroke:2px rgba(236,221,43,.16); letter-spacing:-.04em;
+}
+
+/* ---------- APERTURE -- the test chamber -------------------------------------
+   Every project is a chamber and says its number the way the signage does:
+   a heavy numeral, zero-padded, in the header. The chip loses the 30%-black
+   bevel it inherited on a near-white ground, and the chamber sign hangs in
+   the corner of the lab. */
+:root[data-theme="aperture"] .chip{
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .9), inset 0 -1px 0 rgb(0 0 0 / .07);
+}
+:root[data-theme="aperture"] .lane{counter-reset:chamber}
+:root[data-theme="aperture"] .project{counter-increment:chamber}
+:root[data-theme="aperture"] .project > header .nm::before{
+  content:counter(chamber, decimal-leading-zero) "\00a0\00a0";
+  font-weight:900; letter-spacing:0; color:#1b8ee0;
+}
+:root[data-theme="aperture"] .board::after{
+  content:"19"; position:fixed; right:22px; bottom:14px; pointer-events:none; z-index:2;
+  width:118px; height:86px; padding:6px 0 0 12px; box-sizing:border-box; opacity:.55;
+  font:900 54px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#1b1b1b;
+  background:
+    repeating-linear-gradient(-45deg, #1b1b1b 0 9px, #ffb114 9px 18px) 0 100%/100% 8px no-repeat,
+    #f5f3ee;
+  border:2px solid #1b1b1b; border-radius:2px;
+}
+
+/* ---------- VELLUM -- the scriptorium ------------------------------------------
+   Reference tier already; the one gap was its face, now vendored. Its object
+   is the seal: a wax blot with the sigil pressed into it, bottom-right. */
+:root[data-theme="vellum"] .board::after{
+  content:"\2042"; position:fixed; right:26px; bottom:22px; width:74px; height:74px;
+  pointer-events:none; z-index:2; opacity:.78;
+  display:flex; align-items:center; justify-content:center; border-radius:46% 54% 49% 51% / 52% 47% 53% 48%;
+  font:32px/1 "IM Fell English SC", "Hoefler Text", serif; color:#5a1512; text-shadow:0 1px 0 rgba(255,220,180,.35);
+  background:
+    radial-gradient(circle at 36% 32%, rgba(255,200,170,.35), transparent 42%),
+    radial-gradient(circle at 60% 70%, rgba(60,8,8,.55), transparent 55%),
+    #8f2622;
+  box-shadow:0 2px 0 rgba(60,8,8,.6), 0 6px 14px -6px rgba(0,0,0,.7), inset 0 0 0 4px rgba(120,32,28,.7);
+}
+
+/* ---------- HOARSTONE -- the compass strip --------------------------------------
+   The one HUD element nobody misreads: a compass strip along the seam between
+   the deck and the world, cardinal points and ticks, the heading marked in
+   gold at the centre. */
+:root[data-theme="hoarstone"] .hud{position:relative}
+:root[data-theme="hoarstone"] .hud::after{
+  content:"N \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 NE \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 E \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 SE \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 S \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 SW \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 W \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 NW \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 N";
+  position:absolute; left:0; right:0; bottom:-1px; height:14px; z-index:5; pointer-events:none;
+  text-align:center; white-space:nowrap; overflow:hidden;
+  font:600 9.5px/14px Futura, "Avenir Next Condensed", sans-serif; letter-spacing:.36em;
+  color:rgba(236,234,226,.46); text-shadow:0 1px 0 rgba(0,0,0,.7);
+  background:
+    linear-gradient(#e0b25a,#e0b25a) 50% 0/1px 100% no-repeat,
+    linear-gradient(180deg, rgba(13,18,22,0), rgba(13,18,22,.92) 45%);
+}
+
+/* ---------- CARDSTOCK -- the trading card --------------------------------------
+   The selected card catches the light like foil; every project is numbered in
+   the dex; and the rails grow the tall grass you walk through to find things. */
+:root[data-theme="cardstock"] .bubble.sel{
+  background-image:linear-gradient(110deg, rgba(255,0,128,.10) 0%, rgba(255,200,0,.10) 20%, rgba(0,255,128,.10) 40%, rgba(0,128,255,.10) 60%, rgba(160,0,255,.10) 80%, rgba(255,0,128,.10) 100%);
+  background-size:220% 100%; animation:foil 6s linear infinite;
+}
+@keyframes foil{from{background-position:0% 50%} to{background-position:220% 50%}}
+:root[data-theme="cardstock"] .lane{counter-reset:dex}
+:root[data-theme="cardstock"] .project{counter-increment:dex}
+:root[data-theme="cardstock"] .project > header .nm::before{
+  content:"No." counter(dex, decimal-leading-zero) " ";
+  font-family:"Silkscreen", Krungthep, monospace; font-size:9px; letter-spacing:0; color:var(--faint);
+}
+:root[data-theme="cardstock"] .rail{
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'%3E%3Cg fill='%2358a35a' fill-opacity='.55'%3E%3Crect x='2' y='6' width='2' height='8'/%3E%3Crect x='6' y='3' width='2' height='11'/%3E%3Crect x='10' y='7' width='2' height='7'/%3E%3Crect x='13' y='4' width='2' height='10'/%3E%3C/g%3E%3C/svg%3E"),
+    var(--grain), linear-gradient(180deg,var(--rail-a),var(--rail-b));
+  background-repeat:repeat-x, repeat, no-repeat; background-position:0 100%, 0 0, 0 0;
+}
+
+/* ---------- CHEQUER -- Green Hill ------------------------------------------------
+   Named for a pattern it never drew. The rail is a true two-colour chequer,
+   headers carry a 2x2 Bayer dither the way a Genesis fakes a gradient, and the
+   loop -- a chequered ring you run through -- stands in the bottom-left. */
+:root[data-theme="chequer"] .hrail,
+:root[data-theme="chequer"] .rail{
+  background-image:
+    conic-gradient(from 90deg at 50% 50%, rgba(247,198,46,.16) 0 25%, transparent 0 50%, rgba(247,198,46,.16) 0 75%, transparent 0),
+    linear-gradient(180deg,var(--rail-a),var(--rail-b));
+  background-size:14px 14px, auto;
+}
+:root[data-theme="chequer"] .project > header{
+  background-image:
+    conic-gradient(from 90deg at 50% 50%, rgba(255,255,255,.07) 0 25%, transparent 0 50%, rgba(255,255,255,.07) 0 75%, transparent 0),
+    linear-gradient(180deg,var(--rail-a),var(--rail-b));
+  background-size:4px 4px, auto;
+}
+:root[data-theme="chequer"] .board::after{
+  content:""; position:fixed; left:-90px; bottom:-90px; width:300px; height:300px; border-radius:50%;
+  pointer-events:none; z-index:2; opacity:.22; mix-blend-mode:screen;
+  background:conic-gradient(from 0deg at 50% 50%, #f7c62e 0 25%, #7a3e10 0 50%, #f7c62e 0 75%, #7a3e10 0);
+  background-size:30px 30px;
+  -webkit-mask:radial-gradient(circle, transparent 0 62%, #000 63% 100%); mask:radial-gradient(circle, transparent 0 62%, #000 63% 100%);
+  animation:loop-run 20s linear infinite;
+}
+@keyframes loop-run{from{background-position:0 0} to{background-position:120px 0}}
+:root[data-theme="chequer"] .chip .n{color:#f7c62e; text-shadow:0 0 6px rgba(247,198,46,.5)}
+
+/* ---------- OCHRE -- the control point ---------------------------------------------
+   Contrast first: done was 2.87:1 on the cream, now 4.5. Then the object: the
+   round control point in the corner, half RED, half BLU, the cream centre a
+   capture in progress. */
+:root[data-theme="ochre"]{--done:#a85a16}
+:root[data-theme="ochre"] .board::after{
+  content:""; position:fixed; right:18px; bottom:16px; width:96px; height:96px; border-radius:50%;
+  pointer-events:none; z-index:2; opacity:.55;
+  background:
+    radial-gradient(circle, #fff1d2 0 30%, transparent 31%),
+    conic-gradient(from -90deg, #b8383b 0 50%, #5885a2 50% 100%);
+  box-shadow:0 0 0 4px #2a231b, 0 0 0 6px #fff1d2, 0 4px 10px -4px rgba(0,0,0,.5);
+}
+:root[data-theme="vellum"]{--blocked:#e0563e}       /* madder, up from 2.79:1 to 3.31 on its tinted face */
+:root[data-theme="hoarstone"]{--blocked:#ea5f5a}    /* 3.04 -> 3.39 */
+
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="console"] .board::after,
+  :root[data-theme="console"] .wrap:hover .board::after,
+  :root[data-theme="cyber"] .brand b,
+  :root[data-theme="earth"] .board::after,
+  :root[data-theme="miami86"] .board::after,
+  :root[data-theme="cardstock"] .bubble.sel,
+  :root[data-theme="chequer"] .board::after{animation:none}
+}
+
 /* ===== faces: self-hosted, so a world looks like itself with no network ===== */
 /* Every face below is SIL Open Font License 1.1 (see vendor/fonts/LICENSE.md),
    latin subset only, served from /vendor/fonts/ with a year-long cache. A
@@ -2370,7 +2656,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 .panel h2           { font-size: calc(17px * var(--fs-data)); }
 .rail .rcount       { font-size: calc(12px * var(--fs-data)); }
 
-.gauge .val, .readout, .readout dd, .stat .v, .chip, .chip b,
+.gauge .val, .readout, .readout dd, .stat .v, .chip, .chip .n,
 .bubble .foot, .rail .rcount, .brand span, .hrail .note,
 .crate .row .d, .player .qn{
   font-variant-numeric: tabular-nums lining-nums;
@@ -3206,7 +3492,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* Phosphor bloom on everything that emits. */
 :root[data-theme="pipboy"] .brand b, :root[data-theme="pipboy"] .gauge .val,
 :root[data-theme="pipboy"] .rail .rcount, :root[data-theme="pipboy"] .project > header,
-:root[data-theme="pipboy"] .readout dd b, :root[data-theme="pipboy"] .chip b{
+:root[data-theme="pipboy"] .readout dd b, :root[data-theme="pipboy"] .chip .n{
   text-shadow:0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 :root[data-theme="pipboy"] .bubble .nm{text-shadow:0 0 5px rgba(53,235,82,.28)}
@@ -3483,7 +3769,53 @@ const VOICE_BASE = {
   blank:'nothing written to disk yet', quiet:'no active sessions', empty:'no active sessions',
   offline:'OFFLINE',
 };
-const VOICE = {};   /* filled by the theme packs further down */
+const VOICE = {
+  /* admiralty chart */
+  console:   {running:'underway', idle:'at anchor', done:'berthed', unknown:'no fix', waiting:'hailing',
+              blank:'no log entry yet', quiet:'no vessels underway', offline:'NO SIGNAL'},
+  /* Cinestill 800T */
+  cyber:     {blocked:'jammed', waiting:'on cue', running:'rolling', idle:'on hold', done:'wrapped', unknown:'off frame',
+              blank:'nothing on the reel yet', quiet:'no take tonight', offline:'NO SIGNAL'},
+  /* the forest floor */
+  earth:     {blocked:'snagged', waiting:'listening', running:'growing', idle:'dormant', done:'harvested', unknown:'unseen',
+              blank:'nothing has taken root yet', quiet:'the forest is quiet'},
+  /* the editorial desk */
+  paper:     {blocked:'held', waiting:'copy due', running:'in press', idle:'spiked', done:'filed', unknown:'unsigned',
+              blank:'nothing on the page yet', quiet:'no copy filed'},
+  /* hotline miami */
+  miami86:   {blocked:'wasted', waiting:'pick up', running:'go', idle:'chilling', done:'cleared', unknown:'static',
+              blank:'no message on the machine', quiet:'no calls tonight', offline:'NO SIGNAL'},
+  /* cyberpunk 2077 */
+  signal:    {blocked:'flatlined', waiting:'holo call', running:'jacked in', idle:'idle', done:'gig done', unknown:'no trace',
+              blank:'no shard written yet', quiet:'no gigs on the board', offline:'RELIC ERROR'},
+  /* portal */
+  aperture:  {blocked:'halted', waiting:'awaiting', running:'testing', idle:'standby', done:'complete', unknown:'unlogged',
+              blank:'no test data recorded', quiet:'no test subjects present', offline:'FACILITY OFFLINE'},
+  /* lord of the rings */
+  vellum:    {blocked:'besieged', waiting:'awaits', running:'questing', idle:'at rest', done:'fulfilled', unknown:'unseen',
+              blank:'the page is yet unwritten', quiet:'no company rides today'},
+  /* skyrim */
+  hoarstone: {blocked:'beset', waiting:'summons', running:'hunting', idle:'at hearth', done:'sworn', unknown:'in fog',
+              blank:'no tale told yet', quiet:'the hold is quiet'},
+  /* pokémon */
+  cardstock: {blocked:'paralyzed', waiting:'trade?', running:'battling', idle:'asleep', done:'evolved', unknown:'wild',
+              blank:'no data in the dex yet', quiet:'no trainers on this route'},
+  /* sonic */
+  chequer:   {blocked:'stuck', waiting:'waiting', running:'speeding', idle:'idle', done:'act clear', unknown:'lost',
+              blank:'no rings collected yet', quiet:'no one in this zone', offline:'GAME OVER'},
+  /* team fortress 2 */
+  ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'captured', unknown:'spy?',
+              blank:'nothing in the loadout', quiet:'ceasefire'},
+  /* chess */
+  staunton:  {blocked:'in check', waiting:'your move', running:'thinking', idle:'adjourned', done:'checkmate', unknown:'off board',
+              blank:'no moves recorded', quiet:'no game in progress'},
+  /* the matrix */
+  matrix:    {blocked:'agent', waiting:'operator', running:'inside', idle:'asleep', done:'unplugged', unknown:'glitch',
+              blank:'no signal on this line', quiet:'no one is plugged in', offline:'NO CARRIER'},
+  /* fallout */
+  pipboy:    {blocked:'crippled', waiting:'holotape', running:'exploring', idle:'resting', done:'completed', unknown:'unmarked',
+              blank:'no entries in this log', quiet:'no signals in range', offline:'NO SIGNAL'},
+};
 function voice(k){
   const v = VOICE[document.documentElement.dataset.theme];
   return (v && v[k]) || VOICE_BASE[k] || k;
@@ -3609,7 +3941,7 @@ function drawHud(d){
     + '<dt>uptime</dt><dd><b>'+dur(h.uptime)+'</b></dd>';
 
   document.getElementById('tally').innerHTML = STATES.filter(s=>d.tally[s])
-    .map(s=>'<span class="chip" title="'+s+'"><i class="dot s-'+s+'"></i>'+esc(voice(s))+'<b>'+d.tally[s]+'</b></span>').join('');
+    .map(s=>'<span class="chip" title="'+s+'"><i class="dot s-'+s+'"></i><span class="lb">'+esc(voice(s))+'</span><span class="n">'+d.tally[s]+'</span></span>').join('');
   drawTrace(d.history||[]);
 }
 
