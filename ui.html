@@ -3,9 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <title>FLEET · agent console</title>
 <style>
   /* ============================================================
@@ -2223,6 +2220,28 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   }
   .xterm-viewport::-webkit-scrollbar{width:9px}
   .xterm-viewport::-webkit-scrollbar-thumb{background:var(--edge-hot); border-radius:5px}
+
+/* ===== faces: self-hosted, so a world looks like itself with no network ===== */
+/* Every face below is SIL Open Font License 1.1 (see vendor/fonts/LICENSE.md),
+   latin subset only, served from /vendor/fonts/ with a year-long cache. A
+   variable file carries its whole weight range in one @font-face. font-display
+   swap: the fallback stack shows first, the world's face lands a beat later. */
+@font-face{font-family:'Anton'; font-style:normal; font-weight:400; font-display:swap; src:url('/vendor/fonts/anton-400.woff2') format('woff2');}
+@font-face{font-family:'Archivo'; font-style:normal; font-weight:500 700; font-display:swap; src:url('/vendor/fonts/archivo-500.woff2') format('woff2');}
+@font-face{font-family:'Archivo Black'; font-style:normal; font-weight:400; font-display:swap; src:url('/vendor/fonts/archivo-black-400.woff2') format('woff2');}
+@font-face{font-family:'Chakra Petch'; font-style:normal; font-weight:600; font-display:swap; src:url('/vendor/fonts/chakra-petch-600.woff2') format('woff2');}
+@font-face{font-family:'Cinzel'; font-style:normal; font-weight:500 700; font-display:swap; src:url('/vendor/fonts/cinzel-500.woff2') format('woff2');}
+@font-face{font-family:'EB Garamond'; font-style:normal; font-weight:400 600; font-display:swap; src:url('/vendor/fonts/eb-garamond-400.woff2') format('woff2');}
+@font-face{font-family:'IM Fell English SC'; font-style:normal; font-weight:400; font-display:swap; src:url('/vendor/fonts/im-fell-english-sc-400.woff2') format('woff2');}
+@font-face{font-family:'Inter'; font-style:normal; font-weight:400 600; font-display:swap; src:url('/vendor/fonts/inter-400.woff2') format('woff2');}
+@font-face{font-family:'Orbitron'; font-style:normal; font-weight:500 900; font-display:swap; src:url('/vendor/fonts/orbitron-500.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani'; font-style:normal; font-weight:500; font-display:swap; src:url('/vendor/fonts/rajdhani-500.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani'; font-style:normal; font-weight:600; font-display:swap; src:url('/vendor/fonts/rajdhani-600.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani'; font-style:normal; font-weight:700; font-display:swap; src:url('/vendor/fonts/rajdhani-700.woff2') format('woff2');}
+@font-face{font-family:'Share Tech Mono'; font-style:normal; font-weight:400; font-display:swap; src:url('/vendor/fonts/share-tech-mono-400.woff2') format('woff2');}
+@font-face{font-family:'Silkscreen'; font-style:normal; font-weight:400; font-display:swap; src:url('/vendor/fonts/silkscreen-400.woff2') format('woff2');}
+@font-face{font-family:'Silkscreen'; font-style:normal; font-weight:700; font-display:swap; src:url('/vendor/fonts/silkscreen-700.woff2') format('woff2');}
+@font-face{font-family:'Zilla Slab'; font-style:normal; font-weight:600; font-display:swap; src:url('/vendor/fonts/zilla-slab-600.woff2') format('woff2');}
 
 /* ===== typography: thirteen voices ===== */
 /* ============================================================================

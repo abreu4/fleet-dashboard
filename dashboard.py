@@ -396,6 +396,24 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(HERE, "vendor", name), "rb") as handle:
                 self._send(handle.read(), VENDOR[path])
             return
+        # The themes' faces, self-hosted so a world looks like itself on a
+        # kiosk with no network. Basename only, .woff2 only, from one folder.
+        if path.startswith("/vendor/fonts/"):
+            name = os.path.basename(path)
+            full = os.path.join(HERE, "vendor", "fonts", name)
+            if name.endswith(".woff2") and os.path.isfile(full):
+                with open(full, "rb") as handle:
+                    body = handle.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "font/woff2")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+                self.send_header("X-Fleet-Boot", BOOT_ID)
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            self.send_error(404)
+            return
         # Music reads are network-bound and far slower than anything else
         # here, which is exactly why they are their own endpoints and never
         # part of the snapshot: the board keeps its two-second budget, and
@@ -514,7 +532,10 @@ class Handler(BaseHTTPRequestHandler):
         # per-page token on top of the Host/Origin gate whenever one is minted
         # (it always is under --terminal). The page sends it through termPost.
         if path == "/api/close":
-            if TERMINAL_TOKEN and not self._terminal_ok(need_origin=False):
+            # Ending a process is the one action here that is not undoable, so
+            # it needs the per-page token, full stop: with no token minted
+            # (no --terminal) it is refused rather than left on Host+Origin.
+            if not TERMINAL_TOKEN or not self._terminal_ok(need_origin=False):
                 self.send_error(403)
                 return
             if not session:
