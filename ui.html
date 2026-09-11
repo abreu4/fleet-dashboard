@@ -4578,12 +4578,34 @@ function ensureTerm(meta){
   const fitAddon = new window.FitAddon.FitAddon();
   term.loadAddon(fitAddon);
   term.open(view);
+  term.attachCustomKeyEventHandler(e => macKeys(e, meta.id));
   term.onData(data => queueInput(meta.id, data));
   t = {id: meta.id, meta, term, fit: fitAddon, view, alive: meta.alive !== false};
   terms.set(meta.id, t);
   if(t.pendingOut){ t.pendingOut.forEach(u => term.write(u)); t.pendingOut = null; }
   drawTabs();
   return t;
+}
+
+/* iTerm's "Natural Text Editing" keys. xterm.js drops every Cmd chord on the
+   floor (macOS reserves them), so Cmd-Backspace did nothing and Cmd-arrows
+   went nowhere. Translate the ones a Mac hand expects into the bytes readline,
+   zle and Claude Code already understand; leave Cmd-C/V to the browser. */
+const MAC_KEYS = {
+  'Meta ArrowLeft': '\x01',  'Meta ArrowRight': '\x05',   // line start / end
+  'Meta Backspace': '\x15',  'Alt Backspace': '\x17',    // kill line / kill word
+  'Alt ArrowLeft': '\x1bb',  'Alt ArrowRight': '\x1bf',  // word back / forward
+  'Meta Delete': '\x0b',                                  // kill to line end
+};
+function macKeys(e, tid){
+  if(e.type !== 'keydown' || e.ctrlKey || e.shiftKey) return true;
+  if(e.metaKey && e.key === 'k'){ e.preventDefault(); terms.get(tid)?.term.clear(); return false; }
+  const mod = e.metaKey && !e.altKey ? 'Meta' : e.altKey && !e.metaKey ? 'Alt' : null;
+  const seq = mod && MAC_KEYS[mod + ' ' + e.key];
+  if(!seq) return true;
+  e.preventDefault();
+  queueInput(tid, seq);
+  return false;
 }
 
 /* One request in flight at a time, everything typed meanwhile piles into the
