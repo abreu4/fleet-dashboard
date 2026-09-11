@@ -731,7 +731,7 @@ def collect_antigravity():
         except OSError:
             live = False
 
-        workspace = (workspace or by_id.get(cid) or fallback_ws or HOME).rstrip("/")
+        workspace = (workspace or by_id.get(cid) or HOME).rstrip("/")
         project = os.path.basename(workspace) or "home"
         if workspace == HOME.rstrip("/"):
             project = "home"
