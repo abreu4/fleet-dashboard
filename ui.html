@@ -4494,7 +4494,58 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   background-size: 200px 200px;
   opacity: 0.15;
 }\
+
+
 </style>
+/* ==== PASS5 BEGIN (final lighter touches) ==== */
+
+/* ---------- PAPER -- Editorial Sheet ----------------
+   Column rules between lanes, like a newspaper layout. */
+:root[data-theme="paper"] .lane {
+  border-left: 1px solid rgba(185, 170, 144, 0.5); /* var(--edge) equivalent */
+  padding-left: 12px;
+}
+:root[data-theme="paper"] .brand b {
+  font-family: "Georgia", serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #18283a;
+}
+:root[data-theme="paper"] .project > header {
+  border-bottom: 2px solid #18283a;
+  background: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+/* ---------- EARTH -- Sherwood Forest ----------------
+   Dappled light filtering through the canopy across the top of the board. */
+:root[data-theme="earth"] .board::before {
+  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none; mix-blend-mode: overlay;
+  background: 
+    radial-gradient(ellipse at 15% -10%, rgba(224,189,79,0.3) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% -5%, rgba(137,212,93,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% -20%, rgba(255,255,200,0.15) 0%, transparent 70%);
+}
+
+/* ---------- CONSOLE -- The Default Terminal ----------------
+   A subtle screen vignette to give the glass some physical presence. */
+:root[data-theme="console"] body::after {
+  content: ""; position: fixed; inset: 0; z-index: 95; pointer-events: none;
+  background: radial-gradient(circle at center, transparent 70%, rgba(0,0,0,0.3) 100%);
+}
+
+/* ---------- NEUTRAL -- Graphite Workstation ----------------
+   Blue active datum line running along the HUD. */
+:root[data-theme="neutral"] .hud::after {
+  content: ""; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #73a9e6 20%, #73a9e6 80%, transparent);
+  box-shadow: 0 0 10px #73a9e6;
+  opacity: 0.6;
+}
+/* ==== PASS5 END ==== */
 </head>
 <body>
 <div class="wrap">
