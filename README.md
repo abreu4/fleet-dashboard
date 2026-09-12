@@ -114,10 +114,10 @@ Thirteen colour schemes, picked from the HUD and remembered per browser.
 | **Cyberpunk 2077** | black-and-yellow warning graphics |
 | **Portal** | clean test-chamber white with orange/blue portals |
 | **Lord of the Rings** | candlelit vellum and illuminated-page details |
-| **Skyrim** | hoarfrost, slate and hammered iron |
-| **Pokémon** | printed card stock, handheld LCD and holofoil |
+| **Skyrim** | black glass, hairlines and diamonds, magicka/health/stamina bars, an aurora |
+| **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |
-| **Team Spirit** | playful TF2 RED/BLU screen print on warm menu cream |
+| **Team Spirit** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles |
 
 Each theme sets a `--glow` factor that every shadow multiplies, so neutral is
 genuinely flat rather than dimmed.
