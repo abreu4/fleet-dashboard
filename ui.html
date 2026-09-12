@@ -581,7 +581,7 @@
      outright. Riding on --taken docks them above the sheet instead of under it,
      on the sheet's own .18s so the two move together. */
   .player{
-    position:fixed; z-index:8; right:14px; bottom:calc(14px + var(--taken,0px));
+    position:fixed; z-index:8; left:14px; bottom:calc(14px + var(--taken,0px));
     width:430px; display:none;
     border:1px solid var(--edge-hot); border-radius:8px; background:var(--panel);
     overflow:hidden; box-shadow:0 18px 44px -18px #000;
@@ -662,7 +662,7 @@
      starting 228px up from a sheet-raised floor would run off the top of the
      screen and take the search field with it. */
   .crate{
-    position:fixed; z-index:8; right:14px; bottom:calc(228px + var(--taken,0px));
+    position:fixed; z-index:8; left:14px; bottom:calc(228px + var(--taken,0px));
     width:430px;
     max-height:min(46vh, calc(100vh - var(--taken,0px) - 268px));
     display:none; flex-direction:column; border:1px solid var(--edge-hot);
@@ -3227,13 +3227,13 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="ochre"] .stat .v{ font-weight: 700; }
 
 
-/* ===== theme: chess ======================================================= */
-/* STAUNTON -- a tournament board on a club table. English racing green lacquer
-   and Carrara marble, the squares cut rather than printed, with a brass fillet
+/* ===== theme: casino royale =============================================== */
+/* CASINO ROYALE -- an elegant roulette table at a high-stakes casino. English racing green
+   and Carrara marble, the squares cut rather than printed, with a yellow fillet
    inlaid around the frame. The greens are a lacquer green, deepened with black
    instead of brightened with yellow, and the white is stone, not paper: it has
-   grey veins in it. Gold shows only where a board actually carries metal -- the
-   inlaid line, the engraved file letters, the clock. Nothing glows. A board is
+   grey veins in it. Yellow shows only where the table needs highlights -- the
+   inlaid line, the clock. Nothing glows. A board is
    lit, not lit up, which also makes this the restful dark world on the list.
 
    Measured: --faint 5.32:1 on --tile. Worst state word on its own tinted face
@@ -3244,28 +3244,23 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   --void:#04140d; --panel:#072317; --cell:#0a2c1d; --tile:#0f3b27; --tile-hi:#14492f;
   --edge:#1e5a3d; --edge-hot:#3a8a5e;
   --ink:#f4f1e4; --dim:#c3d2c2; --faint:#9aae9c;
-  --accent:#c9a227;
+  --accent:#eab308;
   --blocked:#f17264; --running:#86e3ad; --idle:#8fb2cc; --done:#f4cc64; --unknown:#97a299;
   --good:#86e3ad; --warn:#f4cc64;
   --waiting:#f99e65;
-  --glow:0; --sigil:"\265E";                 /* the knight, the one glyph nobody misreads */
-  --scan:rgba(244,241,228,.012); --halo:rgba(201,162,39,.055);
+  --glow:0; --sigil:"\2660";                 /* the spade, elegant casino suite */
+  --scan:rgba(244,241,228,.012); --halo:rgba(234,179,8,.055);
   /* Marble: one broad soft mottle for the stone, one fine rake for the vein. */
   --grain:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.009' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23v)' opacity='.085'/%3E%3C/svg%3E"),
     repeating-linear-gradient(64deg, rgba(244,241,228,.014) 0 1px, transparent 1px 23px);
   --hud-a:#0a2e1e; --hud-b:#061d13; --rail-a:#0c3422; --rail-b:#061e14;
-  /* Real leaf, not a flat gold fill: metal is only legible as metal when it
-     carries a light and a dark within one stroke. Eight stops, warm-dark at the
-     ends and a near-white specular band off-centre, which is what a polished
-     bevel actually does under one lamp. Swept slowly across the wordmark so it
-     catches the light rather than sitting there being yellow. */
-  --leaf:linear-gradient(100deg,#6f4f0f 0%,#b8891f 14%,#e6cf79 28%,#fbf3c8 38%,
-                         #e0c163 47%,#9c7318 60%,#d8bb5e 74%,#f4e4a4 85%,#7d5a12 100%);
+  /* A dark golden yellow instead of the fake metallic gold. */
+  --leaf:#cca000;
 }
 
 /* A lamp off the top-left corner and the table falling away into the corners.
-   No bloom: the gold is reflecting, not emitting. */
+   No bloom: the yellow is reflecting, not emitting. */
 :root[data-theme="staunton"] body::after{
   content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
   background:
@@ -3274,119 +3269,84 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 /* THE TELL, 1 -- the board itself. Squares at tile scale, not the micro-chequer
    of an arcade hillside, so a lane reads as a board with sessions standing on
-   it. Marble over lacquer, and the brass fillet inlaid just inside the frame. */
+   it. Marble over lacquer, and the yellow fillet inlaid just inside the frame. */
 :root[data-theme="staunton"] .lane{
   background-image:
     conic-gradient(from 90deg at 50% 50%, rgba(244,241,228,.038) 0 25%, transparent 0 50%, rgba(244,241,228,.038) 0 75%, transparent 0),
     var(--grain);
   background-size:76px 76px, auto, auto;
-  box-shadow:inset 0 0 0 1px rgba(201,162,39,.20), inset 0 1px 0 rgba(244,241,228,.05);
+  box-shadow:inset 0 0 0 1px rgba(234,179,8,.20), inset 0 1px 0 rgba(244,241,228,.05);
 }
-/* THE TELL, 2 -- engraved file letters. Every project in a lane is a file on
-   the board, lettered a, b, c the way the frame of a real board is. Pure CSS
-   counters, so it costs nothing and needs no markup. */
-:root[data-theme="staunton"] .lane{counter-reset:file}
-:root[data-theme="staunton"] .project{counter-increment:file}
-:root[data-theme="staunton"] .project > header{position:relative; padding-left:19px}
-:root[data-theme="staunton"] .project > header::before{
-  content:counter(file, lower-alpha);
-  position:absolute; left:6px; top:50%; transform:translateY(-50%);
-  font:700 10px/1 var(--mono); letter-spacing:0;
-  color:var(--accent); opacity:.72;
-  text-shadow:0 1px 0 rgba(1,8,5,.55);
-}
+/* Removed chess engraved file letters for casino royale theme */
 /* Pieces stand on the square: a stone face, a bright arris catching the lamp,
-   and a brass hairline under it. */
+   and a yellow hairline under it. */
 :root[data-theme="staunton"] .bubble{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23s)' opacity='.06'/%3E%3C/svg%3E");
-  box-shadow:inset 0 1px 0 rgba(244,241,228,.10), inset 0 -1px 0 rgba(201,162,39,.16);
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.10), inset 0 -1px 0 rgba(234,179,8,.16);
 }
 :root[data-theme="staunton"] .bubble:hover{
   box-shadow:inset 0 1px 0 rgba(244,241,228,.14),
-             0 0 0 1px rgba(201,162,39,.55),
+             0 0 0 1px rgba(234,179,8,.55),
              0 10px 22px -14px rgba(1,8,5,.9);
 }
 :root[data-theme="staunton"] .bubble.sel{
   box-shadow:inset 0 1px 0 rgba(244,241,228,.16), 0 0 0 1px var(--accent);
 }
-/* The HUD is the marble slab the board sits on, with a brass rule along its
+/* The HUD is the marble slab the board sits on, with a yellow rule along its
    bottom edge -- the one place the theme allows a hard metal line. */
 :root[data-theme="staunton"] .hud{
   background-image:
     radial-gradient(125% 150% at 22% -30%, rgba(244,241,228,.07), transparent 58%),
     var(--grain),
     linear-gradient(180deg, var(--hud-a), var(--hud-b));
-  border-bottom:1px solid rgba(201,162,39,.42);
+  border-bottom:1px solid rgba(234,179,8,.42);
 }
-/* Coordinates are engraved into the frame, so the rail labels are cut in gold
-   and spaced like lettering on brass rather than set like type. */
+/* Labels are cut in yellow and spaced like lettering on the table rather than set like type. */
 :root[data-theme="staunton"] .rail .vlabel,
 :root[data-theme="staunton"] .hrail .who{
-  color:#cdb470; letter-spacing:.22em; text-shadow:0 1px 0 rgba(1,8,5,.6);
+  color:#eab308; letter-spacing:.22em; text-shadow:0 1px 0 rgba(1,8,5,.6);
 }
 :root[data-theme="staunton"] .rail .rcount,
 :root[data-theme="staunton"] .project > header .ct{color:var(--accent); opacity:.8}
 :root[data-theme="staunton"] .gauge, :root[data-theme="staunton"] .trace,
 :root[data-theme="staunton"] .readout, :root[data-theme="staunton"] .stat{
-  box-shadow:inset 0 1px 0 rgba(244,241,228,.06), inset 0 0 0 1px rgba(201,162,39,.10);
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.06), inset 0 0 0 1px rgba(234,179,8,.10);
 }
 :root[data-theme="staunton"] .panel{
   background-image:var(--grain);
-  box-shadow:inset 1px 0 0 rgba(201,162,39,.22), -26px 0 60px -30px rgba(1,8,5,.95);
+  box-shadow:inset 1px 0 0 rgba(234,179,8,.22), -26px 0 60px -30px rgba(1,8,5,.95);
 }
-:root[data-theme="staunton"] .toast{background:#0a2416; border-color:rgba(201,162,39,.5)}
+:root[data-theme="staunton"] .toast{background:#0a2416; border-color:rgba(234,179,8,.5)}
 :root[data-theme="staunton"] .scrim{background:rgba(2,12,7,.62)}
 :root[data-theme="staunton"] .brand b{letter-spacing:.22em; color:#f4f1e4}
 :root[data-theme="staunton"] .acts button:hover{
-  background:#123a26; box-shadow:0 0 0 1px rgba(201,162,39,.55);
+  background:#123a26; box-shadow:0 0 0 1px rgba(234,179,8,.55);
 }
 
-/* ===== chess: the metal and the wheel ===================================== */
-/* Gold leaf on the wordmark, swept. background-clip:text takes the sigil with
-   it, so the knight is struck from the same leaf as the letters -- and the
-   inherited text-shadow has to go, because a shadow behind transparent fill
-   shows straight through the glyph and muddies it. */
+/* ===== casino: the table and the wheel ==================================== */
+/* Yellow on the wordmark. */
 :root[data-theme="staunton"] .brand b{
-  background:var(--leaf);
-  background-size:260% 100%;
-  -webkit-background-clip:text; background-clip:text;
-  -webkit-text-fill-color:transparent; color:transparent;
-  text-shadow:none;
-  animation:leafsweep 9s linear infinite;
+  color: var(--leaf);
+  text-shadow: none;
 }
 :root[data-theme="staunton"] .brand b::after{ opacity:.85 }
-/* The engraved file letters are struck from the same leaf. */
-:root[data-theme="staunton"] .project > header::before{
-  background:var(--leaf); background-size:300% 100%;
-  -webkit-background-clip:text; background-clip:text;
-  -webkit-text-fill-color:transparent; color:transparent;
-  opacity:1; text-shadow:none;
-  animation:leafsweep 14s linear infinite;
-}
-/* A drawn brass rule under the HUD instead of a flat border: bright along the
-   top edge, dark underneath, the way an inlaid strip catches a room. */
+/* A drawn yellow rule under the HUD. */
 :root[data-theme="staunton"] .hud{border-bottom:0; position:relative}
 :root[data-theme="staunton"] .hud::after{
   content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
   pointer-events:none;
-  background:
-    linear-gradient(180deg, rgba(251,243,200,.85) 0 1px, rgba(201,162,39,.75) 1px 2px, rgba(70,50,10,.85) 2px 3px),
-    var(--leaf);
-  background-size:auto, 220% 100%;
-  animation:leafsweep 16s linear infinite;
+  background: var(--leaf);
 }
-/* The counts and the accent numerals get the metal too, flat rather than swept
-   so the board does not shimmer in six places at once. */
+/* The counts and the accent numerals get the yellow too. */
 :root[data-theme="staunton"] .rail .rcount,
 :root[data-theme="staunton"] .gauge .val{
-  background:var(--leaf); -webkit-background-clip:text; background-clip:text;
-  -webkit-text-fill-color:transparent; color:transparent; text-shadow:none;
+  color: var(--leaf);
+  text-shadow: none;
 }
-@keyframes leafsweep{from{background-position:0% 50%} to{background-position:260% 50%}}
 
 /* THE WHEEL -- a roulette set into the club table at the corner of the room:
-   thirty-seven pockets in house green and black, gold frets between them, a
-   gold rim and hub. It turns once every two and a half minutes, which is slow
+   thirty-seven pockets in house green and black, yellow frets between them, a
+   yellow rim and hub. It turns once every two and a half minutes, which is slow
    enough to never pull the eye off a tile and fast enough that you catch it
    moving if you look. Cropped by the corner, because the table is bigger than
    the screen. */
@@ -3399,10 +3359,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
      under a lamp reads, and leaves any text over it legible. */
   pointer-events:none; z-index:2; opacity:.24; mix-blend-mode:screen;
   background:
-    radial-gradient(circle, rgba(251,243,200,.95) 0 5%, rgba(201,162,39,.9) 5% 7%, transparent 8%),
-    radial-gradient(circle, transparent 19%, rgba(201,162,39,.85) 20% 22%, transparent 23%),
-    radial-gradient(circle, transparent 65%, rgba(251,243,200,.5) 66% 68%, rgba(201,162,39,.75) 68% 73%, transparent 74%),
-    repeating-conic-gradient(from 0deg, rgba(247,231,166,.7) 0 .6deg, transparent .6deg 9.7297deg),
+    radial-gradient(circle, var(--leaf) 0 7%, transparent 8%),
+    radial-gradient(circle, transparent 19%, var(--leaf) 20% 22%, transparent 23%),
+    radial-gradient(circle, transparent 65%, var(--leaf) 66% 73%, transparent 74%),
+    repeating-conic-gradient(from 0deg, var(--leaf) 0 .6deg, transparent .6deg 9.7297deg),
     repeating-conic-gradient(from 0deg, #0e3c25 0 9.7297deg, #100f0b 9.7297deg 19.4595deg);
   animation:wheelspin 150s linear infinite;
 }
@@ -4010,7 +3970,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="cardstock">pokémon</option>
           <option value="chequer">sonic</option>
           <option value="ochre">team spirit</option>
-                <option value="staunton">chess</option>
+                <option value="staunton">casino royale</option>
           <option value="pipboy">fallout</option>
           <option value="matrix">matrix</option>
           <option value="offcut">persona 5</option>
@@ -4171,13 +4131,12 @@ const THEME_MARKS = {
     antigravity:'<path d="M8 1.5 L13.6 8.1 L10.1 8.1 L10.1 9.5 L5.9 9.5 L5.9 8.1 L2.4 8.1Z" fill="currentColor"/><path d="M5.9 10.6h4.2v1.9H5.9zM5.9 13.6h4.2v1.5H5.9z" fill="currentColor"/>',
     codex:'<path d="M6.2 2.5L4.6 4.2" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M3.85 5.0L1.9 7.1V8.9l1.95 2.1" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M4.6 11.8l1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M9.8 2.5l1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M12.15 5.0L14.1 7.1V8.9l-1.95 2.1" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.4 11.8l-1.6 1.7" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="butt" stroke-linejoin="miter"/>',
   },
-  /* chess -- the three Staunton pieces whose silhouettes survive at 16px:
-     a coronet, a mitre and a battlemented tower. Straight edges only, because
-     a turned piece photographs as a hard outline under a club lamp. */
+  /* casino royale -- the three suits:
+     a spade, a club, and a diamond. Pure casino elegance. */
   staunton:{
-    claude:'<path d="M2.3 4.6 L4.4 8.3 L6.2 3.9 L8 8.5 L9.8 3.9 L11.6 8.3 L13.7 4.6 L12.5 11.2 L3.5 11.2 Z" fill="currentColor"/><path d="M3.3 12.1h9.4v1.4H3.3zM2.9 13.9h10.2v1.5H2.9z" fill="currentColor"/><circle cx="2.3" cy="3.8" r=".95" fill="currentColor"/><circle cx="6.2" cy="3.1" r=".95" fill="currentColor"/><circle cx="8" cy="2.6" r="1" fill="currentColor"/><circle cx="9.8" cy="3.1" r=".95" fill="currentColor"/><circle cx="13.7" cy="3.8" r=".95" fill="currentColor"/>',
-    antigravity:'<path d="M8 1.9 L10.5 6.4 L5.5 6.4 Z" fill="currentColor"/><circle cx="8" cy="1.5" r=".95" fill="currentColor"/><path d="M5 6.9h6v1.3H5z" fill="currentColor"/><path d="M5.7 8.6 L10.3 8.6 L11.5 12.3 L4.5 12.3 Z" fill="currentColor"/><path d="M3.4 12.8h9.2v1.3H3.4zM3 14.2h10v1.4H3z" fill="currentColor"/>',
-    codex:'<path d="M3.3 2.4h2.2v2.4H3.3zM6.9 2.4h2.2v2.4H6.9zM10.5 2.4h2.2v2.4H10.5zM3.3 4.8h9.4v1.5H3.3zM4.5 6.3h7v6.1h-7zM3.2 12.4h9.6v1.5H3.2zM2.8 13.9h10.4v1.5H2.8z" fill="currentColor"/>',
+    claude:'<path d="M8 1 C8 1, 2 6.5, 2 10.5 C2 12.5, 3.5 14, 5.5 14 C6.5 14, 8 13, 8 13 C8 13, 9.5 14, 10.5 14 C12.5 14, 14 12.5, 14 10.5 C14 6.5, 8 1, 8 1 Z M8 13 L6.5 16 L9.5 16 Z" fill="currentColor"/>',
+    antigravity:'<circle cx="8" cy="4.5" r="2.5" fill="currentColor"/><circle cx="4.5" cy="9.5" r="2.5" fill="currentColor"/><circle cx="11.5" cy="9.5" r="2.5" fill="currentColor"/><path d="M8 10 L6 15 L10 15 Z" fill="currentColor"/>',
+    codex:'<path d="M8 2 L14 8 L8 14 L2 8 Z" fill="currentColor"/>',
   },
   /* matrix -- glyphs from the rain: square-capped dashes and pixel blocks,
      the way a monospaced face draws a symbol at low resolution. Every shaft is
@@ -4273,9 +4232,9 @@ const VOICE = {
   /* team fortress 2 */
   ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'won', unknown:'spy?',
               blank:'nothing in the loadout', quiet:'ceasefire'},
-  /* chess */
-  staunton:  {blocked:'in check', waiting:'your move', running:'thinking', idle:'adjourned', done:'checkmate', unknown:'off board',
-              blank:'no moves recorded', quiet:'no game in progress'},
+  /* casino royale */
+  staunton:  {blocked:'bust', waiting:'your bet', running:'in play', idle:'cashed out', done:'jackpot', unknown:'off table',
+              blank:'no hands dealt yet', quiet:'the table is closed'},
   /* the matrix */
   matrix:    {blocked:'agent', waiting:'operator', running:'inside', idle:'asleep', done:'unplugged', unknown:'glitch',
               blank:'no signal on this line', quiet:'no one is plugged in', offline:'NO CARRIER'},
@@ -5275,7 +5234,7 @@ const THEME_MUSIC = {
   cardstock: 'chiptune game boy lofi instrumental',
   chequer:   'genesis chiptune funk fusion retro instrumental',
   ochre:     'playful big band spy jazz brass action instrumental',
-  staunton:  'solo piano nocturnes and cello adagio for deep concentration',
+  staunton:  'elegant martini jazz and high stakes baccarat tension',
   pipboy:    '1950s swing jazz ink spots big band fallout',
   matrix:    '90s industrial metal dark techno breakbeat',
   offcut:    'acid jazz funk hammond organ heist groove instrumental',
@@ -6047,8 +6006,37 @@ async function startStream(){
   }
 }
 
+const RECENT_FOLDERS_KEY = 'fleet.recent_folders';
+let recentFolders = (() => {
+  try { return JSON.parse(localStorage.getItem(RECENT_FOLDERS_KEY) || '[]'); }
+  catch(e) { return []; }
+})();
+
+// The last few folders a terminal was opened in, so the + picker can offer
+// them ahead of what happens to be on the board right now. Five is enough to
+// hold a day's worth of places; ~ is always in the list anyway.
+function trackRecentFolder(path) {
+  if (!path || path === '~' || path === '/') return;
+  recentFolders = [path, ...recentFolders.filter(p => p !== path)].slice(0, 5);
+  try { localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(recentFolders)); } catch(e){}
+}
+
 async function openTerminal(sessionId){
   if(!TERMCFG.enabled){ toast('terminal is off — start the server with --terminal'); return; }
+  if(sessionId){
+    // A session already has a live terminal in the sheet: go to it rather
+    // than open a second one. The pty carries the session id it was opened
+    // for (terminal.py meta), so this is a straight match.
+    for(const t of terms.values()){
+      if(t.alive && t.meta.session_id === sessionId){
+        showSheet(true);
+        activate(t.id);
+        return;
+      }
+    }
+    const s = sessionById(sessionId);
+    if(s?.cwd) trackRecentFolder(s.cwd);
+  }
   await loadXterm();
   showSheet(true);
   const {rows, cols} = cellsForSheet();
@@ -6108,7 +6096,9 @@ function newTermPicker(){
   picker = {
     el,
     show(){
-      const dirs = knownDirs();
+      // Recent picks lead, then the board's folders by how busy they are;
+      // ~ stays last either way. Deduped, since a recent one is usually live.
+      const dirs = [...recentFolders, ...knownDirs().filter(d => !recentFolders.includes(d))];
       const cur = selected ? sessionById(selected)?.cwd : null;
       const sel = dirs.includes(cur) ? cur : null;      // the session you're looking at, if any
       q('dir').innerHTML = dirs.map(d => '<option value="'+esc(d)+'"'+(d===sel?' selected':'')+'>'+esc(tilde(d))+'</option>').join('');
@@ -6139,7 +6129,10 @@ async function openFresh(cwd, agent){
   showSheet(true);
   const {rows, cols} = cellsForSheet();
   const r = await termPost('/api/term/open', {cwd, agent, rows, cols});
-  if(!r.ok) toast(r.message || 'could not open a terminal');
+  if(!r.ok){ toast(r.message || 'could not open a terminal'); return; }
+  // Remember where it landed (the server resolves ~ and symlinks), not what
+  // was typed, so the same folder never shows up twice in the picker.
+  trackRecentFolder(r.terminal?.cwd || cwd);
 }
 
 if(TERMCFG.enabled){
@@ -6173,6 +6166,14 @@ if(TERMCFG.enabled){
     if(backquote || cmdJ){
       e.preventDefault(); e.stopPropagation(); showSheet(!sheetOn);
       if(sheetOn) terms.get(activeTid)?.term.focus();
+    }
+    // ⌘T: a new terminal -- the + picker, with Enter opening it. Chrome keeps
+    // ⌘T for itself; the Firefox family lets the page have it.
+    const cmdT = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 't' || e.key === 'T');
+    if(cmdT){
+      e.preventDefault(); e.stopPropagation();
+      const p = newTermPicker();
+      p.on() ? p.hide() : p.show();
     }
   }, true);
   applySheet();

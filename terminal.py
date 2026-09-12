@@ -81,8 +81,9 @@ def _set_winsize(fd, rows, cols):
 class Pty:
     """One pseudo-terminal, its output ring, and everyone watching it."""
 
-    def __init__(self, tid, title, cwd, rows, cols, script):
+    def __init__(self, tid, session_id, title, cwd, rows, cols, script):
         self.id = tid
+        self.session_id = session_id
         self.title = title
         self.cwd = cwd
         self.rows, self.cols = rows, cols
@@ -203,7 +204,8 @@ class Pty:
                 pass
 
     def meta(self):
-        return {"id": self.id, "title": self.title, "cwd": self.cwd,
+        return {"id": self.id, "session_id": self.session_id,
+                "title": self.title, "cwd": self.cwd,
                 "rows": self.rows, "cols": self.cols,
                 "started": int(self.started * 1000),
                 "alive": self.exited is None}
@@ -234,7 +236,7 @@ class Terminals:
         # iTerm and Terminal buttons assemble theirs. Nothing from the page.
         script = actions.launch_script(session or {})
         try:
-            term = Pty(tid, title, cwd, max(4, int(rows)), max(20, int(cols)), script)
+            term = Pty(tid, (session or {}).get("id"), title, cwd, max(4, int(rows)), max(20, int(cols)), script)
         except OSError as exc:
             return None, "could not start a terminal: %s" % exc
         with self._lock:
@@ -256,7 +258,7 @@ class Terminals:
         name = os.path.basename(real.rstrip(os.sep)) or "~"
         title = name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
         try:
-            term = Pty(tid, title, real, max(4, int(rows)), max(20, int(cols)), script)
+            term = Pty(tid, None, title, real, max(4, int(rows)), max(20, int(cols)), script)
         except OSError as exc:
             return None, "could not start a terminal: %s" % exc
         with self._lock:
