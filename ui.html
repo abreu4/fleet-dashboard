@@ -4179,7 +4179,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   font:11px/1.75 "Silkscreen", Krungthep, monospace; color:#1b1b1b;
   background-color:#fffdf4; border:3px solid #1b1b1b; border-radius:7px;
   box-shadow:inset 0 0 0 2px #fffdf4, inset 0 0 0 4px #1b1b1b, 0 4px 12px -6px rgba(0,0,0,.45);
-  --hp:calc(100 - var(--g-mem, 0));
+  --hp:var(--g-batt, 100);
   background-image:
     linear-gradient(hsl(calc(var(--hp) * 1.2deg) 72% 44%), hsl(calc(var(--hp) * 1.2deg) 72% 44%)),
     linear-gradient(#cfd0c4, #cfd0c4),
@@ -4477,6 +4477,23 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   -webkit-mask-image: repeating-linear-gradient(180deg, #000 0, #000 8px, transparent 8px, transparent 12px);
 }
 /* ==== PASS4 END ==== */\
+
+/* ---------- CHITIN -- Hollow Knight ----------------
+   Starry sky background instead of jet black. */
+:root[data-theme="chitin"] body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: 
+    radial-gradient(1px 1px at 15% 15%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 35% 25%, #fff, transparent),
+    radial-gradient(1px 1px at 60% 10%, #fff, transparent),
+    radial-gradient(1px 1px at 85% 40%, #fff, transparent),
+    radial-gradient(2px 2px at 45% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 75% 80%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 20% 90%, #fff, transparent),
+    radial-gradient(1px 1px at 90% 95%, #fff, transparent);
+  background-size: 200px 200px;
+  opacity: 0.15;
+}\
 </style>
 </head>
 <body>
@@ -4916,6 +4933,7 @@ function drawHud(d){
   rs.setProperty('--g-live', whole(fleetPct));
   rs.setProperty('--g-pres', whole(h.pressurePct));
   rs.setProperty('--g-disk', whole(h.disk?.pct));
+  rs.setProperty('--g-batt', whole(pw.pct != null ? pw.pct : 100));
   rs.setProperty('--n-active', String(active|0));
   rs.setProperty('--n-total',  String(d.total|0));
 
