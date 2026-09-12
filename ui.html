@@ -4419,6 +4419,64 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   :root[data-theme="hoarstone"] .wrap::after{animation:none}
 }
 /* ==== PASS3 END ==== */
+/* ==== PASS4 BEGIN (lighter pass on the weaker others) ==== */
+
+/* ---------- SIGNAL -- Cyberpunk 2077 ----------------
+   Hazard tape on the board bottom, and a glitching brand text. */
+:root[data-theme="signal"] .board::before {
+  content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 8px; z-index: 100; pointer-events: none;
+  background: repeating-linear-gradient(-45deg, #ecdd2b, #ecdd2b 12px, #07080a 12px, #07080a 24px);
+  border-top: 2px solid #ff2f52;
+}
+:root[data-theme="signal"] .brand b:hover {
+  animation: sig-glitch 0.2s steps(2) infinite;
+  color: #ff2f52;
+}
+@keyframes sig-glitch {
+  0% { transform: translate(0) }
+  25% { transform: translate(-2px, 1px) }
+  50% { transform: translate(2px, -1px) }
+  75% { transform: translate(-1px, 2px) }
+  100% { transform: translate(1px, -2px) }
+}
+
+/* ---------- APERTURE -- Portal ----------------
+   Two glowing oval portals on the walls of the room, one blue, one orange.
+   A facility test chamber grid line. */
+:root[data-theme="aperture"] .wrap::before,
+:root[data-theme="aperture"] .wrap::after {
+  content: ""; position: fixed; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 180px; border-radius: 50%;
+  pointer-events: none; z-index: 1; opacity: 0.85;
+}
+:root[data-theme="aperture"] .wrap::before {
+  left: -7px;
+  box-shadow: 0 0 25px 8px #f8853b, inset 0 0 12px #f8853b;
+  border: 1px solid rgba(255,255,255,0.8);
+  background: #000;
+}
+:root[data-theme="aperture"] .wrap::after {
+  right: -7px;
+  box-shadow: 0 0 25px 8px #1b8ee0, inset 0 0 12px #1b8ee0;
+  border: 1px solid rgba(255,255,255,0.8);
+  background: #000;
+}
+:root[data-theme="aperture"] .rail {
+  background: repeating-linear-gradient(-45deg, #f5f3ee, #f5f3ee 10px, #e4e2db 10px, #e4e2db 20px);
+}
+
+/* ---------- MIAMI86 -- Hotline Miami ----------------
+   A setting retrowave sun on the horizon. */
+:root[data-theme="miami86"] .board::before {
+  content: ""; position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 400px; border-radius: 50%;
+  background: linear-gradient(180deg, #ff4d9e 0%, #ff823c 60%, transparent 60%);
+  box-shadow: 0 0 80px 20px rgba(255,77,158,0.2);
+  z-index: 0; pointer-events: none; opacity: 0.12;
+  mask-image: repeating-linear-gradient(180deg, #000 0, #000 8px, transparent 8px, transparent 12px);
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0, #000 8px, transparent 8px, transparent 12px);
+}
+/* ==== PASS4 END ==== */\
 </style>
 </head>
 <body>
