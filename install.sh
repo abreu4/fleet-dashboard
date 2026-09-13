@@ -13,12 +13,21 @@ mkdir -p "$RUNTIME" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
 # LaunchAgents do not inherit a terminal application's permission to read
 # ~/Documents. Keep a small runtime copy somewhere launchd can always read.
-FILES=(README.md actions.py collectors.py dashboard.py fleet.command install.sh
-       metrics.py music.py notes.py requirements.txt uninstall.sh ui.html)
+# Every module dashboard.py imports (directly or through actions/terminal)
+# has to be here, or the copy starts and dies on an ImportError; vendor/ holds
+# xterm, the fonts and the sound bank the page loads from /vendor/.
+FILES=(README.md actions.py aliases.py collectors.py dashboard.py fleet-name
+       fleet.command flush.py install.sh instance.py iterm_link.py metrics.py
+       music.py notes.py requirements.txt sunset.py terminal.py uninstall.sh
+       ui.html)
 if [[ "$SOURCE" != "$RUNTIME" ]]; then
   for file in "${FILES[@]}"; do
     cp -p "$SOURCE/$file" "$RUNTIME/$file"
   done
+  rm -rf "$RUNTIME/vendor"
+  cp -Rp "$SOURCE/vendor" "$RUNTIME/vendor"
+  # A stale bytecode cache from an older copy can shadow a fresh module.
+  rm -rf "$RUNTIME/__pycache__"
 fi
 
 # ytmusicapi 1.12+ requires Python 3.10. Prefer Homebrew, but accept any modern
@@ -79,9 +88,35 @@ cat > "$PLIST" <<PLISTEOF
 </plist>
 PLISTEOF
 
+# bootout is asynchronous: a bootstrap issued straight after it fails with
+# "Input/output error" while launchd is still tearing the old job down, and
+# under set -e that left the plist written but never loaded -- a board that
+# looks installed and serves nothing. Wait for the job to be gone, and give
+# bootstrap a few tries.
 launchctl bootout "gui/$UID/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$UID" "$PLIST"
-launchctl kickstart -k "gui/$UID/$LABEL"
+for _ in $(seq 1 50); do
+  launchctl print "gui/$UID/$LABEL" >/dev/null 2>&1 || break
+  sleep 0.1
+done
+loaded=0
+for attempt in 1 2 3 4 5; do
+  if launchctl bootstrap "gui/$UID" "$PLIST" 2>/dev/null; then loaded=1; break; fi
+  sleep 1
+done
+if [[ "$loaded" != 1 ]]; then
+  echo "could not load $LABEL into launchd (see: launchctl bootstrap gui/$UID $PLIST)" >&2
+  exit 1
+fi
+
+# RunAtLoad already started it; prove the port answers before claiming success.
+for _ in $(seq 1 100); do
+  curl -sf -m 2 -o /dev/null "http://127.0.0.1:$PORT/api/state" && break
+  sleep 0.2
+done
+if ! curl -sf -m 2 -o /dev/null "http://127.0.0.1:$PORT/api/state"; then
+  echo "$LABEL is loaded but nothing answers on port $PORT; see $HOME/Library/Logs/fleet-dashboard.log" >&2
+  exit 1
+fi
 
 echo "installed $LABEL on port $PORT"
 echo "runtime:       $RUNTIME"
