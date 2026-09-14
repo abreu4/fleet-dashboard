@@ -17,7 +17,7 @@ mkdir -p "$RUNTIME" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 # has to be here, or the copy starts and dies on an ImportError; vendor/ holds
 # xterm, the fonts and the sound bank the page loads from /vendor/.
 FILES=(README.md actions.py aliases.py collectors.py dashboard.py fleet-name
-       fleet.command fleet-browser.swift flush.py install.sh instance.py iterm_link.py metrics.py
+       fleet.command fleet-browser.plist fleet-browser.swift flush.py install.sh instance.py iterm_link.py metrics.py
        music.py notes.py requirements.txt sunset.py terminal.py uninstall.sh
        ui.html)
 if [[ "$SOURCE" != "$RUNTIME" ]]; then
