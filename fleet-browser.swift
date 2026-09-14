@@ -63,6 +63,13 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             guard flags.contains(.command), !flags.contains(.control) else { return event }
             let characters = [event.characters, event.charactersIgnoringModifiers].compactMap { $0 }
+            // Command-W belongs to the active embedded terminal, never to the
+            // one dashboard window. Exact modifiers preserve the conventional
+            // Command-Option-W meaning should the app gain one later.
+            if flags == [.command] && characters.contains(where: { $0.lowercased() == "w" }) {
+                self?.closeTerminal()
+                return nil
+            }
             if characters.contains(where: { $0 == "[" }) {
                 self?.previousTerminal()
                 return nil
@@ -101,6 +108,7 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
         let terminalMenu = NSMenu(title: "Terminal")
         terminalItem.submenu = terminalMenu
         addCommand("New Terminal", key: "t", action: #selector(newTerminal), to: terminalMenu)
+        addCommand("Close Terminal", key: "w", action: #selector(closeTerminal), to: terminalMenu)
         terminalMenu.addItem(.separator())
         addCommand("Previous Terminal", key: "[", action: #selector(previousTerminal), to: terminalMenu)
         addCommand("Next Terminal", key: "]", action: #selector(nextTerminal), to: terminalMenu)
@@ -129,6 +137,10 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
 
     @objc private func newTerminal() {
         run("window.fleetNewTerminal?.()")
+    }
+
+    @objc private func closeTerminal() {
+        run("window.fleetCloseTerminal?.()")
     }
 
     @objc private func previousTerminal() {

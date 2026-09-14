@@ -6652,7 +6652,10 @@ function ensureTerm(meta){
   view.className = 'view'; view.hidden = true;
   bodyEl.appendChild(view);
   const term = new window.Terminal({
-    fontFamily: '"SF Mono", Menlo, ui-monospace, monospace', fontSize: 12,
+    // The dashboard is a WKWebView, so it does not inherit either iTerm's or
+    // VS Code's terminal preference. Use the installed patched mono face here
+    // explicitly; SF Mono has no Nerd Font / Powerline private-use glyphs.
+    fontFamily: '"Iosevka Nerd Font Mono", "Iosevka NFM", "SF Mono", Menlo, ui-monospace, monospace', fontSize: 12,
     lineHeight: 1.15, cursorBlink: true, scrollback: 8000, allowProposedApi: true,
     macOptionIsMeta: true, theme: xtermTheme(),
   });
@@ -6933,6 +6936,11 @@ async function openFresh(cwd, agent){
 // pages own the same chords.
 window.fleetCycleTerminal = cycleTerminal;
 window.fleetNewTerminal = () => openFresh('~', 'shell');
+window.fleetCloseTerminal = () => {
+  if(!TERMCFG.enabled || !terms.has(activeTid)) return false;
+  termPost('/api/term/close', {tid: activeTid});
+  return true;
+};
 
 if(TERMCFG.enabled){
   document.getElementById('term-new').onclick = e => {
@@ -6940,9 +6948,7 @@ if(TERMCFG.enabled){
     const p = newTermPicker();
     p.on() ? p.hide() : p.show();
   };
-  document.getElementById('term-close').onclick = () => {
-    if(terms.has(activeTid)) termPost('/api/term/close', {tid: activeTid});
-  };
+  document.getElementById('term-close').onclick = window.fleetCloseTerminal;
   document.getElementById('term-hide').onclick = () => showSheet(false);
   // Only revealed once the terminal is actually enabled, so a board running
   // without --terminal never shows a button that would do nothing.
@@ -6973,6 +6979,14 @@ if(TERMCFG.enabled){
     if(cmdPrev || cmdNext){
       e.preventDefault(); e.stopPropagation();
       cycleTerminal(cmdNext ? 1 : -1);
+      return;
+    }
+    // In ordinary browser shells, claim Command-W before it reaches the
+    // browser. The native Fleet app also intercepts it at AppKit level.
+    const cmdW = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'w' || e.key === 'W');
+    if(cmdW){
+      e.preventDefault(); e.stopPropagation();
+      window.fleetCloseTerminal();
       return;
     }
     // ⌘T: immediately open a plain shell in the default folder. Chrome keeps
