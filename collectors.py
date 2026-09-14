@@ -834,9 +834,11 @@ class CodexTranscripts:
                 "last_user": None, "last_user_ordinal": -1,
                 "last_assistant": None, "last_assistant_ordinal": -1,
                 "prev_assistant": None, "turns": 0,
+                "mtime": 0,
             }
             self._entries[path] = entry
         elif stat.st_size == entry["offset"]:
+            entry["mtime"] = int(stat.st_mtime * 1000)
             return entry
         try:
             with open(path, "rb") as handle:
@@ -845,6 +847,7 @@ class CodexTranscripts:
         except OSError:
             return entry
         entry["offset"] = stat.st_size
+        entry["mtime"] = int(stat.st_mtime * 1000)
         buffer = entry["pending"] + chunk
         lines = buffer.split(b"\n")
         entry["pending"] = lines.pop()
@@ -918,6 +921,10 @@ def collect_codex(transcripts=None):
         latest = flatten(preview or "")
         entry = transcripts.read(rollout)
         if entry:
+            # SQLite's updated_at has lagged behind an actively appended
+            # rollout in several Codex releases. The transcript is the better
+            # evidence that the open session is alive.
+            updated_ms = max(updated_ms, entry.get("mtime") or 0)
             prompt = flatten(entry.get("last_user") or "")
             reply = flatten(entry.get("last_assistant") or "")
             if len(reply) < 60:
@@ -1059,14 +1066,23 @@ def live_processes(provider):
 
 def merge_live(sessions, provider, label):
     """Add a tile for any running process that no on-disk session accounts for."""
-    # Compare against what disk reported, not against tiles added in this loop:
-    # two sessions of the same agent in one directory are two sessions.
-    on_disk = [(s.get("cwd") or "").rstrip("/") for s in sessions
-               if s["state"] == "running"]
+    # Reconcile a process with the freshest session in its cwd, even when the
+    # provider's own liveness timestamp briefly says idle. Restrict candidates
+    # to sessions that wrote since this process started: otherwise a brand-new
+    # CLI in a familiar repo would steal an unrelated session from yesterday
+    # and inherit its name and description.
+    on_disk = list(sessions)
     for proc in live_processes(provider):
         cwd = (proc["cwd"] or HOME).rstrip("/")
-        if cwd in on_disk:
-            on_disk.remove(cwd)      # one process, one on-disk session
+        candidates = [s for s in on_disk
+                      if (s.get("cwd") or "").rstrip("/") == cwd
+                      and (s.get("updated") or 0) >= proc["started"] - 30_000]
+        if candidates:
+            matched = max(candidates, key=lambda s: s.get("updated") or 0)
+            on_disk.remove(matched)       # one process, one on-disk session
+            matched["pid"] = proc["pid"]
+            if matched.get("state") not in ("blocked", "waiting"):
+                matched["state"] = "running"
             continue
         project = os.path.basename(cwd) or "home"
         if cwd == HOME.rstrip("/"):

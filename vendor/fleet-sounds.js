@@ -84,6 +84,7 @@
   // Track whether a cue has really reached the graph so the speaker's first
   // click activates/tests it instead of silently switching it off.
   var audible = false;
+  var pendingCue = null;
   var packBus = null, packShaper = null, verbNode = null, wetGain = null;
   var noiseBuf = null;
   var activeVoices = 0;
@@ -103,6 +104,18 @@
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { return null; }
+    // A context that was healthy before display sleep or an output-device
+    // change can become suspended/interrupted later. Do not keep claiming it
+    // is audible: that made the speaker's recovery click mute the board.
+    ctx.onstatechange = function () {
+      if (ctx.state !== 'running') audible = false;
+      label();
+      if (ctx.state === 'running' && pendingCue && !muted) {
+        var layers = pendingCue;
+        pendingCue = null;
+        trigger(layers);
+      }
+    };
 
     master = ctx.createGain();
     master.gain.value = muted ? 0 : volume;
@@ -670,11 +683,19 @@
     if (ctx.state !== 'running') {
       // Suspended/interrupted until playback is permitted: ask, and play this
       // same cue once resume completes rather than losing the notification.
+      // Keep only the latest cue. A sleeping display may accumulate many
+      // state changes; on wake we want one useful notification, not a queue.
+      pendingCue = layers;
       try {
         var resumed = ctx.resume();
         var fired = false;
         var afterResume = function () {
-          if (!fired && ctx.state === 'running') { fired = true; trigger(layers); }
+          if (!fired && ctx.state === 'running') {
+            fired = true;
+            var queued = pendingCue;
+            pendingCue = null;
+            if (queued && !muted) trigger(queued);
+          }
         };
         if (resumed && resumed.then) resumed.then(afterResume);
         // Older WebKit builds did not reliably return the resume promise even
@@ -700,6 +721,7 @@
 
   function setMuted(on) {
     muted = !!on;
+    if (muted) pendingCue = null;
     writeLS(LS_MUTED, muted);
     if (master) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.01);
     label();
@@ -737,11 +759,15 @@
     btn.className = 'ghost';
     btn.id = 'snd';
     btn.addEventListener('click', function (e) {
+      // Capture this before ensureCtx(): resume is asynchronous in WebKit.
+      // Otherwise an interrupted context still looks "audible" here and the
+      // recovery click takes the mute branch instead of testing the output.
+      var needsActivation = !audible || !ctx || ctx.state !== 'running';
       ensureCtx();                                  // this IS the gesture the browser wants
       if (e.shiftKey) {
         cycleVolume();
         if (!muted) play('tap');
-      } else if (!muted && !audible) {
+      } else if (!muted && needsActivation) {
         // After a page reload the saved state can say “on” while WebKit has
         // suspended the fresh AudioContext. Make this click an audible unlock;
         // once unlocked, subsequent clicks keep the normal mute behaviour.
@@ -779,7 +805,9 @@
 
   // First gesture of any kind resumes a context that was created suspended.
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
-    document.addEventListener(ev, function () { if (ctx && ctx.state === 'suspended') ensureCtx(); }, true);
+    document.addEventListener(ev, function () {
+      if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') ensureCtx();
+    }, true);
   });
 
   // Theme picker committed: announce in the NEW pack. (The data-theme observer

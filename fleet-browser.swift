@@ -27,6 +27,12 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
+        // This is a dedicated local status board, not an arbitrary web page.
+        // Notifications have to survive the automatic reloads used to pick up
+        // dashboard updates, so do not put each fresh Web Audio context behind
+        // WKWebView's media gesture gate. The page still owns its persisted
+        // mute/volume controls and defaults click noises off.
+        configuration.mediaTypesRequiringUserActionForPlayback = []
         webView = WKWebView(frame: window.contentView!.bounds, configuration: configuration)
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = self

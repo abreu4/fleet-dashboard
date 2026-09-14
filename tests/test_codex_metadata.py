@@ -54,6 +54,7 @@ class CodexTranscriptTests(unittest.TestCase):
         self.assertGreater(second["offset"], offset)
         self.assertEqual(second["last_user"], "Merge the tested fix")
         self.assertEqual(second["turns"], 2)
+        self.assertGreater(second["mtime"], 0)
 
     def test_collector_prefers_name_and_rollout_progress(self):
         self.append(
@@ -85,6 +86,30 @@ class CodexTranscriptTests(unittest.TestCase):
         self.assertEqual(session["brief"], "Fix the backup service")
         self.assertIn("catch-up upload is running", session["now"])
         self.assertEqual(session["turns"], 1)
+
+    def test_live_process_reattaches_to_named_session_that_looks_idle(self):
+        session = {
+            "id": "thread-1", "provider": "codex", "name": "Fix backups",
+            "cwd": self.temp.name, "state": "idle", "updated": 200_000,
+        }
+        process = {"pid": 123, "cwd": self.temp.name, "started": 100_000}
+        with mock.patch.object(collectors, "live_processes", return_value=[process]):
+            merged = collectors.merge_live([session], "codex", "codex")
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["name"], "Fix backups")
+        self.assertEqual(merged[0]["state"], "running")
+        self.assertEqual(merged[0]["pid"], 123)
+
+    def test_new_process_does_not_steal_old_session_metadata(self):
+        session = {
+            "id": "old", "provider": "codex", "name": "Old task",
+            "cwd": self.temp.name, "state": "idle", "updated": 50_000,
+        }
+        process = {"pid": 456, "cwd": self.temp.name, "started": 200_000}
+        with mock.patch.object(collectors, "live_processes", return_value=[process]):
+            merged = collectors.merge_live([session], "codex", "codex")
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[1]["name"], "codex 456")
 
 
 if __name__ == "__main__":
