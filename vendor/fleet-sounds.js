@@ -80,6 +80,10 @@
    */
 
   var ctx = null, master = null, comp = null;
+  // Sound can be logically on while WebKit is still waiting for a gesture.
+  // Track whether a cue has really reached the graph so the speaker's first
+  // click activates/tests it instead of silently switching it off.
+  var audible = false;
   var packBus = null, packShaper = null, verbNode = null, wetGain = null;
   var noiseBuf = null;
   var activeVoices = 0;
@@ -88,7 +92,12 @@
 
   function ensureCtx() {
     if (ctx) {
-      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* not in a gesture */ } }
+      // WebKit may report `interrupted` as well as `suspended` after a display
+      // sleep, output-device change, or an automatic dashboard reload. Both
+      // states need an explicit resume before the next synthesized cue.
+      if (ctx.state !== 'running' && ctx.state !== 'closed') {
+        try { ctx.resume(); } catch (e) { /* a normal browser may still require a gesture */ }
+      }
       return ctx;
     }
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -313,6 +322,8 @@
 
   function trigger(layers) {
     if (!ctx || !packBus) return;
+    audible = true;
+    label();
     var t0 = ctx.currentTime + 0.004;
     for (var i = 0; i < layers.length; i++) {
       if (activeVoices >= MAX_VOICES) break;
@@ -657,8 +668,19 @@
     var p = PACKS[packKey], layers = p && p[name];
     if (!layers || muted || !ctx) return false;
     if (ctx.state !== 'running') {
-      // Suspended until a gesture: ask, and play if the browser lets us.
-      try { ctx.resume().then(function () { if (ctx.state === 'running') trigger(layers); }); } catch (e) { /* no */ }
+      // Suspended/interrupted until playback is permitted: ask, and play this
+      // same cue once resume completes rather than losing the notification.
+      try {
+        var resumed = ctx.resume();
+        var fired = false;
+        var afterResume = function () {
+          if (!fired && ctx.state === 'running') { fired = true; trigger(layers); }
+        };
+        if (resumed && resumed.then) resumed.then(afterResume);
+        // Older WebKit builds did not reliably return the resume promise even
+        // when the context resumed. The guarded follow-up covers that path.
+        setTimeout(afterResume, 80);
+      } catch (e) { /* no */ }
       return false;
     }
     trigger(layers);
@@ -703,7 +725,8 @@
     if (!btn) return;
     btn.innerHTML = muted ? '🔇<span> off</span>' : '🔊<span> on</span>';
     btn.title = 'sound ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
-              + '\nclick: mute / unmute · shift+click: cycle volume · volume, pack and cues under \u22ef';
+              + (!muted && !audible ? '\nclick: activate and test sound' : '\nclick: mute / unmute')
+              + ' · shift+click: cycle volume · volume, pack and cues under \u22ef';
     btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
   }
   function mount() {
@@ -718,6 +741,11 @@
       if (e.shiftKey) {
         cycleVolume();
         if (!muted) play('tap');
+      } else if (!muted && !audible) {
+        // After a page reload the saved state can say “on” while WebKit has
+        // suspended the fresh AudioContext. Make this click an audible unlock;
+        // once unlocked, subsequent clicks keep the normal mute behaviour.
+        play('switch');
       } else {
         setMuted(!muted);
         if (!muted) play('switch');                 // the pack introduces itself
@@ -808,6 +836,8 @@
     /** Mute or unmute, persisted. */
     mute: function (on) { setMuted(on === undefined ? true : on); return muted; },
     muted: function () { return muted; },
+    /** Current browser audio state, used by the settings/debug surface. */
+    state: function () { return ctx ? ctx.state : 'uninitialized'; },
     /** UI click cues on/off (default off), persisted. */
     clicks: function (on) { if (on !== undefined) { clicks = !!on; writeLS(LS_CLICKS, clicks); } return clicks; },
     /** Pin one pack for every theme, or 'theme' to follow the theme. Persisted. */
