@@ -389,14 +389,14 @@
     .tally{width:100%}
     .gauges{flex:0 1 270px; min-width:252px}
     .trace{flex:1 1 190px; min-width:180px}
-    .ctl{flex:0 0 112px; min-width:0}
-    .ctl select{width:100%; min-width:0}   /* the squares wrap by themselves */
+    .ctl{flex:0 0 176px; min-width:0}
+    .ctl select{width:100%; min-width:0}
   }
   @media (max-width:700px){
     .trace{display:none}
     .brand{flex-basis:150px}
     .gauges{min-width:238px}
-    .ctl{flex-basis:104px}
+    .ctl{flex-basis:160px}
   }
    button.ghost{
     background:color-mix(in srgb, var(--cell) 72%, transparent);
@@ -4536,6 +4536,171 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   opacity: 0.6; pointer-events: none;
 }
 /* ==== PASS5 END ==== */
+
+/* ==========================================================================
+   DASHBOARD CLEANUP -- authoritative kiosk and theme corrections.
+   ========================================================================== */
+
+/* Five 28px controls plus four 5px gaps need exactly 160px. */
+@media (max-width:980px){.ctl{flex-basis:176px}}
+@media (max-width:700px){.ctl{flex-basis:160px}}
+
+/* Keep Minecraft's breathing title splash inside the title box. */
+:root[data-theme="cobble"] .brand::after{
+  left:auto; right:5px; top:18px; max-width:124px;
+  font-size:9px; text-align:right; transform-origin:right center;
+}
+@keyframes mc-splash{
+  from{transform:rotate(-10deg) scale(.96)}
+  to{transform:rotate(-10deg) scale(1.02)}
+}
+
+/* Sonic: a compact live arcade score replaces the oversized clipped loop. */
+:root[data-theme="chequer"] .board::after{display:none}
+:root[data-theme="chequer"] .brand{
+  position:relative; counter-reset:sonic-rings var(--n-active, 0);
+}
+:root[data-theme="chequer"] .brand::after{
+  content:"SCORE  00100\A RINGS  " counter(sonic-rings);
+  position:absolute; right:2px; top:5px; white-space:pre; pointer-events:none;
+  padding:4px 6px 3px; border-left:3px solid #f7c62e;
+  background:rgba(5,13,40,.66); color:#f4f8ff;
+  font:700 8px/1.45 "Silkscreen", Krungthep, monospace;
+  letter-spacing:.04em; text-align:left; text-shadow:1px 1px 0 #050d28;
+  box-shadow:inset 0 0 0 1px rgba(247,198,46,.22);
+}
+
+/* Pokémon: high-contrast ink and reading surfaces, with the toys intact. */
+:root[data-theme="cardstock"]{
+  --void:#aebfd2; --panel:#f5ecd9; --cell:#eee3ca;
+  --tile:#fffaf0; --tile-hi:#fffef8;
+  --edge:#8f805f; --edge-hot:#315f96;
+  --ink:#151515; --dim:#303030; --faint:#4b4b4b;
+}
+:root[data-theme="cardstock"] .hud,
+:root[data-theme="cardstock"] .lane,
+:root[data-theme="cardstock"] .project{border-color:#756a52}
+:root[data-theme="cardstock"] .bubble{background-color:#fffaf0; color:#151515}
+:root[data-theme="cardstock"] .bubble .nm{color:#151515}
+:root[data-theme="cardstock"] .bubble .gist{color:#292929}
+:root[data-theme="cardstock"] .bubble .foot{color:#444}
+:root[data-theme="cardstock"] .project > header,
+:root[data-theme="cardstock"] .project > header .nm,
+:root[data-theme="cardstock"] .project > header .ct,
+:root[data-theme="cardstock"] .project > header .caret{color:#151515; opacity:1}
+:root[data-theme="cardstock"] .project:nth-child(5n+1) > header{background-color:#78bd48}
+:root[data-theme="cardstock"] .project:nth-child(5n+2) > header{background-color:#e9782c}
+:root[data-theme="cardstock"] .project:nth-child(5n+3) > header{background-color:#6f9df5}
+:root[data-theme="cardstock"] .project:nth-child(5n+4) > header{background-color:#edc52b}
+:root[data-theme="cardstock"] .project:nth-child(5n+5) > header{background-color:#ee5d8c}
+
+/* Team Fortress: a restrained Mann Co scoreboard. “Team Spirit” survives as
+   a small sponsor badge rather than taking over the whole world. */
+:root[data-theme="ochre"]{
+  --void:#b9a27f; --panel:#e7d1aa; --cell:#d9c29b;
+  --tile:#f4e1bd; --tile-hi:#fff0cf;
+  --edge:#66594a; --edge-hot:#302b26;
+  --ink:#28231d; --dim:#4b4135; --faint:#675a49;
+  --team-red:#ad3d3f; --team-red-dark:#792d30;
+  --team-blu:#557f99; --team-blu-dark:#36586d;
+  --accent:#d57835; --sigil:"";
+}
+:root[data-theme="ochre"] body::after{
+  background:
+    radial-gradient(circle at 1px 1px, rgba(42,35,27,.075) 1px, transparent 1.2px),
+    linear-gradient(135deg, rgba(255,244,218,.14), transparent 45%);
+  background-size:9px 9px, auto; opacity:1;
+}
+:root[data-theme="ochre"] .hud{
+  background:#2c2925; background-image:none;
+  border:0; border-bottom:4px solid #191715;
+  box-shadow:inset 0 -1px 0 #514940, 0 4px 0 rgba(42,35,27,.18);
+}
+:root[data-theme="ochre"] .brand b{
+  color:#f4dfb7; font-size:26px; font-weight:800; letter-spacing:.08em;
+  -webkit-text-stroke:1px #171513; text-shadow:2px 2px 0 #171513;
+}
+:root[data-theme="ochre"] .brand b::after{
+  content:"TEAM SPIRIT"; display:inline-block; margin-left:8px; padding:2px 4px;
+  color:#2b2722; background:#d57835; border:1px solid #171513;
+  font:700 7px/1.15 "Silkscreen", Krungthep, monospace;
+  letter-spacing:.07em; vertical-align:.45em; -webkit-text-stroke:0; text-shadow:none;
+  transform:rotate(-2deg);
+}
+:root[data-theme="ochre"] #clock{
+  margin-top:5px; padding:1px 9px; border:1px solid #171513;
+  background:#1f1d1a; color:#f4dfb7; box-shadow:none;
+}
+:root[data-theme="ochre"] .lane,
+:root[data-theme="ochre"] .project,
+:root[data-theme="ochre"] .panel{
+  background-color:#dbc49d; background-image:none;
+  border-color:#5c5042; border-radius:3px;
+}
+:root[data-theme="ochre"] .lane{box-shadow:2px 2px 0 rgba(42,35,27,.16)}
+:root[data-theme="ochre"] .project{border:1px solid #4a4035; box-shadow:none}
+:root[data-theme="ochre"] .project > header{
+  color:#fff0d2; background:var(--team-red-dark); background-image:none;
+  border-bottom:2px solid #28231d; text-shadow:1px 1px 0 rgba(0,0,0,.45);
+}
+:root[data-theme="ochre"] .project:nth-child(even) > header{background:var(--team-blu-dark); background-image:none}
+:root[data-theme="ochre"] .project > header .ct,
+:root[data-theme="ochre"] .project > header .caret{color:#fff0d2}
+:root[data-theme="ochre"] .project > header .ct::before{
+  background:#f4dfb7; border:1px solid rgba(31,29,26,.55); font-weight:800;
+}
+:root[data-theme="ochre"] .bubble{
+  background:#f4e1bd; background-image:none; color:#28231d;
+  border:1px solid #88765e; border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 1px 1px 0 rgba(42,35,27,.12);
+}
+:root[data-theme="ochre"] .bubble:hover,
+:root[data-theme="ochre"] .project:nth-child(even) .bubble:hover{
+  transform:translateY(-1px); border-color:#3b342c;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 2px 3px 0 rgba(42,35,27,.16);
+}
+:root[data-theme="ochre"] .bubble.sel{
+  border-color:#29231d; box-shadow:inset 0 0 0 2px #d57835, 2px 3px 0 rgba(42,35,27,.16);
+}
+:root[data-theme="ochre"] .bubble .nm{color:#28231d}
+:root[data-theme="ochre"] .bubble .gist{color:#463d33}
+:root[data-theme="ochre"] .bubble .foot{color:#625544}
+:root[data-theme="ochre"] .rail,
+:root[data-theme="ochre"] .hrail{
+  background:var(--team-red-dark); background-image:none; color:#fff0d2;
+  border-color:#29231d;
+}
+:root[data-theme="ochre"] .lane:nth-child(even) > .rail,
+:root[data-theme="ochre"] .lane:nth-child(even) > .hrail{background:var(--team-blu-dark); background-image:none}
+:root[data-theme="ochre"] .rail .vlabel,
+:root[data-theme="ochre"] .rail .rcount,
+:root[data-theme="ochre"] .hrail .who,
+:root[data-theme="ochre"] .hrail .note{color:#fff0d2; text-shadow:1px 1px 0 rgba(0,0,0,.45)}
+:root[data-theme="ochre"] .gauge,
+:root[data-theme="ochre"] .readout,
+:root[data-theme="ochre"] .chip,
+:root[data-theme="ochre"] .stat,
+:root[data-theme="ochre"] .trace{
+  background:#1f1d1a; background-image:none; color:#e6cfaa;
+  border:1px solid #0f0e0d; border-radius:4px; box-shadow:inset 0 1px 0 #4a443d;
+}
+:root[data-theme="ochre"] .readout > div{background:#292621}
+:root[data-theme="ochre"] button.ghost,
+:root[data-theme="ochre"] .ctl select,
+:root[data-theme="ochre"] .acts button{
+  background:#4a4238; color:#f4dfb7; border:1px solid #171513;
+  border-radius:3px; box-shadow:inset 0 1px 0 #6d6254; text-shadow:none;
+}
+:root[data-theme="ochre"] .board::before{display:none}
+:root[data-theme="ochre"] .board::after{
+  content:""; display:block; position:fixed; right:18px; bottom:18px;
+  width:52px; height:52px; border-radius:50%; pointer-events:none; z-index:2;
+  opacity:.82; background:
+    radial-gradient(circle, #f4dfb7 0 27%, #29231d 28% 34%, transparent 35%),
+    conic-gradient(from -90deg, var(--team-red) 0 50%, var(--team-blu) 50%);
+  box-shadow:0 0 0 3px #29231d, 0 0 0 5px #d7bd91, 0 3px 8px rgba(0,0,0,.3);
+  animation:none;
+}
 </style>
 </head>
 <body>
@@ -4569,8 +4734,8 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="hoarstone">skyrim</option>
           <option value="cardstock">pokémon</option>
           <option value="chequer">sonic</option>
-          <option value="ochre">team spirit</option>
-                <option value="staunton">casino royale</option>
+          <option value="ochre">team fortress</option>
+          <option value="staunton">casino royale</option>
           <option value="pipboy">fallout</option>
           <option value="matrix">matrix</option>
           <option value="offcut">persona 5</option>
