@@ -238,6 +238,7 @@ LOOPBACK = ("127.0.0.1", "::1", "localhost")
 VENDOR = {"/vendor/xterm.js": "application/javascript",
           "/vendor/xterm.css": "text/css",
           "/vendor/xterm-addon-fit.js": "application/javascript",
+          "/vendor/xterm-addon-unicode11.js": "application/javascript",
           "/vendor/fleet-sounds.js": "application/javascript"}
 
 

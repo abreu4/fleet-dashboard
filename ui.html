@@ -6500,7 +6500,15 @@ function loadXterm(){
     js.onload = () => {
       const fit = document.createElement('script');
       fit.src = '/vendor/xterm-addon-fit.js';
-      fit.onload = resolve; fit.onerror = reject;
+      fit.onload = () => {
+        // Optional: a server that predates the vendor allowlist entry 404s
+        // this one, and the terminal still opens (emoji at Unicode 6 width).
+        const uni = document.createElement('script');
+        uni.src = '/vendor/xterm-addon-unicode11.js';
+        uni.onload = resolve; uni.onerror = resolve;
+        document.head.appendChild(uni);
+      };
+      fit.onerror = reject;
       document.head.appendChild(fit);
     };
     js.onerror = reject;
@@ -6692,19 +6700,27 @@ function ensureTerm(meta){
   view.className = 'view'; view.hidden = true;
   bodyEl.appendChild(view);
   const term = new window.Terminal({
-    // The dashboard is a WKWebView, so it inherits neither iTerm's nor VS
-    // Code's terminal face. ui-monospace is SF Mono on a Mac whether or not
-    // the family is installed for other apps; Iosevka's condensed letters at
-    // 1.15 lines read as a wall. Medium weight for density, and air between
-    // the lines.
-    fontFamily: '"IosevkaNFM", ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace', fontSize: 12,
-    fontWeight: '500', fontWeightBold: '700', lineHeight: 1.42,
+    // Mirror the iTerm Default profile ("IosevkaNFM 14", spacing 1x1) so the
+    // sheet reads like the real terminal. The CSS family names are the ones
+    // fc-list reports; "IosevkaNFM" is iTerm's PostScript-style name and only
+    // WebKit happens to accept it. Never put SF Mono / ui-monospace ahead of
+    // Menlo: it renders Nerd Font glyphs as nothing at all instead of tofu.
+    fontFamily: '"Iosevka Nerd Font Mono", "Iosevka NFM", IosevkaNFM, Menlo, monospace',
+    fontSize: 14, fontWeight: '400', fontWeightBold: '700', lineHeight: 1.0,
     cursorBlink: true, scrollback: 8000, allowProposedApi: true,
     macOptionIsMeta: true, theme: xtermTheme(),
   });
   const fitAddon = new window.FitAddon.FitAddon();
   term.loadAddon(fitAddon);
-  term.open(view);
+  // The pty, zsh and iTerm all count an emoji as two cells; xterm's built-in
+  // width table stops at Unicode 6, where 🐍 is one, so agnoster's venv
+  // segment came out squeezed into a single cell and everything after it
+  // sat one column off.
+  if(window.Unicode11Addon){
+    term.loadAddon(new window.Unicode11Addon.Unicode11Addon());
+    term.unicode.activeVersion = '11';
+  }
+  openMeasuringInDom(term, view);
   term.attachCustomKeyEventHandler(e => macKeys(e, meta.id));
   term.onData(data => queueInput(meta.id, data));
   t = {id: meta.id, meta, term, fit: fitAddon, view, alive: meta.alive !== false};
@@ -6712,6 +6728,20 @@ function ensureTerm(meta){
   if(t.pendingOut){ t.pendingOut.forEach(u => term.write(u)); t.pendingOut = null; }
   drawTabs();
   return t;
+}
+
+/* xterm 5.5 measures the cell on an OffscreenCanvas. In WKWebView a 2D
+   context that is not attached to the document only sees Apple's system fonts,
+   so the measurement came back as Menlo's 8.43px advance while the rows were
+   painted in Iosevka's 7px glyphs: letter-spaced text, box-drawing corners
+   that did not meet, Powerline segments with seams. Hiding OffscreenCanvas for
+   the duration of open() makes xterm fall back to its in-DOM <span> measure,
+   which resolves the user-installed family like any other text. */
+function openMeasuringInDom(term, view){
+  const offscreen = window.OffscreenCanvas;
+  window.OffscreenCanvas = undefined;
+  try{ term.open(view); }
+  finally{ window.OffscreenCanvas = offscreen; }
 }
 
 /* iTerm's "Natural Text Editing" keys, plus Shift-Enter as a newline the way
