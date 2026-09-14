@@ -291,11 +291,25 @@
   .settings .sw input[type=color]::-webkit-color-swatch{border:1px solid rgb(255 255 255 / .18); border-radius:5px}
   .settings .sw span{text-transform:uppercase; letter-spacing:.1em; font-size:10px}
   .settings .sw.tinted span::after{content:" •"; color:var(--accent)}
+  .settings .picks{display:flex; flex-wrap:wrap; gap:6px}
+  .settings .pick{
+    display:inline-flex; align-items:center; gap:8px; padding:4px 8px 4px 9px;
+    border:1px solid var(--edge); border-radius:6px; background:var(--cell); color:var(--dim);
+  }
+  .settings .pick b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .settings .pick.now{border-color:var(--edge-hot); color:var(--ink)}
+  .settings .pick.now b{color:var(--accent)}
+  .settings .picks .none{color:var(--faint)}
   .settings .row{display:flex; align-items:center; gap:10px; min-height:24px}
   .settings .row > span:first-child{flex:0 0 64px; text-transform:uppercase; color:var(--faint)}
   .settings input[type=range]{flex:1; min-width:0; accent-color:var(--accent); cursor:pointer}
   .settings .pct{flex:0 0 40px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
   .settings label.chk{display:flex; align-items:center; gap:7px; cursor:pointer}
+  .settings select{
+    flex:1; min-width:0; padding:3px 6px; border-radius:5px;
+    background:var(--cell); color:var(--ink); border:1px solid var(--edge);
+    font:11px var(--mono);
+  }
   .settings input[type=checkbox]{accent-color:var(--accent); margin:0}
   /* motion off, by choice rather than by OS: everything that moves stops */
   :root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after{
@@ -2736,7 +2750,13 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 .stat .k            { font-size: calc(10px   * var(--fs-chrome)); letter-spacing: calc(.11em * var(--tr-chrome)); }
 .acts button        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing: calc(.09em * var(--tr-chrome)); }
 .empty              { font-size: calc(11px   * var(--fs-chrome)); }
-.readout dt         { font-size: calc(clamp(12px,1.5vh,13.5px)  * var(--fs-chrome)); }
+.readout dt         { font-size: calc(clamp(9.5px,1.2vh,11.5px) * var(--fs-chrome)); letter-spacing: calc(.08em * var(--tr-chrome)); }
+/* The readout's words are the gauge labels' size, not the values': at the
+   values' size POWER, TOKENS and UPTIME met in the middle of the box and read
+   as one word on a 1440-wide screen. A word that still does not fit its cell
+   clips inside it rather than running into its neighbour. */
+.readout > div      { overflow: hidden; }
+.readout dt         { max-width: 100%; overflow: hidden; }
 
 /* [BASE 5/5] Data sizing + numerals, and the code face.
    Tabular lining figures everywhere a number is read or aligned — this is the
@@ -3361,7 +3381,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    moving if you look. Cropped by the corner, because the table is bigger than
    the screen. */
 :root[data-theme="staunton"] .wrap::before{
-  content:""; position:fixed; left:-104px; bottom:-104px;
+  content:""; position:fixed; left:-104px; bottom:calc(-104px + var(--taken,0px));
   width:320px; height:320px; border-radius:50%;
   /* Above the lanes, not under them: at z-index 0 it was first in tree order
      and every opaque lane panel painted over it, so it only ever showed in the
@@ -3673,7 +3693,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 6. THE OBJECT -- the calling card itself, pasted skewed on the desk: bone
    stock, one red band, ransom-note caps. Hover the board and it straightens. */
 :root[data-theme="offcut"] .board::after{
-  content:"TAKE NOTICE"; position:fixed; right:24px; bottom:22px; pointer-events:none; z-index:2;
+  content:"TAKE NOTICE"; position:fixed; right:24px; bottom:calc(22px + var(--taken,0px)); pointer-events:none; z-index:2;
   padding:10px 14px 9px; background:#f6f1e6; color:#0e0b0b; opacity:.88;
   font:900 15px/1 "Archivo Black", "Anton", Impact, sans-serif; letter-spacing:.16em; text-transform:uppercase;
   background-image:linear-gradient(-8deg, transparent 0 46%, var(--accent) 46% 60%, transparent 60%);
@@ -3905,7 +3925,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 5. THE OBJECT -- the bench. A rest point, bone-white iron, bottom-right;
    resting is what idle is called here. */
 :root[data-theme="chitin"] .board::after{
-  content:""; position:fixed; right:22px; bottom:14px; width:120px; height:60px; pointer-events:none; z-index:2; opacity:.42;
+  content:""; position:fixed; right:22px; bottom:calc(14px + var(--taken,0px)); width:120px; height:60px; pointer-events:none; z-index:2; opacity:.42;
   background:
     linear-gradient(#eceaf0,#eceaf0) 10px 6px/100px 3px no-repeat,
     linear-gradient(#eceaf0,#eceaf0) 14px 12px/92px 2px no-repeat,
@@ -4186,7 +4206,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="cardstock"] .board::after{
   counter-reset:lvl var(--n-total, 0);
   content:"FLEET" "\00a0\00a0" ":L" counter(lvl) "\A HP:";
-  white-space:pre; position:fixed; right:18px; bottom:16px; z-index:2; pointer-events:none;
+  white-space:pre; position:fixed; right:18px; bottom:calc(16px + var(--taken,0px)); z-index:2; pointer-events:none;
   width:186px; box-sizing:border-box; padding:7px 12px 8px;
   font:11px/1.75 "Silkscreen", Krungthep, monospace; color:#1b1b1b;
   background-color:#fffdf4; border:3px solid #1b1b1b; border-radius:7px;
@@ -4480,7 +4500,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* ---------- MIAMI86 -- Hotline Miami ----------------
    A setting retrowave sun on the horizon. */
 :root[data-theme="miami86"] .board::before {
-  content: ""; position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%);
+  content: ""; position: fixed; bottom: calc(-80px + var(--taken,0px)); left: 50%; transform: translateX(-50%);
   width: 400px; height: 400px; border-radius: 50%;
   background: linear-gradient(180deg, #ff4d9e 0%, #ff823c 60%, transparent 60%);
   box-shadow: 0 0 80px 20px rgba(255,77,158,0.2);
@@ -4488,7 +4508,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   mask-image: repeating-linear-gradient(180deg, #000 0, #000 8px, transparent 8px, transparent 12px);
   -webkit-mask-image: repeating-linear-gradient(180deg, #000 0, #000 8px, transparent 8px, transparent 12px);
 }
-/* ==== PASS4 END ==== */\
+/* ==== PASS4 END ==== */
 
 /* ---------- CHITIN -- Hollow Knight ----------------
    Starry sky background instead of jet black. */
@@ -5799,7 +5819,22 @@ themePicker.addEventListener('keydown', e => {
     themePicker.blur();
   }
 });
-themePicker.addEventListener('change', () => { themeBefore = null; });
+/* ---- theme picks --------------------------------------------------------
+   How often each theme gets chosen by hand, per browser, alongside the theme
+   itself. A pick is a committed choice from the picker (`change`): walking the
+   list with the arrow keys and escaping back costs nothing, and neither does
+   the remembered theme coming back on load or a ?theme= kiosk override. The
+   settings card lists the tally. */
+const PICKS_KEY = 'fleet.theme.picks';
+function picks(){
+  try{ const v = JSON.parse(localStorage.getItem(PICKS_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; }
+  catch(e){ return {}; }
+}
+function countPick(name){
+  const p = picks(); p[name] = (p[name] || 0) + 1;
+  try{ localStorage.setItem(PICKS_KEY, JSON.stringify(p)); }catch(e){}
+}
+themePicker.addEventListener('change', () => { themeBefore = null; countPick(themePicker.value); });
 
 /* ---- the HUD controls: squares and a menu ------------------------------- */
 /* Collapse, flush and refresh are moved -- the same nodes, not copies -- into a
@@ -5951,8 +5986,15 @@ function openSettings(){
       + '<section><h3>colours <span class="hint">this theme\u2019s accent and state colours \u2014 every tile, gauge and shell follows</span>'
       +   '<button class="ghost" data-k="reset-tint">theme\u2019s own</button></h3>'
       +   '<div class="sw-row" data-k="sw"></div></section>'
+      + '<section><h3>themes <span class="hint">how many times each one has been picked from the menu, in this browser</span>'
+      +   '<button class="ghost" data-k="reset-picks">start over</button></h3>'
+      +   '<div class="picks" data-k="picks"></div></section>'
       + '<section><h3>tiles <span class="hint">how large the board draws them</span></h3>'
       +   '<div class="row"><span>scale</span><input type="range" min="100" max="200" step="5" data-k="scale"><b class="pct" data-k="scale-pct"></b></div></section>'
+      + '<section><h3>terminal <span class="hint">the face the sheet\u2019s shells use \u2014 applies to open ones as you change it</span></h3>'
+      +   '<div class="row"><span>face</span><select data-k="tf-face"></select></div>'
+      +   '<div class="row"><span>weight</span><select data-k="tf-weight"><option value="400">regular</option><option value="500">medium</option><option value="600">semibold</option><option value="700">bold</option></select></div>'
+      +   '<div class="row"><span>size</span><input type="range" min="11" max="20" step="1" data-k="tf-size"><b class="pct" data-k="tf-size-pct"></b></div></section>'
       + '<section><h3>sound</h3><div data-k="snd"></div></section>'
       + '<section><h3>motion</h3>'
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="motion"> stop every animation (pulses, halos, rain, roulette)</label></div></section>'
@@ -5975,6 +6017,11 @@ function openSettings(){
       TINT_VARS.forEach(v => setTint(theme, v, ''));
       fillSettings();
     };
+    // theme picks
+    q('reset-picks').onclick = () => {
+      try{ localStorage.removeItem(PICKS_KEY); }catch(e){}
+      fillSettings();
+    };
     // tiles
     q('scale').oninput = () => {
       TILE_SCALE = q('scale').value / 100;
@@ -5982,6 +6029,12 @@ function openSettings(){
       try{ localStorage.setItem(SCALE_KEY, TILE_SCALE); }catch(e){}
       fit();
     };
+    // terminal face
+    q('tf-face').innerHTML = Object.keys(TERM_FACES).map(k =>
+      '<option value="'+k+'">'+esc(TERM_FACES[k].label)+'</option>').join('');
+    q('tf-face').onchange = () => setTermFont({face: q('tf-face').value});
+    q('tf-weight').onchange = () => setTermFont({weight: +q('tf-weight').value});
+    q('tf-size').oninput = () => { q('tf-size-pct').textContent = q('tf-size').value + 'px'; setTermFont({size: +q('tf-size').value}); };
     // sound
     const snd = soundPanel();
     if(snd) q('snd').appendChild(snd);
@@ -6005,8 +6058,18 @@ function fillSettings(){
     sw.querySelector('input').value = t[v] || toHex(themeValue(v));
     sw.classList.toggle('tinted', !!t[v]);
   });
+  // theme picks, most chosen first; the picker's own labels, so the list
+  // reads "skyrim", not "hoarstone"
+  const p = picks(), label = k => themePicker.querySelector('option[value="'+k+'"]')?.textContent || k;
+  const rows = Object.keys(p).filter(k => p[k] > 0).sort((a, b) => p[b] - p[a] || label(a).localeCompare(label(b)));
+  q('picks').innerHTML = rows.length
+    ? rows.map(k => '<span class="pick'+(k === theme ? ' now' : '')+'"><span>'+esc(label(k))+'</span><b>'+p[k]+'</b></span>').join('')
+    : '<span class="none">nothing counted yet \u2014 picks from the menu land here</span>';
   q('scale').value = Math.round(TILE_SCALE * 100);
   q('scale-pct').textContent = Math.round(TILE_SCALE * 100) + '%';
+  const tf = termFont();
+  q('tf-face').value = tf.face; q('tf-weight').value = String(tf.weight);
+  q('tf-size').value = tf.size; q('tf-size-pct').textContent = tf.size + 'px';
   q('motion').checked = document.documentElement.dataset.motion === 'off';
 }
 function closeSettings(){ settingsEl?.classList.remove('on'); }
@@ -6428,6 +6491,47 @@ const emptyEl = document.getElementById('term-empty');
 let sheetOn = false, sheetStep = 0, xtermReady = null, streaming = false;
 const terms = new Map();                 // tid -> {meta, term, fit, view, pending, alive}
 
+/* The sheet's face. Every entry is a family already installed on this Mac
+   that carries the Powerline glyphs itself; the Nerd Font icons (U+E7xx,
+   U+F0xx) fall through to Iosevka NFM, which is second in each list. SF Mono
+   and ui-monospace stay out of every list: they render those glyphs as
+   nothing at all, not even tofu. Iosevka's Extended faces are width variants
+   of the one "Iosevka" family, so they are reached with font-stretch. */
+const TERM_FACES = {
+  fira:     {label:'Fira Code',              family:'"Fira Code", "Iosevka Nerd Font Mono", Menlo, monospace'},
+  hack:     {label:'Hack',                   family:'Hack, "Iosevka Nerd Font Mono", Menlo, monospace'},
+  meslo:    {label:'Meslo LG M',             family:'"Meslo LG M for Powerline", "Iosevka Nerd Font Mono", Menlo, monospace'},
+  source:   {label:'Source Code Pro',        family:'"Source Code Pro for Powerline", "Iosevka Nerd Font Mono", Menlo, monospace'},
+  iosevkax: {label:'Iosevka Extended',       family:'Iosevka, "Iosevka Nerd Font Mono", Menlo, monospace', stretch:'expanded'},
+  iosevka:  {label:'Iosevka NFM (as iTerm)', family:'"Iosevka Nerd Font Mono", "Iosevka NFM", IosevkaNFM, Menlo, monospace'},
+};
+const TERMFONT_KEY = 'fleet.termfont';
+const TERMFONT_DEFAULT = {face:'fira', weight:600, size:14};
+function termFont(){
+  let saved = {};
+  try{ saved = JSON.parse(localStorage.getItem(TERMFONT_KEY) || '{}') || {}; }catch(e){}
+  const f = Object.assign({}, TERMFONT_DEFAULT, saved);
+  if(!TERM_FACES[f.face]) f.face = TERMFONT_DEFAULT.face;
+  f.weight = [400, 500, 600, 700].includes(+f.weight) ? +f.weight : TERMFONT_DEFAULT.weight;
+  f.size = Math.min(20, Math.max(11, +f.size || TERMFONT_DEFAULT.size));
+  return f;
+}
+function termFontOptions(){
+  const f = termFont();
+  return {fontFamily: TERM_FACES[f.face].family, fontSize: f.size, fontWeight: String(f.weight),
+          fontWeightBold: '700', lineHeight: 1.0};
+}
+function setTermFont(patch){
+  const f = Object.assign(termFont(), patch);
+  try{ localStorage.setItem(TERMFONT_KEY, JSON.stringify(f)); }catch(e){}
+  const o = termFontOptions(), stretch = TERM_FACES[f.face].stretch || 'normal';
+  for(const t of terms.values()){
+    t.view.style.fontStretch = stretch;
+    Object.assign(t.term.options, o);
+  }
+  refit();
+}
+
 // Hands every live shell the new theme's palette. Declared up by setTheme so it
 // can be called before this block has run; see the note there.
 retintTerms = () => {
@@ -6691,14 +6795,12 @@ function ensureTerm(meta){
   const view = document.createElement('div');
   view.className = 'view'; view.hidden = true;
   bodyEl.appendChild(view);
+  view.style.fontStretch = TERM_FACES[termFont().face].stretch || 'normal';
   const term = new window.Terminal({
-    // Mirror the iTerm Default profile ("IosevkaNFM 14", spacing 1x1) so the
-    // sheet reads like the real terminal. The CSS family names are the ones
-    // fc-list reports; "IosevkaNFM" is iTerm's PostScript-style name and only
-    // WebKit happens to accept it. Never put SF Mono / ui-monospace ahead of
-    // Menlo: it renders Nerd Font glyphs as nothing at all instead of tofu.
-    fontFamily: '"Iosevka Nerd Font Mono", "Iosevka NFM", IosevkaNFM, Menlo, monospace',
-    fontSize: 14, fontWeight: '400', fontWeightBold: '700', lineHeight: 1.0,
+    // Face, weight and size come from the settings card (TERM_FACES above);
+    // the default is a wide, heavy one because the board is read from arm's
+    // length. Line height 1.0 is what iTerm draws at spacing 1x1.
+    ...termFontOptions(),
     cursorBlink: true, scrollback: 8000, allowProposedApi: true,
     macOptionIsMeta: true, theme: xtermTheme(),
   });
