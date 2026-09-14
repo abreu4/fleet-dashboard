@@ -6491,13 +6491,15 @@ const emptyEl = document.getElementById('term-empty');
 let sheetOn = false, sheetStep = 0, xtermReady = null, streaming = false;
 const terms = new Map();                 // tid -> {meta, term, fit, view, pending, alive}
 
-/* The sheet's face. Every entry is a family already installed on this Mac
-   that carries the Powerline glyphs itself; the Nerd Font icons (U+E7xx,
-   U+F0xx) fall through to Iosevka NFM, which is second in each list. SF Mono
-   and ui-monospace stay out of every list: they render those glyphs as
-   nothing at all, not even tofu. Iosevka's Extended faces are width variants
+/* The sheet's face. Every entry is a family already installed on this Mac;
+   whatever glyph it lacks -- the Powerline arrows, the Nerd Font icons
+   (U+E7xx, U+F0xx) -- falls through to Iosevka NFM, which follows it in every
+   list. (Canvas probes showed SF Mono drawing those as nothing: that was the
+   detached-canvas quirk described at openMeasuringInDom, not the font. In
+   the DOM the fallback works.) Iosevka's Extended faces are width variants
    of the one "Iosevka" family, so they are reached with font-stretch. */
 const TERM_FACES = {
+  sf:       {label:'SF Mono (Apple)',        family:'ui-monospace, "SF Mono", "Iosevka Nerd Font Mono", Menlo, monospace'},
   fira:     {label:'Fira Code',              family:'"Fira Code", "Iosevka Nerd Font Mono", Menlo, monospace'},
   hack:     {label:'Hack',                   family:'Hack, "Iosevka Nerd Font Mono", Menlo, monospace'},
   meslo:    {label:'Meslo LG M',             family:'"Meslo LG M for Powerline", "Iosevka Nerd Font Mono", Menlo, monospace'},
@@ -6506,7 +6508,7 @@ const TERM_FACES = {
   iosevka:  {label:'Iosevka NFM (as iTerm)', family:'"Iosevka Nerd Font Mono", "Iosevka NFM", IosevkaNFM, Menlo, monospace'},
 };
 const TERMFONT_KEY = 'fleet.termfont';
-const TERMFONT_DEFAULT = {face:'fira', weight:600, size:14};
+const TERMFONT_DEFAULT = {face:'sf', weight:500, size:14};
 function termFont(){
   let saved = {};
   try{ saved = JSON.parse(localStorage.getItem(TERMFONT_KEY) || '{}') || {}; }catch(e){}
@@ -6798,8 +6800,9 @@ function ensureTerm(meta){
   view.style.fontStretch = TERM_FACES[termFont().face].stretch || 'normal';
   const term = new window.Terminal({
     // Face, weight and size come from the settings card (TERM_FACES above);
-    // the default is a wide, heavy one because the board is read from arm's
-    // length. Line height 1.0 is what iTerm draws at spacing 1x1.
+    // the default is SF Mono at medium weight, the Mac's own terminal face
+    // with a little more ink for a board read from arm's length. Line height
+    // 1.0 is what iTerm draws at spacing 1x1.
     ...termFontOptions(),
     cursorBlink: true, scrollback: 8000, allowProposedApi: true,
     macOptionIsMeta: true, theme: xtermTheme(),
