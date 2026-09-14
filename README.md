@@ -90,6 +90,14 @@ last prompt, or the last real reply (short sign-offs are skipped).
 **Next step it planned** (drawer only) — the compact summary's *Optional Next
 Step* or *Pending Tasks*.
 
+Codex supplies model-written session names in `threads.name`; those lead the
+tile title, with the nickname or a clipped prompt only as fallbacks. Its SQLite
+preview often repeats the opening prompt, so **Now** is read incrementally from
+the rollout instead: the latest meaningful commentary/final response, or a new
+user request that has not received a response yet. Harness instructions and
+one-word nudges are excluded, and only newly appended bytes are read after the
+first refresh.
+
 ## Status colour
 
 Fixed across every theme: **blocked** red, **running** green, **idle** blue

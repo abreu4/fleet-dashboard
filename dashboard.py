@@ -81,6 +81,7 @@ class Snapshot:
 
     def __init__(self):
         self._transcripts = collectors.Transcripts()
+        self._codex_transcripts = collectors.CodexTranscripts()
         self._payload = None
         self._index = {}            # session id -> session, for /api/open
         self._history = []          # ring of light samples, for the sparklines
@@ -118,7 +119,7 @@ class Snapshot:
         for collect in (
             lambda: collectors.collect_claude(self._transcripts),
             collectors.collect_antigravity,
-            collectors.collect_codex,
+            lambda: collectors.collect_codex(self._codex_transcripts),
         ):
             try:
                 sessions.extend(collect())

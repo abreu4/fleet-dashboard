@@ -780,16 +780,123 @@ def collect_antigravity():
 # codex
 # --------------------------------------------------------------------------
 
-def collect_codex():
+_CODEX_USER_NOISE = re.compile(
+    r"^(?:#\s*AGENTS\.md instructions\b|<environment_context>|"
+    r"<user_shell_command>|<turn_aborted>)", re.I)
+_CODEX_NUDGE = re.compile(
+    r"^(?:continue|retry|go on|keep going|carry on|yes|yep|ok|okay|cool)[?!. ]*$",
+    re.I)
+
+
+def _codex_text(message):
+    """Plain text from a Codex response_item message, excluding tool data."""
+    if not isinstance(message, dict):
+        return ""
+    parts = []
+    for block in message.get("content") or []:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") in ("input_text", "output_text", "text", "Text"):
+            parts.append(block.get("text") or "")
+    return "\n".join(parts)
+
+
+def _looks_like_codex_user(text):
+    clean = (text or "").lstrip()
+    return (looks_like_user(clean) and not _CODEX_USER_NOISE.match(clean)
+            and not _CODEX_NUDGE.match(flatten(clean)))
+
+
+class CodexTranscripts:
+    """Incrementally recover current work from append-only Codex rollouts.
+
+    The SQLite preview is normally just the opening prompt. Rollouts contain
+    the useful status commentary and final response, but can grow to several
+    megabytes, so each refresh starts at the byte where the previous one ended.
+    """
+
+    def __init__(self):
+        self._entries = {}
+
+    def read(self, path):
+        if not path:
+            return {}
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return {}
+        entry = self._entries.get(path)
+        fresh = (entry is None or entry["ino"] != stat.st_ino
+                 or stat.st_size < entry["offset"])
+        if fresh:
+            entry = {
+                "ino": stat.st_ino, "offset": 0, "pending": b"",
+                "last_user": None, "last_user_ordinal": -1,
+                "last_assistant": None, "last_assistant_ordinal": -1,
+                "prev_assistant": None, "turns": 0,
+            }
+            self._entries[path] = entry
+        elif stat.st_size == entry["offset"]:
+            return entry
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(entry["offset"])
+                chunk = handle.read(stat.st_size - entry["offset"])
+        except OSError:
+            return entry
+        entry["offset"] = stat.st_size
+        buffer = entry["pending"] + chunk
+        lines = buffer.split(b"\n")
+        entry["pending"] = lines.pop()
+        for raw in lines:
+            if not raw.strip():
+                continue
+            try:
+                row = json.loads(raw.decode("utf-8", "replace"))
+            except ValueError:
+                continue
+            if row.get("type") != "response_item":
+                continue
+            message = row.get("payload") or {}
+            if message.get("type") != "message":
+                continue
+            ordinal = row.get("ordinal")
+            ordinal = ordinal if isinstance(ordinal, int) else -1
+            text = _codex_text(message)
+            role = message.get("role")
+            if role == "user" and _looks_like_codex_user(text):
+                entry["last_user"] = text
+                entry["last_user_ordinal"] = ordinal
+                entry["turns"] += 1
+            elif role == "assistant" and text.strip():
+                if (entry["last_assistant"]
+                        and len(flatten(entry["last_assistant"])) >= 60):
+                    entry["prev_assistant"] = entry["last_assistant"]
+                entry["last_assistant"] = text
+                entry["last_assistant_ordinal"] = ordinal
+        return entry
+
+
+def _codex_fallback_name(text):
+    """Make old, unnamed Codex rows readable without pretending to summarise."""
+    clean = flatten(text)
+    clean = re.sub(
+        r"^(?:please\s+|can you\s+|could you\s+|i need you to\s+|"
+        r"i want you to\s+|let'?s\s+)", "", clean, flags=re.I)
+    return clip(clean, 34)
+
+
+def collect_codex(transcripts=None):
     path = os.path.join(CODEX_DIR, "state_5.sqlite")
     if not os.path.exists(path):
         return []
+    transcripts = transcripts or CodexTranscripts()
     rows = []
     try:
         conn = sqlite3.connect("file:%s?mode=ro" % path, uri=True, timeout=1)
         rows = conn.execute(
-            "select id, title, cwd, git_branch, tokens_used, first_user_message,"
-            "       preview, created_at, updated_at"
+            "select id, name, agent_nickname, title, cwd, git_branch, tokens_used,"
+            "       first_user_message, preview, rollout_path, created_at, updated_at"
             "  from threads where archived = 0"
             "  order by updated_at desc limit 40").fetchall()
         conn.close()
@@ -798,7 +905,8 @@ def collect_codex():
 
     now_ms = time.time() * 1000
     sessions = []
-    for (tid, title, cwd, branch, tokens, first, preview, created, updated) in rows:
+    for (tid, name, nickname, title, cwd, branch, tokens, first, preview,
+         rollout, created, updated) in rows:
         updated_ms = (updated or 0) * 1000
         if now_ms - updated_ms > STALE_MS:
             continue
@@ -808,10 +916,23 @@ def collect_codex():
             project = "home"
         brief = flatten(first or title or "")
         latest = flatten(preview or "")
+        entry = transcripts.read(rollout)
+        if entry:
+            prompt = flatten(entry.get("last_user") or "")
+            reply = flatten(entry.get("last_assistant") or "")
+            if len(reply) < 60:
+                reply = flatten(entry.get("prev_assistant") or "") or reply
+            if entry.get("last_user_ordinal", -1) > entry.get("last_assistant_ordinal", -1):
+                latest = prompt or reply or latest
+            else:
+                latest = reply or prompt or latest
+        display_name = flatten(name or nickname or "")
+        if not display_name:
+            display_name = _codex_fallback_name(title or first or tid)
         sessions.append({
             "id": tid,
             "provider": "codex",
-            "name": clip(flatten(title or first or tid), 34),
+            "name": clip(display_name, 34),
             "project": project,
             "place": ("branch: " + branch) if branch else "main checkout",
             "kind": "interactive",
@@ -822,7 +943,7 @@ def collect_codex():
             "next": "",
             "links": [],
             "tokens": tokens or None,
-            "turns": 0,
+            "turns": entry.get("turns", 0) if entry else 0,
             "cwd": cwd or HOME,
             "sessionId": tid,
             "resume": "codex",
