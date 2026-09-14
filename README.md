@@ -108,8 +108,9 @@ plain health paint and stay put if the status colours are ever reassigned.
 
 ## Themes
 
-Thirteen colour schemes, picked from the HUD and remembered per browser.
-`?theme=` in the URL overrides one load.
+Nineteen colour schemes, picked from the HUD and remembered per browser.
+`?theme=` in the URL overrides one load, and the settings card (`⌘,`) keeps a
+count of how often each theme has been picked from the menu.
 
 | | |
 |---|---|
@@ -125,7 +126,13 @@ Thirteen colour schemes, picked from the HUD and remembered per browser.
 | **Skyrim** | black glass, hairlines and diamonds, magicka/health/stamina bars, an aurora |
 | **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |
-| **Team Spirit** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles |
+| **Team Fortress** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles, a kill feed |
+| **Casino Royale** | racing green and marble, yellow inlay, a roulette wheel turning in the corner |
+| **Fallout** | a Pip-Boy tube: P1 phosphor behind curved glass, scanlines, amber for what needs you |
+| **Matrix** | black terminal with the rain behind the glass, P31 mint, a blinking cursor for a sigil |
+| **Persona 5** | a two-colour print job: vermilion on newsprint black, every tile snipped with scissors, zero glow |
+| **Minecraft** | quarried stone by torchlight, grass-block headers, the survival HUD, a splash on the title |
+| **Hollow Knight** | layered indigo void, bone hairlines on the top edge only, souls drifting up, a bench to rest on |
 
 Each theme sets a `--glow` factor that every shadow multiplies, so neutral is
 genuinely flat rather than dimmed.

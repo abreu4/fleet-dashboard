@@ -650,6 +650,30 @@
                at(0.12, S('sawtooth', 87.3, { lp: 320, a: 0.01, d: 0.34, g: 0.12 }))]
     },
 
+    /* Racing green and marble (Casino Royale): ceramic chip clacks for the
+     * taps, a card snapped off the shoe for switch, the ball rattling home
+     * into a pocket for alert -- ticks that bunch up and stop -- and a chip
+     * stack cascading onto the felt for done. A quiet room with a high
+     * ceiling behind all of it; nothing here is electronic. */
+    staunton: {
+      drive: { type: 'soft', k: 1.6 }, verb: { time: 0.36, mix: 0.16 },
+      tap:    [click({ hp: 3800, d: 0.007, g: 0.5 }), S('sine', 2350, { a: 0.0006, d: 0.022, g: 0.3 }),
+               S('triangle', 3520, { a: 0.0006, d: 0.014, g: 0.12 }), thump({ f: 120, g: 0.5 })],
+      tile:   [click({ hp: 3000, d: 0.008, g: 0.5 }), S('sine', 1960, { a: 0.0006, d: 0.028, g: 0.32 }),
+               S('triangle', 2940, { a: 0.0006, d: 0.016, g: 0.12 }), thump({ f: 130, g: 0.6 })],
+      switch: [click({ hp: 4500, d: 0.005, g: 0.45 }), at(0.008, N({ bp: 2200, q: 1.8, a: 0.0006, d: 0.03, g: 0.5 })),
+               at(0.032, N({ bp: 900, q: 1.2, a: 0.002, d: 0.05, g: 0.3 })), thump({ g: 0.45 })],
+      alert:  [0, 0.09, 0.165, 0.225, 0.27, 0.305, 0.33, 0.35].map(function (t, i) {
+                 return at(t, S('sine', 2350 - i * 60, { a: 0.0006, d: 0.02, g: 0.28 }));
+               }).concat([0, 0.09, 0.165, 0.225, 0.27, 0.305, 0.33, 0.35].map(function (t) {
+                 return at(t, click({ hp: 3600, d: 0.006, g: 0.42 }));
+               })).concat([at(0.35, thump({ f: 110, g: 0.7 })), at(0.36, S('sine', 1568, { a: 0.001, d: 0.12, g: 0.22 }))]),
+      done:   seq([2350, 2090, 1960, 1760, 1568], 0.045, function (f) { return S('sine', f, { a: 0.0006, d: 0.03, g: 0.26 }); })
+              .concat(seq([0, 0, 0, 0, 0], 0.045, function () { return click({ hp: 3400, d: 0.007, g: 0.4 }); }))
+              .concat([thump({ f: 130, g: 0.5 }), at(0.24, S('sine', 1046.5, { a: 0.002, d: 0.42, g: 0.22 })),
+                       at(0.24, S('sine', 2093, { a: 0.002, d: 0.3, g: 0.08 }))])
+    },
+
     /* Void indigo and bone white (Hollow Knight): glassy, echoing, minor-key;
      * a distant soft bell for done. */
     chitin: {

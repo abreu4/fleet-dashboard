@@ -2455,7 +2455,7 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   text-shadow:1.2px 0 0 rgba(49,223,235,.55), -1.2px 0 0 rgba(255,79,184,.55);
 }
 :root[data-theme="miami86"] .board::after{
-  content:"\25B6 PLAY   SP   0:00:00"; position:fixed; left:18px; bottom:16px;
+  content:"\25B6 PLAY   SP   0:00:00"; position:fixed; left:18px; bottom:calc(16px + var(--taken,0px));
   pointer-events:none; z-index:2; opacity:.72;
   font:700 15px/1 "Silkscreen", Krungthep, ui-monospace, monospace; letter-spacing:.1em;
   color:#fff; text-shadow:0 0 6px rgba(255,255,255,.55), 2px 0 0 rgba(255,79,184,.6), -2px 0 0 rgba(49,223,235,.6);
@@ -4586,10 +4586,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* Sonic: a compact live arcade score replaces the oversized clipped loop. */
 :root[data-theme="chequer"] .board::after{display:none}
 :root[data-theme="chequer"] .brand{
-  position:relative; counter-reset:sonic-rings var(--n-active, 0);
+  position:relative; counter-reset:sonic-rings var(--n-active, 0) sonic-score var(--n-total, 0);
 }
 :root[data-theme="chequer"] .brand::after{
-  content:"SCORE  00100\A RINGS  " counter(sonic-rings);
+  content:"SCORE  0" counter(sonic-score, decimal-leading-zero) "00\A RINGS  " counter(sonic-rings);
   position:absolute; right:2px; top:5px; white-space:pre; pointer-events:none;
   padding:4px 6px 3px; border-left:3px solid #f7c62e;
   background:rgba(5,13,40,.66); color:#f4f8ff;
@@ -4716,6 +4716,255 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 .feed .kill.out{opacity:0; transform:translateX(14px)}
 @keyframes kill-in{from{opacity:0; transform:translateX(14px)}}
 @media (prefers-reduced-motion:reduce){ .feed .kill{animation:none; transition:none} }
+/* ==== PASS 7: CASINO ROYALE ====
+   The table had a wheel and nothing else you could name from the door. Three
+   things a casino is known by, all of them carrying data: the tally counts
+   sit on clay chips, the closed tables print the betting layout, and a
+   session finishing is the ball dropping -- the wheel picks up, the ball
+   rattles home, and the winning number goes up on the plaque beside it. */
+/* 1. Chips. Each count is a chip in its state's colour, with the edge spots a
+   clay chip has and the number stamped on the face. */
+:root[data-theme="staunton"] .chip{padding:2px 5px 2px 8px; gap:7px; --chip:var(--unknown)}
+:root[data-theme="staunton"] .chip[data-s="blocked"]{--chip:var(--blocked)}
+:root[data-theme="staunton"] .chip[data-s="waiting"]{--chip:var(--waiting)}
+:root[data-theme="staunton"] .chip[data-s="running"]{--chip:var(--running)}
+:root[data-theme="staunton"] .chip[data-s="idle"]{--chip:var(--idle)}
+:root[data-theme="staunton"] .chip[data-s="done"]{--chip:var(--done)}
+:root[data-theme="staunton"] .chip .n{
+  width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:#04140d; text-shadow:none;
+  background:
+    radial-gradient(circle, var(--chip) 0 43%, rgba(1,8,5,.55) 44% 47%, transparent 48%),
+    repeating-conic-gradient(from 8deg, #f4f1e4 0 18deg, var(--chip) 18deg 60deg);
+  box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--chip);
+}
+:root[data-theme="staunton"] .chip .dot{display:none}
+/* 2. The betting layout, printed on a closed table: the outside bets, in the
+   table's yellow, boxed the way the felt has them. */
+:root[data-theme="staunton"] .hrail{position:relative}
+:root[data-theme="staunton"] .hrail::after{
+  content:"1 TO 18 \2502 EVEN \2502 RED \2502 BLACK \2502 ODD \2502 19 TO 36";
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font:600 9px/1 var(--mono); letter-spacing:.2em; color:rgba(234,179,8,.6);
+  padding:4px 10px 3px; border:1px solid rgba(234,179,8,.3); border-radius:2px;
+  pointer-events:none; white-space:nowrap;
+}
+@media (max-width:1100px){ :root[data-theme="staunton"] .hrail::after{display:none} }
+/* 3. The drop. The wheel picks up for the length of the spin, the ball runs
+   the outer track and rattles down into a pocket, and the plaque shows the
+   number in its pocket colour with the session's name under it. */
+:root[data-theme="staunton"] .wrap.spin::before{animation-duration:5s}
+:root[data-theme="staunton"] .ball{
+  position:fixed; left:56px; bottom:calc(56px + var(--taken,0px)); width:0; height:0; z-index:3; pointer-events:none;
+  animation:ball-run 2.8s cubic-bezier(.2,.7,.3,1) forwards;
+}
+:root[data-theme="staunton"] .ball i{
+  position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #fffdf3, #d9d3bd 70%, #8f8a76);
+  box-shadow:0 1px 3px rgba(0,0,0,.6);
+  animation:ball-fall 2.8s cubic-bezier(.4,0,.6,1) forwards;
+}
+:root[data-theme="staunton"] .ball.out{transition:opacity .6s ease; opacity:0}
+@keyframes ball-run{from{transform:rotate(0)} to{transform:rotate(-1260deg)}}
+@keyframes ball-fall{0%{transform:translateX(146px)} 70%{transform:translateX(146px)} 85%{transform:translateX(118px)} 100%{transform:translateX(112px)}}
+:root[data-theme="staunton"] .plaque{
+  position:fixed; left:150px; bottom:calc(150px + var(--taken,0px)); z-index:3; pointer-events:none;
+  display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px;
+  background:linear-gradient(180deg,#f4f1e4,#d9d3bd); color:#04140d; border-radius:3px;
+  border:1px solid rgba(234,179,8,.7); box-shadow:0 8px 18px -8px rgba(0,0,0,.8), inset 0 1px 0 #fff;
+  font:600 10px/1.3 var(--mono); letter-spacing:.12em; text-transform:uppercase;
+  animation:plaque-in .25s ease-out; transition:opacity .5s ease, transform .5s ease;
+}
+:root[data-theme="staunton"] .plaque b{
+  width:30px; height:30px; border-radius:3px; display:inline-flex; align-items:center; justify-content:center;
+  font-size:15px; letter-spacing:0; color:#f4f1e4; background:#111;
+}
+:root[data-theme="staunton"] .plaque.red b{background:#b3261e}
+:root[data-theme="staunton"] .plaque.green b{background:#0e6b3a}
+:root[data-theme="staunton"] .plaque span{display:block; color:#2b3a30; letter-spacing:.1em}
+:root[data-theme="staunton"] .plaque span + span{color:#04140d; font-size:11px; text-transform:none; letter-spacing:.02em; margin-top:1px}
+:root[data-theme="staunton"] .plaque.out{opacity:0; transform:translateY(6px)}
+@keyframes plaque-in{from{opacity:0; transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="staunton"] .ball{display:none}
+  :root[data-theme="staunton"] .plaque{animation:none}
+}
+/* ==== PASS 7: HOTLINE MIAMI ====
+   The wordmark was seventeen pixels of dim Phosphate, and the sun was a
+   twelve-percent ghost behind the lanes. The things the game's title screen
+   is known by are the airbrushed chrome-gel logo, the sun on the horizon,
+   the palms in front of it, and a tape that will not track. So: those. */
+/* 1. The logo. Phosphate at size, filled with the gel gradient -- rose over
+   tangerine over lemon -- with the colour plates slipped apart around it.
+   The plates are drop-shadows rather than text-shadows so they sit behind
+   the gradient fill instead of painting over it. */
+:root[data-theme="miami86"] .brand b{
+  font-size:27px; letter-spacing:.14em; font-style:oblique 12deg; line-height:1;
+  background:linear-gradient(180deg, #ffe3f4 0%, #ff8ccb 30%, #ff4d9e 48%, #ff823c 52%, #ffd166 78%, #fff3b0 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:none;
+  filter:drop-shadow(-2px 0 rgba(63,216,232,.55)) drop-shadow(2px 0 rgba(255,77,158,.45)) drop-shadow(0 0 10px rgba(255,77,158,.35));
+}
+:root[data-theme="miami86"] .brand b::after{color:#3fd8e8; opacity:1; -webkit-text-fill-color:#3fd8e8}
+/* 2. The sun, with the palms in front of it. Lifted from behind the lanes
+   to the glass and screen-blended, so it only ever lightens what it crosses
+   and a tile over it stays legible. The disc is cut by the horizon (the top
+   of the sheet, when the sheet is up), striped through its lower half, and
+   the two palms are cut OUT of it: a silhouette against a dark sky is
+   invisible anyway, and this way a frond never darkens a tile. Two mask
+   layers, the second subtracted from the first. */
+:root[data-theme="miami86"] .board::before{
+  bottom:var(--taken,0px); left:50%; transform:translateX(-50%);
+  width:640px; height:200px; border-radius:0;
+  z-index:2; opacity:.62; mix-blend-mode:screen;
+  background:linear-gradient(180deg, #ffe08a 0%, #ff823c 42%, #ff4d9e 74%, #b04cff 100%);
+  box-shadow:none;
+  -webkit-mask-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='200'%3E%3CclipPath id='c'%3E%3Ccircle cx='320' cy='190' r='170'/%3E%3C/clipPath%3E%3Cg clip-path='url(%23c)' fill='%23fff'%3E%3Crect width='640' height='112'/%3E%3Crect y='117' width='640' height='16'/%3E%3Crect y='139' width='640' height='13'/%3E%3Crect y='159' width='640' height='10'/%3E%3Crect y='177' width='640' height='7'/%3E%3Crect y='192' width='640' height='4'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='200'%3E%3Cg fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath d='M196 200c8-44 4-84-12-124' stroke-width='9'/%3E%3Cg stroke-width='7'%3E%3Cpath d='M184 76c-30-20-62-22-88-6'/%3E%3Cpath d='M184 76c-22-32-48-46-78-42'/%3E%3Cpath d='M184 76c-2-38-16-62-40-74'/%3E%3Cpath d='M184 76c14-34 12-60 2-84'/%3E%3Cpath d='M184 76c26-30 54-42 82-36'/%3E%3Cpath d='M184 76c32-16 64-14 86 10'/%3E%3Cpath d='M184 76c30 0 52 12 66 34'/%3E%3C/g%3E%3Cpath d='M448 200c-8-48-2-92 18-136' stroke-width='9'/%3E%3Cg stroke-width='7'%3E%3Cpath d='M466 64c32-18 64-16 88 8'/%3E%3Cpath d='M466 64c28-30 60-42 90-34'/%3E%3Cpath d='M466 64c8-38 28-62 58-72'/%3E%3Cpath d='M466 64c-10-38-6-68 10-92'/%3E%3Cpath d='M466 64c-28-30-58-40-88-30'/%3E%3Cpath d='M466 64c-34-14-68-8-88 18'/%3E%3Cpath d='M466 64c-28 2-50 16-62 40'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  mask-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='200'%3E%3CclipPath id='c'%3E%3Ccircle cx='320' cy='190' r='170'/%3E%3C/clipPath%3E%3Cg clip-path='url(%23c)' fill='%23fff'%3E%3Crect width='640' height='112'/%3E%3Crect y='117' width='640' height='16'/%3E%3Crect y='139' width='640' height='13'/%3E%3Crect y='159' width='640' height='10'/%3E%3Crect y='177' width='640' height='7'/%3E%3Crect y='192' width='640' height='4'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='200'%3E%3Cg fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath d='M196 200c8-44 4-84-12-124' stroke-width='9'/%3E%3Cg stroke-width='7'%3E%3Cpath d='M184 76c-30-20-62-22-88-6'/%3E%3Cpath d='M184 76c-22-32-48-46-78-42'/%3E%3Cpath d='M184 76c-2-38-16-62-40-74'/%3E%3Cpath d='M184 76c14-34 12-60 2-84'/%3E%3Cpath d='M184 76c26-30 54-42 82-36'/%3E%3Cpath d='M184 76c32-16 64-14 86 10'/%3E%3Cpath d='M184 76c30 0 52 12 66 34'/%3E%3C/g%3E%3Cpath d='M448 200c-8-48-2-92 18-136' stroke-width='9'/%3E%3Cg stroke-width='7'%3E%3Cpath d='M466 64c32-18 64-16 88 8'/%3E%3Cpath d='M466 64c28-30 60-42 90-34'/%3E%3Cpath d='M466 64c8-38 28-62 58-72'/%3E%3Cpath d='M466 64c-10-38-6-68 10-92'/%3E%3Cpath d='M466 64c-28-30-58-40-88-30'/%3E%3Cpath d='M466 64c-34-14-68-8-88 18'/%3E%3Cpath d='M466 64c-28 2-50 16-62 40'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  -webkit-mask-size:640px 200px; mask-size:640px 200px;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  /* the operator belongs to the layer being placed onto the ones beneath it,
+     so it is the disc that carries `subtract`: the disc, where it falls
+     outside the palms */
+  -webkit-mask-composite:source-out, source-over; mask-composite:subtract, add;
+}
+/* The sun's glow, on a layer of its own so the mask does not cut it. */
+:root[data-theme="miami86"] .wrap::before{
+  content:""; position:fixed; left:50%; bottom:calc(-120px + var(--taken,0px)); transform:translateX(-50%);
+  width:520px; height:300px; border-radius:50%; z-index:1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(255,77,158,.28), rgba(255,130,60,.10) 55%, transparent 100%);
+  mix-blend-mode:screen;
+}
+/* 4. Tracking. Point at the logo and the tape loses it: a bright band of
+   displaced lines rolls down the frame, the picture shivers. Hover only,
+   so it costs nothing while the board is being read. */
+:root[data-theme="miami86"] .wrap:has(.brand:hover)::after{
+  background:
+    linear-gradient(180deg, transparent 0 38%, rgba(255,255,255,.16) 39% 42%, rgba(63,216,232,.14) 42% 43%, rgba(10,2,14,.5) 43% 46%, transparent 47%),
+    repeating-linear-gradient(0deg, rgba(10,2,14,.20) 0 1px, transparent 1px 4px);
+  background-size:100% 260%, auto; background-repeat:no-repeat, repeat;
+  animation:vhs-track 1.1s linear infinite;
+}
+:root[data-theme="miami86"] .wrap:has(.brand:hover) .board{animation:vhs-shiver .16s steps(2,end) infinite}
+@keyframes vhs-track{from{background-position:0 -160%, 0 0} to{background-position:0 160%, 0 4px}}
+@keyframes vhs-shiver{0%{transform:translateX(0)} 50%{transform:translateX(-2px) skewX(-.4deg)} 100%{transform:translateX(1px)}}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="miami86"] .wrap:has(.brand:hover)::after{animation:none}
+  :root[data-theme="miami86"] .wrap:has(.brand:hover) .board{animation:none}
+}
+/* ==== PASS 7: PORTAL ====
+   The two portals were fourteen-pixel slivers half off the screen, which is
+   to say the tell was not there. Real ovals now, in from the walls, and
+   they do the one thing portals do: when a session changes state, something
+   goes in the blue one and comes out of the orange one. */
+/* 1. The portals: ovals set into the side walls, halfway up the room that
+   is left once the sheet has taken its share, with the rim glow and the
+   dark interior of the real thing. */
+:root[data-theme="aperture"] .wrap::before,
+:root[data-theme="aperture"] .wrap::after{
+  content:""; position:fixed; top:calc((100vh - var(--taken,0px)) / 2); transform:translateY(-50%);
+  width:42px; height:150px; border-radius:50%; pointer-events:none; z-index:1; opacity:1;
+  background:radial-gradient(ellipse at 50% 50%, #0b0f14 0 52%, var(--portal) 74%, transparent 76%);
+  border:0;
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--portal) 85%, #fff), 0 0 18px 4px color-mix(in srgb, var(--portal) 55%, transparent), inset 0 0 10px color-mix(in srgb, var(--portal) 60%, transparent);
+}
+:root[data-theme="aperture"] .wrap::before{left:12px; right:auto; --portal:#1b8ee0}
+:root[data-theme="aperture"] .wrap::after{right:12px; left:auto; --portal:#ff8c1a}
+/* 2. The traveller: a dot in the state's colour, squeezed thin as it leaves
+   the blue portal, across the room in a shallow arc, squeezed again into
+   the orange one. One shot per state change. */
+:root[data-theme="aperture"] .traveller{
+  position:fixed; left:33px; top:calc((100vh - var(--taken,0px)) / 2); width:14px; height:14px; margin:-7px 0 0 -7px;
+  border-radius:50%; background:var(--rib, var(--accent)); z-index:2; pointer-events:none;
+  box-shadow:0 0 8px var(--rib, var(--accent));
+  animation:portal-cross 1.15s cubic-bezier(.45,0,.55,1) forwards;
+}
+@keyframes portal-cross{
+  0%  {transform:translate(0,0) scale(.2,1); opacity:0}
+  8%  {transform:translate(0,0) scale(.35,1.1); opacity:1}
+  22% {transform:translate(calc((100vw - 66px) * .22), -34px) scale(1,1)}
+  78% {transform:translate(calc((100vw - 66px) * .78), -34px) scale(1,1)}
+  92% {transform:translate(calc(100vw - 66px), 0) scale(.35,1.1); opacity:1}
+  100%{transform:translate(calc(100vw - 66px), 0) scale(.2,1); opacity:0}
+}
+/* 3. The clock names the chamber: how many test subjects are on the board. */
+:root[data-theme="aperture"] #clock{counter-reset:chamber var(--n-total, 0)}
+:root[data-theme="aperture"] #clock::before{
+  content:"chamber " counter(chamber, decimal-leading-zero) "\00a0\00a0\00b7\00a0\00a0";
+  text-transform:uppercase; letter-spacing:.14em; color:#ff8c1a;
+}
+/* 4. A closed lane is one strip of enamel, not a run of plate seams. */
+:root[data-theme="aperture"] .hrail{background-image:linear-gradient(90deg, var(--rail-a), var(--rail-b))}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="aperture"] .traveller{display:none} }
+/* ==== PASS 7: SONIC ====
+   The score is live now (a hundred a session, the rings are what is
+   running), every project is an act, and the one thing everybody knows
+   from the game: get hit and your rings go everywhere. A session going
+   blocked scatters its rings out of the tile. */
+/* 1. Acts. Each lane counts its projects, and the header wears the number
+   the way the title card does. */
+:root[data-theme="chequer"] .lane{counter-reset:act}
+:root[data-theme="chequer"] .project{counter-increment:act}
+:root[data-theme="chequer"] .project > header::before{
+  content:"ACT " counter(act); flex:none; order:-1; padding:1px 5px 0; border-radius:2px;
+  background:#f7c62e; color:#0a1a4a; font:700 8px/1.5 "Silkscreen", Krungthep, monospace; letter-spacing:.06em;
+  text-shadow:none;
+}
+/* 2. Rings, scattered. Each one is a gold ring that leaves the tile on its
+   own arc -- up, out, and down again, fading as it goes -- with the angle
+   and reach set per ring by the script. Transform and opacity only. */
+:root[data-theme="chequer"] .ring{
+  position:fixed; left:var(--x); top:var(--y); width:12px; height:12px; margin:-6px 0 0 -6px;
+  z-index:6; pointer-events:none;
+  animation:ring-fly .9s cubic-bezier(.2,.6,.6,1) forwards;
+}
+/* the ring itself is the inner box, so its spin (a scaleX) and the flight
+   (a translate) are not fighting over one transform */
+:root[data-theme="chequer"] .ring::before{
+  content:""; position:absolute; inset:0; border-radius:50%; box-sizing:border-box;
+  border:3px solid #f7c62e; box-shadow:0 0 6px rgba(247,198,46,.7), inset 0 0 2px rgba(255,255,255,.8);
+  animation:ring-spin .35s linear infinite;
+}
+@keyframes ring-fly{
+  0%  {transform:translate(0,0); opacity:1}
+  45% {transform:translate(calc(var(--dx) * .5), calc(var(--dy) * -1)); opacity:1}
+  100%{transform:translate(var(--dx), calc(var(--dy) * .6)); opacity:0}
+}
+@keyframes ring-spin{from{transform:scaleX(1)} 50%{transform:scaleX(.25)} to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="chequer"] .ring{display:none} }
+/* ==== PASS 7: SKYRIM ====
+   Quest markers on the compass. Every session that is working, stuck or
+   asking sits on the strip as the game's diamond, at the bearing of its
+   tile on the screen -- hollow bone for running, filled gold for waiting,
+   filled red for blocked -- so the compass points at the work. */
+:root[data-theme="hoarstone"] .quests{position:absolute; left:0; right:0; bottom:-1px; height:14px; z-index:6; pointer-events:none}
+:root[data-theme="hoarstone"] .quests .q{
+  position:absolute; top:3px; width:8px; height:8px; margin-left:-4px; box-sizing:border-box;
+  transform:rotate(45deg); border:1.5px solid #ece9e2; background:rgba(13,18,22,.92);
+  box-shadow:0 0 5px rgba(236,233,226,.35); transition:left .25s ease;
+}
+:root[data-theme="hoarstone"] .quests .q.waiting{border-color:#e0b25a; background:#e0b25a; box-shadow:0 0 6px rgba(224,178,90,.6)}
+:root[data-theme="hoarstone"] .quests .q.blocked{border-color:var(--blocked); background:var(--blocked); box-shadow:0 0 6px var(--blocked)}
+/* ==== PASS 7: HOLLOW KNIGHT ====
+   The lantern. The void is not empty, it is unmapped: move the pointer over
+   the board and a lumafly's worth of light goes with it, and inside that
+   light is the map -- rooms, passages, a bench -- in the cartographer's
+   quill line. It only ever shows in the void between the panels; the panels
+   themselves stay night. Pointer-driven, so a board nobody is touching
+   costs nothing at all. */
+:root[data-theme="chitin"] .lantern{
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0; transition:opacity .6s ease;
+  --mx:-999px; --my:-999px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M48 70q30-12 62-4t54 10q10 40-6 72t-58 16q-40-6-52-38t0-56z'/%3E%3Cpath d='M118 160v34q40 6 62-18t8-46'/%3E%3Cpath d='M236 44q56-10 96 18t10 74q-28 34-74 22t-46-60q0-32 14-54z'/%3E%3Cpath d='M164 100h58'/%3E%3Cpath d='M60 236q22-24 58-18t44 40q0 46-40 62t-62-12q-18-38 0-72z'/%3E%3Cpath d='M228 210q44-14 90 6t18 52q-30 24-78 14t-42-46q2-16 12-26z'/%3E%3Cpath d='M162 266h64'/%3E%3Cpath d='M160 350q40-22 88-12t54 30q-22 26-76 22t-66-40z'/%3E%3Cpath d='M300 296v40'/%3E%3Cpath d='M110 328q14 12 24 30'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1' stroke-dasharray='2 5' stroke-linecap='round'%3E%3Cpath d='M74 110q40 40 96 30t70-50'/%3E%3Cpath d='M112 300q60-20 100-40t90-24'/%3E%3C/g%3E%3Cg fill='%23eceaf0'%3E%3Cpath d='M256 228h20v2h-20zM258 231h16v2h-16zM259 234h2v6h-2zM271 234h2v6h-2z'/%3E%3Ccircle cx='86' cy='96' r='2'/%3E%3Ccircle cx='308' cy='88' r='2'/%3E%3Ccircle cx='96' cy='268' r='2'/%3E%3Ccircle cx='230' cy='368' r='2'/%3E%3C/g%3E%3C/svg%3E") 0 0/420px 420px repeat;
+  -webkit-mask-image:radial-gradient(circle 190px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
+  mask-image:radial-gradient(circle 190px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
+}
+:root[data-theme="chitin"] .lantern.lit{opacity:.5}
 </style>
 </head>
 <body>
@@ -5015,7 +5264,7 @@ const VOICE = {
   ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'won', unknown:'spy?',
               blank:'nothing in the loadout', quiet:'ceasefire'},
   /* casino royale */
-  staunton:  {blocked:'bust', waiting:'your bet', running:'in play', idle:'cashed out', done:'jackpot', unknown:'off table',
+  staunton:  {blocked:'bust', waiting:'your bet', running:'in play', idle:'folded', done:'jackpot', unknown:'off table',
               blank:'no hands dealt yet', quiet:'the table is closed'},
   /* the matrix */
   matrix:    {blocked:'agent', waiting:'operator', running:'inside', idle:'asleep', done:'unplugged', unknown:'glitch',
@@ -5176,7 +5425,7 @@ function drawHud(d){
     + cell('uptime', '<b>'+dur(h.uptime)+'</b>');
 
   document.getElementById('tally').innerHTML = STATES.filter(s=>d.tally[s])
-    .map(s=>'<span class="chip" title="'+s+'"><i class="dot s-'+s+'"></i><span class="lb">'+esc(voice(s))+'</span><span class="n">'+d.tally[s]+'</span></span>').join('');
+    .map(s=>'<span class="chip" data-s="'+s+'" title="'+s+'"><i class="dot s-'+s+'"></i><span class="lb">'+esc(voice(s))+'</span><span class="n">'+d.tally[s]+'</span></span>').join('');
   drawTrace(d.history||[]);
 }
 
@@ -5907,6 +6156,139 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     while(feed.children.length > MAX) feed.firstChild.remove();
     setTimeout(() => { line.classList.add('out'); setTimeout(() => line.remove(), 450); }, KEEP_MS);
   });
+})();
+
+/* ---- the drop (casino royale) ------------------------------------------ */
+/* A session finishing is the ball dropping. The wheel picks up, the ball runs
+   the outer track and rattles home, and the plaque beside the wheel shows the
+   number -- drawn at random, which is the only honest way to run a wheel --
+   in its pocket colour, with the session's name under it. Only the staunton
+   world does any of this; the state events are already dispatched. */
+(function(){
+  const REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+  let plaque = null, ball = null, spinT = null;
+  document.addEventListener('fleet:state', e => {
+    if(document.documentElement.dataset.theme !== 'staunton') return;
+    const d = e.detail || {};
+    if(d.to !== 'done') return;
+    const el = board.querySelector('.bubble[data-id="'+CSS.escape(d.id)+'"]');
+    const name = el?.querySelector('.nm')?.textContent || d.id || '';
+    const n = Math.floor(Math.random() * 37);
+    const colour = n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black';
+    const wrap = document.querySelector('.wrap');
+    const still = reducedMotion() || document.documentElement.dataset.motion === 'off';
+    // the spin: wheel up, ball out
+    if(!still){
+      wrap.classList.add('spin'); clearTimeout(spinT);
+      spinT = setTimeout(() => wrap.classList.remove('spin'), 3400);
+      if(ball) ball.remove();
+      ball = document.createElement('div'); ball.className = 'ball'; ball.innerHTML = '<i></i>';
+      document.body.appendChild(ball);
+      const b = ball;
+      setTimeout(() => { b.classList.add('out'); setTimeout(() => b.remove(), 650); }, 4200);
+    }
+    // the plaque, once the ball is in
+    setTimeout(() => {
+      if(plaque) plaque.remove();
+      plaque = document.createElement('div'); plaque.className = 'plaque ' + colour;
+      plaque.setAttribute('aria-live', 'polite');
+      plaque.innerHTML = '<b>' + n + '</b><div><span>' + colour + '</span><span>' + esc(name) + '</span></div>';
+      document.body.appendChild(plaque);
+      const q = plaque;
+      setTimeout(() => { q.classList.add('out'); setTimeout(() => q.remove(), 550); }, 7000);
+    }, still ? 0 : 2700);
+  });
+})();
+
+/* ---- through the portals (portal) --------------------------------------- */
+/* A session changing state goes in the blue portal and out of the orange
+   one, as a dot in the colour of the state it arrived at. */
+(function(){
+  document.addEventListener('fleet:state', e => {
+    if(document.documentElement.dataset.theme !== 'aperture') return;
+    if(reducedMotion() || document.documentElement.dataset.motion === 'off') return;
+    const d = e.detail || {};
+    const dot = document.createElement('i');
+    dot.className = 'traveller'; dot.setAttribute('aria-hidden', 'true');
+    dot.style.setProperty('--rib', 'var(--' + (STATES.includes(d.to) ? d.to : 'unknown') + ')');
+    document.body.appendChild(dot);
+    dot.addEventListener('animationend', () => dot.remove(), {once:true});
+    setTimeout(() => dot.remove(), 2000);
+  });
+})();
+
+/* ---- rings, scattered (sonic) ------------------------------------------- */
+/* A session going blocked is a hit: its rings burst out of the tile in a
+   fan and drop away. Nine of them, each on its own arc. */
+(function(){
+  document.addEventListener('fleet:state', e => {
+    if(document.documentElement.dataset.theme !== 'chequer') return;
+    if(reducedMotion() || document.documentElement.dataset.motion === 'off') return;
+    const d = e.detail || {};
+    if(d.to !== 'blocked') return;
+    const el = board.querySelector('.bubble[data-id="'+CSS.escape(d.id)+'"]');
+    if(!el) return;
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    for(let i = 0; i < 9; i++){
+      const ring = document.createElement('i');
+      ring.className = 'ring'; ring.setAttribute('aria-hidden', 'true');
+      const a = (-160 + i * 20 + (Math.random() * 10 - 5)) * Math.PI / 180;   // a fan across the top
+      const v = 70 + Math.random() * 60;
+      ring.style.setProperty('--x', cx + 'px'); ring.style.setProperty('--y', cy + 'px');
+      ring.style.setProperty('--dx', (Math.cos(a) * v * 1.6).toFixed(1) + 'px');
+      ring.style.setProperty('--dy', (Math.abs(Math.sin(a)) * v + 30).toFixed(1) + 'px');
+      ring.style.animationDelay = (i * 18) + 'ms';
+      document.body.appendChild(ring);
+      setTimeout(() => ring.remove(), 1400);
+    }
+  });
+})();
+
+/* ---- quest markers (skyrim) --------------------------------------------- */
+/* The compass strip under the HUD carries a diamond for every session that
+   wants attention or is working, at the bearing of its tile. Redrawn after
+   every paint and every re-fit, cheaply: a handful of rects, one rAF. */
+(function(){
+  let strip = null, raf = 0;
+  const draw = () => {
+    raf = 0;
+    if(document.documentElement.dataset.theme !== 'hoarstone'){ if(strip) strip.innerHTML = ''; return; }
+    if(!strip){
+      strip = document.createElement('div'); strip.className = 'quests'; strip.setAttribute('aria-hidden', 'true');
+      document.querySelector('.hud').appendChild(strip);
+    }
+    const hud = strip.parentElement.getBoundingClientRect();
+    strip.innerHTML = [...board.querySelectorAll('.bubble')]
+      .filter(el => /^(running|blocked|waiting)$/.test(el.dataset.state))
+      .map(el => {
+        const r = el.getBoundingClientRect(); if(!r.width) return '';
+        return '<i class="q ' + el.dataset.state + '" style="left:' + (r.left + r.width / 2 - hud.left).toFixed(0) + 'px"></i>';
+      }).join('');
+  };
+  const queue = () => { if(!raf) raf = requestAnimationFrame(draw); };
+  new MutationObserver(queue).observe(board, {childList:true, subtree:true, attributes:true, attributeFilter:['style', 'data-state', 'class']});
+  new ResizeObserver(queue).observe(board);
+  document.addEventListener('fleet:theme', queue);
+  addEventListener('resize', queue);
+})();
+
+/* ---- the lantern (hollow knight) ---------------------------------------- */
+/* A pool of light follows the pointer across the void and shows the map
+   under it. One element, two custom properties, updated at most once a
+   frame; gone again half a second after the pointer leaves the window. */
+(function(){
+  let el = null, raf = 0, x = 0, y = 0, off = 0;
+  const place = () => { raf = 0; el.style.setProperty('--mx', x + 'px'); el.style.setProperty('--my', y + 'px'); };
+  document.addEventListener('pointermove', e => {
+    if(document.documentElement.dataset.theme !== 'chitin'){ if(el) el.classList.remove('lit'); return; }
+    if(!el){ el = document.createElement('div'); el.className = 'lantern'; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el); }
+    x = e.clientX; y = e.clientY;
+    el.classList.add('lit');
+    if(!raf) raf = requestAnimationFrame(place);
+    clearTimeout(off); off = setTimeout(() => el.classList.remove('lit'), 2500);
+  }, {passive:true});
+  document.addEventListener('pointerleave', () => { if(el) el.classList.remove('lit'); });
+  document.addEventListener('fleet:theme', () => { if(el) el.classList.remove('lit'); });
 })();
 
 /* ---------------- settings ---------------- */
