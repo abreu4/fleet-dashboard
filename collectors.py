@@ -19,6 +19,7 @@ Every collector returns a list of dicts with the same shape:
 Nothing here writes, and nothing here holds a whole transcript in memory.
 """
 
+import ctypes
 import glob
 import json
 import os
@@ -908,11 +909,14 @@ def collect_codex(transcripts=None):
 
     now_ms = time.time() * 1000
     sessions = []
+    rollout_of = {}
     for (tid, name, nickname, title, cwd, branch, tokens, first, preview,
          rollout, created, updated) in rows:
         updated_ms = (updated or 0) * 1000
         if now_ms - updated_ms > STALE_MS:
             continue
+        if rollout:
+            rollout_of[tid] = os.path.realpath(rollout)
         cwd = (cwd or "").rstrip("/")
         project = os.path.basename(cwd) or "home"
         if cwd == HOME.rstrip("/"):
@@ -957,7 +961,20 @@ def collect_codex(transcripts=None):
             "started": (created or 0) * 1000 or None,
             "updated": updated_ms or None,
         })
-    return merge_live(sessions, "codex", "codex")
+    # Codex holds its rollout open for as long as the session runs, which ties
+    # a process to its thread exactly. Matching by folder alone could not tell
+    # two sessions started from ~ apart: the first process took the freshest
+    # thread, the second found nothing it was allowed to claim, and the tile
+    # that idled out lost its × while its process sat there, unclosable.
+    def by_rollout(proc, pool):
+        held = _process_files(proc["pid"], CODEX_DIR)
+        if not held:
+            return None
+        for session in pool:
+            if rollout_of.get(session["id"]) in held:
+                return session
+        return None
+    return merge_live(sessions, "codex", "codex", link=by_rollout)
 
 # --------------------------------------------------------------------------
 # live processes
@@ -990,6 +1007,35 @@ def _etime_seconds(text):
     return days * 86400 + parts[0] * 3600 + parts[1] * 60 + parts[2]
 
 
+# proc_pidinfo(PROC_PIDVNODEPATHINFO): struct proc_vnodepathinfo is two
+# vnode_info_path blocks, cwd then root; each is a 152-byte vnode_info followed
+# by a MAXPATHLEN path. Read straight out of the buffer rather than declaring
+# the whole struct.
+_PROC_PIDVNODEPATHINFO = 9
+_VNODEPATHINFO_SIZE = 2352
+_VNODE_INFO_SIZE = 152
+_MAXPATHLEN = 1024
+try:
+    _libproc = ctypes.CDLL("/usr/lib/libproc.dylib")
+except OSError:
+    _libproc = None
+
+
+def _cwd_syscall(pid):
+    """The process's working directory from libproc: 40µs, and it cannot
+    time out the way lsof did under load -- which left a process with no
+    folder, so no session matched it and its tile lost the ×."""
+    if not _libproc:
+        return ""
+    buf = ctypes.create_string_buffer(_VNODEPATHINFO_SIZE)
+    got = _libproc.proc_pidinfo(ctypes.c_int(pid), ctypes.c_int(_PROC_PIDVNODEPATHINFO),
+                                ctypes.c_uint64(0), buf, ctypes.c_int(_VNODEPATHINFO_SIZE))
+    if got < _VNODE_INFO_SIZE + 1:
+        return ""
+    raw = buf.raw[_VNODE_INFO_SIZE:_VNODE_INFO_SIZE + _MAXPATHLEN]
+    return raw.split(b"\0", 1)[0].decode("utf-8", "replace")
+
+
 def _process_cwd(pid):
     # Keyed by int, because the sweep at the end of the scan builds its live set
     # from int(pid). Cached under a string, every entry missed that set and was
@@ -999,6 +1045,10 @@ def _process_cwd(pid):
     hit = _cwd_cache.get(pid)
     if hit:
         return hit
+    cwd = _cwd_syscall(pid)
+    if cwd:
+        _cwd_cache[pid] = cwd
+        return cwd
     try:
         proc = subprocess.run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
                               capture_output=True, text=True, timeout=4)
@@ -1009,6 +1059,36 @@ def _process_cwd(pid):
             _cwd_cache[pid] = line[1:]
             return line[1:]
     return ""
+
+
+_files_cache = {}
+FILES_SECONDS = 12.0
+
+
+def _process_files(pid, under):
+    """Regular files the process holds open below `under`, as real paths.
+
+    Cached a dozen seconds per pid: a session's transcript does not move, but
+    a TUI can start a fresh thread in place, so the answer is not forever.
+    """
+    pid = int(pid)
+    hit = _files_cache.get(pid)
+    if hit and time.time() - hit[0] < FILES_SECONDS:
+        return hit[1]
+    held = set()
+    try:
+        proc = subprocess.run(["lsof", "-a", "-p", str(pid), "-Fn"],
+                              capture_output=True, text=True, timeout=4)
+    except (OSError, subprocess.SubprocessError):
+        # Back off half a window rather than paying a timed-out lsof on every
+        # pass; the folder heuristic carries the tile meanwhile.
+        _files_cache[pid] = (time.time() - FILES_SECONDS / 2, held)
+        return held
+    for line in proc.stdout.splitlines():
+        if line.startswith("n/") and line[1:].startswith(under):
+            held.add(os.path.realpath(line[1:]))
+    _files_cache[pid] = (time.time(), held)
+    return held
 
 
 _ps_cache = (0.0, "")
@@ -1061,24 +1141,45 @@ def live_processes(provider):
     for pid in list(_cwd_cache):
         if pid not in alive:
             _cwd_cache.pop(pid, None)
+    for pid in list(_files_cache):
+        if pid not in alive:
+            _files_cache.pop(pid, None)
     return found
 
 
-def merge_live(sessions, provider, label):
-    """Add a tile for any running process that no on-disk session accounts for."""
-    # Reconcile a process with the freshest session in its cwd, even when the
-    # provider's own liveness timestamp briefly says idle. Restrict candidates
-    # to sessions that wrote since this process started: otherwise a brand-new
-    # CLI in a familiar repo would steal an unrelated session from yesterday
-    # and inherit its name and description.
+# A CLI that has run this long without a thread of its own on disk is not a
+# brand-new session still writing its first row; it is a resumed one whose
+# thread predates it. Past this age a process may claim the folder's freshest
+# unclaimed session, timestamps notwithstanding.
+SETTLED_S = 20
+
+
+def merge_live(sessions, provider, label, link=None):
+    """Add a tile for any running process that no on-disk session accounts for.
+
+    `link(proc, pool)` may name the session a process belongs to outright
+    (Codex: the rollout it holds open). Otherwise a process is reconciled with
+    the freshest session in its cwd, even when the provider's own liveness
+    timestamp briefly says idle. Candidates are sessions that wrote since the
+    process started, so a brand-new CLI in a familiar repo does not steal an
+    unrelated session from yesterday and inherit its name and description --
+    unless the process has been around long enough that no new row is coming,
+    in which case the freshest orphan in that folder is the one it resumed.
+    """
     on_disk = list(sessions)
+    now_ms = time.time() * 1000
     for proc in live_processes(provider):
         cwd = (proc["cwd"] or HOME).rstrip("/")
-        candidates = [s for s in on_disk
-                      if (s.get("cwd") or "").rstrip("/") == cwd
-                      and (s.get("updated") or 0) >= proc["started"] - 30_000]
-        if candidates:
-            matched = max(candidates, key=lambda s: s.get("updated") or 0)
+        matched = link(proc, on_disk) if link else None
+        if not matched:
+            in_cwd = [s for s in on_disk if (s.get("cwd") or "").rstrip("/") == cwd]
+            candidates = [s for s in in_cwd
+                          if (s.get("updated") or 0) >= proc["started"] - 30_000]
+            if not candidates and now_ms - proc["started"] > SETTLED_S * 1000:
+                candidates = in_cwd
+            if candidates:
+                matched = max(candidates, key=lambda s: s.get("updated") or 0)
+        if matched:
             on_disk.remove(matched)       # one process, one on-disk session
             matched["pid"] = proc["pid"]
             if matched.get("state") not in ("blocked", "waiting"):

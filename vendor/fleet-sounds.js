@@ -11,7 +11,9 @@
  *   change on select#theme                -> 'switch', played in the NEW theme's pack
  *   fleet:theme  CustomEvent {theme}      -> switch the active pack (+ 'switch')
  *   fleet:state  CustomEvent {id,from,to} -> 'alert' when to is blocked|waiting,
- *                                            'done'  when to is done, else silence
+ *                                            'done'  when to is done, or when a
+ *                                            running session goes idle (its turn
+ *                                            ended: it is waiting on you now)
  *   <html data-theme> mutations           -> fallback pack switching
  *
  * Feel: punchy game-menu UI (Halo / CoD / CS / Portal / Hotline Miami menus).
@@ -743,9 +745,17 @@
   /* ------------------------------------------------------------------ */
 
   var btn = null;
+  // Drawn, not an emoji: the colour glyph ignored the theme and sat a size
+  // larger than the other squares' mono symbols.
+  var ICON_ON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'
+    + '<path d="M2.5 6h2.6L8.5 3.2v9.6L5.1 10H2.5z" fill="currentColor" stroke="none"/>'
+    + '<path d="M10.6 5.7a3.2 3.2 0 0 1 0 4.6M12.6 3.9a5.8 5.8 0 0 1 0 8.2"/></svg>';
+  var ICON_OFF = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'
+    + '<path d="M2.5 6h2.6L8.5 3.2v9.6L5.1 10H2.5z" fill="currentColor" stroke="none"/>'
+    + '<path d="M10.6 6.2l3.4 3.6M14 6.2l-3.4 3.6"/></svg>';
   function label() {
     if (!btn) return;
-    btn.innerHTML = muted ? '🔇<span> off</span>' : '🔊<span> on</span>';
+    btn.innerHTML = (muted ? ICON_OFF : ICON_ON) + '<span> ' + (muted ? 'off' : 'on') + '</span>';
     btn.title = 'sound ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
               + (!muted && !audible ? '\nclick: activate and test sound' : '\nclick: mute / unmute')
               + ' · shift+click: cycle volume · volume, pack and cues under \u22ef';
@@ -823,13 +833,22 @@
     if (d.theme) switchTo(d.theme, true);
   });
 
+  // What the collectors actually say is `running` and `idle`: `claude agents`
+  // reports busy/idle, and the agy and codex lanes are timestamps against a
+  // liveness window. Nothing on the board reaches `done`, `blocked` or
+  // `waiting` today, so an engine keyed on those alone sat wired up and
+  // silent through every finished turn. A session that stops running has
+  // finished what it was asked and is waiting on you -- the cue's whole point.
+  function turnEnded(d) {
+    return d.to === 'done' || (d.from === 'running' && d.to === 'idle');
+  }
   document.addEventListener('fleet:state', function (e) {
     var d = e.detail || {}, now = Date.now();
     if (d.to === 'blocked' || d.to === 'waiting') {
       if (now - lastAlert < ALERT_GAP_MS) return;    // coalesce the burst
       lastAlert = now;
       play('alert');
-    } else if (d.to === 'done') {
+    } else if (turnEnded(d)) {
       if (now - lastDone < DONE_GAP_MS) return;
       lastDone = now;
       play('done');

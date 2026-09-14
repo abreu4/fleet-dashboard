@@ -79,7 +79,7 @@ class CodexTranscriptTests(unittest.TestCase):
         conn.close()
 
         with mock.patch.object(collectors, "CODEX_DIR", self.temp.name), \
-             mock.patch.object(collectors, "merge_live", side_effect=lambda rows, *_: rows):
+             mock.patch.object(collectors, "merge_live", side_effect=lambda rows, *_, **__: rows):
             session = collectors.collect_codex(collectors.CodexTranscripts())[0]
 
         self.assertEqual(session["name"], "Fix nightly backup failures")
@@ -101,15 +101,50 @@ class CodexTranscriptTests(unittest.TestCase):
         self.assertEqual(merged[0]["pid"], 123)
 
     def test_new_process_does_not_steal_old_session_metadata(self):
+        now = int(__import__("time").time() * 1000)
         session = {
             "id": "old", "provider": "codex", "name": "Old task",
-            "cwd": self.temp.name, "state": "idle", "updated": 50_000,
+            "cwd": self.temp.name, "state": "idle", "updated": now - 3_600_000,
         }
-        process = {"pid": 456, "cwd": self.temp.name, "started": 200_000}
+        process = {"pid": 456, "cwd": self.temp.name, "started": now - 5_000}
         with mock.patch.object(collectors, "live_processes", return_value=[process]):
             merged = collectors.merge_live([session], "codex", "codex")
         self.assertEqual(len(merged), 2)
         self.assertEqual(merged[1]["name"], "codex 456")
+        self.assertNotIn("pid", merged[0])
+
+    def test_settled_process_claims_the_folder_orphan_it_resumed(self):
+        # `codex resume` on a thread nobody has written to since: the row's
+        # timestamp predates the process, but after twenty seconds no new row
+        # is coming, and the tile must carry the pid or it cannot be closed.
+        now = int(__import__("time").time() * 1000)
+        session = {
+            "id": "old", "provider": "codex", "name": "Old task",
+            "cwd": self.temp.name, "state": "idle", "updated": now - 3_600_000,
+        }
+        process = {"pid": 456, "cwd": self.temp.name, "started": now - 60_000}
+        with mock.patch.object(collectors, "live_processes", return_value=[process]):
+            merged = collectors.merge_live([session], "codex", "codex")
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["pid"], 456)
+
+    def test_rollout_held_open_ties_process_to_its_thread(self):
+        # Two sessions from ~, two processes: the folder heuristic alone gave
+        # the first process the freshest thread whichever it really was.
+        now = int(__import__("time").time() * 1000)
+        older = {"id": "a", "provider": "codex", "name": "A", "cwd": "/Users/x",
+                 "state": "idle", "updated": now - 1000, "rollout": "/r/a.jsonl"}
+        newer = {"id": "b", "provider": "codex", "name": "B", "cwd": "/Users/x",
+                 "state": "idle", "updated": now - 500, "rollout": "/r/b.jsonl"}
+        procs = [{"pid": 1, "cwd": "/Users/x", "started": now - 90_000},
+                 {"pid": 2, "cwd": "/Users/x", "started": now - 80_000}]
+        held = {1: {"/r/a.jsonl"}, 2: {"/r/b.jsonl"}}
+        link = lambda proc, pool: next(
+            (s for s in pool if s["rollout"] in held[proc["pid"]]), None)
+        with mock.patch.object(collectors, "live_processes", return_value=procs):
+            merged = collectors.merge_live([older, newer], "codex", "codex", link=link)
+        self.assertEqual(len(merged), 2)
+        self.assertEqual((older["pid"], newer["pid"]), (1, 2))
 
 
 if __name__ == "__main__":

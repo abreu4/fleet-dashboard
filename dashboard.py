@@ -397,7 +397,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._stream_terminal()
             return
-        if path in VENDOR and TERMINAL is not None:
+        # Allowlisted static files. Not gated on the terminal: the sound bank
+        # is in here too, and a board run without --terminal was getting a 404
+        # for it and going silent.
+        if path in VENDOR:
             name = os.path.basename(path)          # allowlisted, never joined raw
             with open(os.path.join(HERE, "vendor", name), "rb") as handle:
                 self._send(handle.read(), VENDOR[path])

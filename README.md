@@ -181,8 +181,9 @@ no gist -- and lets the lanes shrink to fit what is left, so the whole fleet
 reads in a glance and the slack pools once at the foot of the board instead of
 opening a hole in every project. The same button then reads **expand all**,
 which restores the gist and also brings back any project minimised to a strip.
-The choice is remembered per browser, and `?collapse=1` forces it for one load
-the way `?theme=` does.
+It sits in the HUD's row of squares (`⊟`/`⊞`) and answers to `⌘E`. The choice
+is remembered per browser, and `?collapse=1` forces it for one load the way
+`?theme=` does.
 
 ## Opening a session
 
@@ -212,9 +213,12 @@ folder the board knows about, or one typed under `~`, and shell / claude / agy /
 codex — and `×` closes the active one. The page sends a session id, or a folder
 plus an agent key; the server maps the key through a fixed table, so no command
 string ever comes from the browser. `⌘[` and `⌘]` cycle through terminal tabs,
-and `⌘T` opens a new shell in `~`. Fresh and resumed Codex terminals run with
-`--yolo`. Mac editing keys work as in iTerm's Natural Text Editing preset
-(⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K) and Shift-Enter inserts a newline.
+`⌘T` opens a new shell in `~`, and `⌘W` closes the active tab. Fresh and
+resumed Codex terminals run with `--yolo`. Mac editing keys work as in iTerm's
+Natural Text Editing preset (⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K), Shift-Enter inserts a
+newline, and `⌘C`/`⌘V` copy a selection and paste as in any terminal. The
+face is SF Mono at medium weight with loose leading, whatever the browser's
+own monospace preference.
 
 `fleet.command` uses a tiny native WebKit shell so Chrome cannot consume
 `⌘T` before the dashboard sees it. The shell is compiled locally on first use;
