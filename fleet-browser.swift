@@ -5,6 +5,7 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
     private let dashboardURL: URL
     private var window: NSWindow!
     private var webView: WKWebView!
+    private var shortcutMonitor: Any?
 
     init(url: URL) {
         dashboardURL = url
@@ -12,6 +13,7 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installMenu()
+        installShortcutMonitor()
 
         let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 900, height: 1000)
         let size = NSSize(width: min(900, visible.width), height: min(1000, visible.height))
@@ -37,6 +39,44 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let shortcutMonitor {
+            NSEvent.removeMonitor(shortcutMonitor)
+        }
+    }
+
+    private func installShortcutMonitor() {
+        // WebKit treats Cmd-[ and Cmd-] as browser history before its page gets
+        // a keyboard event. A local AppKit monitor runs earlier in dispatch,
+        // letting the dashboard own those chords just as the Cmd-T menu item
+        // does. Compare produced characters as well as the unmodified ones so
+        // keyboard layouts that need Option to type a bracket work too.
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags.contains(.command), !flags.contains(.control) else { return event }
+            let characters = [event.characters, event.charactersIgnoringModifiers].compactMap { $0 }
+            if characters.contains(where: { $0 == "[" }) {
+                self?.previousTerminal()
+                return nil
+            }
+            if characters.contains(where: { $0 == "]" }) {
+                self?.nextTerminal()
+                return nil
+            }
+            // ANSI bracket key codes cover layouts where Command suppresses
+            // the character value before AppKit exposes the event.
+            if flags == [.command] && event.keyCode == 33 {
+                self?.previousTerminal()
+                return nil
+            }
+            if flags == [.command] && event.keyCode == 30 {
+                self?.nextTerminal()
+                return nil
+            }
+            return event
+        }
     }
 
     private func installMenu() {
