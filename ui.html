@@ -5668,13 +5668,18 @@ document.getElementById('pause').onclick = e => {
   b.classList.toggle('lit', paused);
 };
 const collapseBtn = document.getElementById('collapse');
+/* One writer for the square's face. The words live in a span the HUD row
+   hides; written as plain text they spilled out of the square. */
+function labelCollapse(){
+  collapseBtn.innerHTML = compact ? '⊞<span> expand</span>' : '⊟<span> collapse</span>';
+  collapseBtn.title = (compact ? 'expand every tile' : 'collapse all tiles to one-line summaries') + ' (\u2318E)';
+  collapseBtn.classList.toggle('lit', compact);
+}
 function setCompact(on){
   compact = on;
   localStorage.setItem(COMPACT_KEY, on ? '1' : '0');
   board.classList.toggle('compact', on);
-  collapseBtn.innerHTML = on ? '⊞<span> expand</span>' : '⊟<span> collapse</span>';
-  collapseBtn.title = (on ? 'expand every tile' : 'collapse all tiles to one-line summaries') + ' (\u2318E)';
-  collapseBtn.classList.toggle('lit', on);
+  labelCollapse();
   if(latest) render(latest);
 }
 collapseBtn.onclick = () => {
@@ -5682,8 +5687,7 @@ collapseBtn.onclick = () => {
   setCompact(!compact);
 };
 board.classList.toggle('compact', compact);
-collapseBtn.innerHTML = compact ? '⊞<span> expand</span>' : '⊟<span> collapse</span>';
-collapseBtn.classList.toggle('lit', compact);
+labelCollapse();
 addEventListener('resize', fit);
 
 /* Flush clears finished work off the BOARD. It never signals a process, never
@@ -6612,13 +6616,12 @@ let compactBeforeSheet = null;
 function showSheet(on){
   if(on && compactBeforeSheet === null){
     compactBeforeSheet = compact;
-    if(!compact){ compact = true; board.classList.add('compact');
-                  collapseBtn.textContent = '⊞ expand'; }
+    if(!compact){ compact = true; board.classList.add('compact'); labelCollapse(); }
   }else if(!on && compactBeforeSheet !== null){
     if(compact !== compactBeforeSheet){
       compact = compactBeforeSheet;
       board.classList.toggle('compact', compact);
-      collapseBtn.innerHTML = compact ? '⊞<span> expand</span>' : '⊟<span> collapse</span>';
+      labelCollapse();
     }
     compactBeforeSheet = null;
   }
