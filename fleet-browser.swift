@@ -1,0 +1,136 @@
+import Cocoa
+import WebKit
+
+final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
+    private let dashboardURL: URL
+    private var window: NSWindow!
+    private var webView: WKWebView!
+
+    init(url: URL) {
+        dashboardURL = url
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        installMenu()
+
+        let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 900, height: 1000)
+        let size = NSSize(width: min(900, visible.width), height: min(1000, visible.height))
+        let frame = NSRect(x: visible.minX, y: visible.maxY - size.height,
+                           width: size.width, height: size.height)
+        window = NSWindow(contentRect: frame,
+                          styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                          backing: .buffered, defer: false)
+        window.title = "FLEET · agent console"
+        window.setFrameAutosaveName("fleet-dashboard")
+
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .default()
+        webView = WKWebView(frame: window.contentView!.bounds, configuration: configuration)
+        webView.autoresizingMask = [.width, .height]
+        webView.navigationDelegate = self
+        webView.uiDelegate = self
+        window.contentView = webView
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        webView.load(URLRequest(url: dashboardURL))
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+
+    private func installMenu() {
+        let main = NSMenu()
+        NSApp.mainMenu = main
+
+        let appItem = NSMenuItem()
+        main.addItem(appItem)
+        let appMenu = NSMenu()
+        appItem.submenu = appMenu
+        appMenu.addItem(withTitle: "Quit Fleet Dashboard",
+                        action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+
+        let terminalItem = NSMenuItem()
+        main.addItem(terminalItem)
+        let terminalMenu = NSMenu(title: "Terminal")
+        terminalItem.submenu = terminalMenu
+        addCommand("New Terminal", key: "t", action: #selector(newTerminal), to: terminalMenu)
+        terminalMenu.addItem(.separator())
+        addCommand("Previous Terminal", key: "[", action: #selector(previousTerminal), to: terminalMenu)
+        addCommand("Next Terminal", key: "]", action: #selector(nextTerminal), to: terminalMenu)
+
+        let viewItem = NSMenuItem()
+        main.addItem(viewItem)
+        let viewMenu = NSMenu(title: "View")
+        viewItem.submenu = viewMenu
+        addCommand("Reload", key: "r", action: #selector(reload), to: viewMenu)
+        let fullscreen = NSMenuItem(title: "Enter Full Screen",
+                                    action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        fullscreen.keyEquivalentModifierMask = [.command, .control]
+        viewMenu.addItem(fullscreen)
+    }
+
+    private func addCommand(_ title: String, key: String, action: Selector, to menu: NSMenu) {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = self
+        item.keyEquivalentModifierMask = [.command]
+        menu.addItem(item)
+    }
+
+    private func run(_ javascript: String) {
+        webView?.evaluateJavaScript(javascript, completionHandler: nil)
+    }
+
+    @objc private func newTerminal() {
+        run("window.fleetNewTerminal?.()")
+    }
+
+    @objc private func previousTerminal() {
+        run("window.fleetCycleTerminal?.(-1)")
+    }
+
+    @objc private func nextTerminal() {
+        run("window.fleetCycleTerminal?.(1)")
+    }
+
+    @objc private func reload() {
+        webView?.reload()
+    }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction,
+                 windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            NSWorkspace.shared.open(url)
+        }
+        return nil
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+        let isDashboard = url.host == dashboardURL.host && url.port == dashboardURL.port
+        if navigationAction.targetFrame?.isMainFrame == true && !isDashboard {
+            NSWorkspace.shared.open(url)
+            decisionHandler(.cancel)
+        } else {
+            decisionHandler(.allow)
+        }
+    }
+}
+
+guard CommandLine.arguments.count > 1,
+      let url = URL(string: CommandLine.arguments[1]),
+      ["http", "https"].contains(url.scheme ?? "") else {
+    fputs("usage: fleet-browser http://127.0.0.1:PORT\n", stderr)
+    exit(2)
+}
+
+let application = NSApplication.shared
+let delegate = FleetApp(url: url)
+application.delegate = delegate
+application.setActivationPolicy(.regular)
+application.run()

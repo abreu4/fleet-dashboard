@@ -31,7 +31,7 @@ VSCODE_BINS = ("/usr/local/bin/code", "/opt/homebrew/bin/code",
 # one line.
 _RESUME = {
     "claude":      "claude --resume %s",
-    "codex":       "codex resume %s",
+    "codex":       "codex --yolo resume %s",
     "antigravity": "agy --conversation %s",
 }
 _ATTACH = {
@@ -40,7 +40,7 @@ _ATTACH = {
 
 # A fresh conversation, by agent. The page picks a key from this table, never
 # a string of its own; "shell" is a shell and nothing else.
-FRESH = {"shell": "", "claude": "claude", "antigravity": "agy", "codex": "codex"}
+FRESH = {"shell": "", "claude": "claude", "antigravity": "agy", "codex": "codex --yolo"}
 
 # Every launch writes a script, and a script has to outlive the click, so
 # nothing can delete it at the time. They went to $TMPDIR with delete=False and

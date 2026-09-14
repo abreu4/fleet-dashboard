@@ -6470,6 +6470,16 @@ function activate(tid){
   terms.get(tid)?.term.focus();
 }
 
+function cycleTerminal(step){
+  const tids = [...terms.keys()];
+  if(!tids.length) return;
+  const current = tids.indexOf(activeTid);
+  const start = current < 0 ? (step > 0 ? -1 : 0) : current;
+  const next = (start + step + tids.length) % tids.length;
+  showSheet(true);
+  activate(tids[next]);
+}
+
 function ensureTerm(meta){
   let t = terms.get(meta.id);
   if(t){ t.meta.title = meta.title; t.alive = meta.alive !== false; drawTabs(); return t; }
@@ -6753,6 +6763,12 @@ async function openFresh(cwd, agent){
   trackRecentFolder(r.terminal?.cwd || cwd);
 }
 
+// fleet.command's native shell calls these from its application-menu
+// shortcuts. The keydown handler below is still useful in browsers that let
+// pages own the same chords.
+window.fleetCycleTerminal = cycleTerminal;
+window.fleetNewTerminal = () => openFresh('~', 'shell');
+
 if(TERMCFG.enabled){
   document.getElementById('term-new').onclick = e => {
     e.stopPropagation();
@@ -6785,13 +6801,22 @@ if(TERMCFG.enabled){
       e.preventDefault(); e.stopPropagation(); showSheet(!sheetOn);
       if(sheetOn) terms.get(activeTid)?.term.focus();
     }
-    // ⌘T: a new terminal -- the + picker, with Enter opening it. Chrome keeps
-    // ⌘T for itself; the Firefox family lets the page have it.
+    // ⌘[/⌘]: move through the terminal tabs and wrap at either end. Capture
+    // these before Chrome can interpret them as Back/Forward navigation.
+    const cmdPrev = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === '[' || e.code === 'BracketLeft');
+    const cmdNext = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === ']' || e.code === 'BracketRight');
+    if(cmdPrev || cmdNext){
+      e.preventDefault(); e.stopPropagation();
+      cycleTerminal(cmdNext ? 1 : -1);
+      return;
+    }
+    // ⌘T: immediately open a plain shell in the default folder. Chrome keeps
+    // this chord for itself in ordinary browser windows; fleet.command opens
+    // an app window, while browser shells that expose the event land here.
     const cmdT = e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 't' || e.key === 'T');
     if(cmdT){
       e.preventDefault(); e.stopPropagation();
-      const p = newTermPicker();
-      p.on() ? p.hide() : p.show();
+      window.fleetNewTerminal();
     }
   }, true);
   applySheet();

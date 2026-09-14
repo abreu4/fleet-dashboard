@@ -5,7 +5,7 @@ Antigravity (`agy`) and Codex, grouped by agent and by project, alongside live
 host telemetry. Built for a MacBook Air used as a second screen.
 
     ./install.sh          # deploy, install deps, run at login on port 8787
-    ./fleet.command       # open it in a chromeless Chrome window
+    ./fleet.command       # open it in a chromeless dashboard window
     ./uninstall.sh        # remove the login agent
 
 The installer keeps a self-contained runtime and virtual environment under
@@ -203,8 +203,15 @@ tile's drawer has a "shell here" button; the sheet's `+` opens a picker — any
 folder the board knows about, or one typed under `~`, and shell / claude / agy /
 codex — and `×` closes the active one. The page sends a session id, or a folder
 plus an agent key; the server maps the key through a fixed table, so no command
-string ever comes from the browser. Mac editing keys work as in iTerm's Natural
-Text Editing preset (⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K) and Shift-Enter inserts a newline.
+string ever comes from the browser. `⌘[` and `⌘]` cycle through terminal tabs,
+and `⌘T` opens a new shell in `~`. Fresh and resumed Codex terminals run with
+`--yolo`. Mac editing keys work as in iTerm's Natural Text Editing preset
+(⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K) and Shift-Enter inserts a newline.
+
+`fleet.command` uses a tiny native WebKit shell so Chrome cannot consume
+`⌘T` before the dashboard sees it. The shell is compiled locally on first use;
+if the macOS command-line tools are unavailable, the launcher falls back to
+Chrome and the on-page shortcuts that Chrome permits.
 
 The terminal is loopback-only and gated by a per-process token, so it is off
 when the server binds anything but 127.0.0.1.
