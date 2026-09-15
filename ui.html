@@ -574,8 +574,14 @@
     font:10.5px/1.4 var(--mono); letter-spacing:.05em; text-transform:uppercase; color:var(--faint);
   }
   .bubble .foot .st{flex:none; font-weight:inherit}
-  .bubble .foot .rest{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--faint)}
-  .bubble .foot .rest::before{content:'\00b7\00a0'}
+  /* Age, turns and place are separate parts on a row that is allowed to wrap
+     -- with the second line pushed clean out of view. A part that does not fit
+     drops off whole, last first (the path goes before the turn count), so a
+     narrow tile reads "IN PLAY · 2M · 31T" and never "…/FLE…". */
+  .bubble .foot .rest{flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; align-content:flex-start;
+                      column-gap:.35em; row-gap:200px; max-height:2em; overflow:hidden; color:var(--faint)}
+  .bubble .foot .rest > span{flex:none; white-space:nowrap}
+  .bubble .foot .rest > span::before{content:'\00b7\00a0'}
   /* what a tile shows scales with the height it actually got */
   .project[data-size="lg"] .bubble .nm{-webkit-line-clamp:2}
   .project[data-size="lg"] .bubble .gist{-webkit-line-clamp:3}
@@ -590,6 +596,24 @@
   .board.compact .bubble .gist{display:none}
   .board.compact .bubble .nm{-webkit-line-clamp:1}
   .board.compact .bubble .foot{margin-top:2px}
+  /* The peek: a collapsed tile hides its line of context, and expanding the
+     whole board to read one line is a lot. Rest on a tile (or tab to it) and
+     the line floats up under it. One element in the body, placed by script,
+     because tiles, groups and lanes all clip their overflow. */
+  .peek{
+    position:fixed; z-index:40; max-width:min(440px, 60vw); pointer-events:none;
+    padding:7px 10px 7px 12px; border:1px solid var(--edge-hot); border-radius:7px;
+    background:var(--tile-hi); color:var(--ink); box-shadow:0 10px 26px -10px #000, 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+    font:12.5px/1.45 var(--face-prose, var(--mono)); border-left:3px solid var(--rib, var(--accent));
+    opacity:0; transform:translateY(-3px); transition:opacity .14s ease, transform .14s ease;
+  }
+  .peek.on{opacity:1; transform:none}
+  .peek .gist{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  .peek .gist.said::before{content:'\201C'; color:var(--accent); font-weight:700}
+  .peek .gist.none{color:var(--faint); font-style:italic}
+  .peek .where{margin-top:3px; font:10.5px/1.4 var(--mono); letter-spacing:.05em; color:var(--faint); text-transform:uppercase;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  @media (prefers-reduced-motion:reduce){ .peek{transition:none} }
 
   /* ===================== mini player ===================== */
   /* Floats over the bottom-right of the board instead of taking a strip out of
@@ -4965,6 +4989,163 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   mask-image:radial-gradient(circle 190px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
 }
 :root[data-theme="chitin"] .lantern.lit{opacity:.5}
+
+/* ============================================================================
+   PASS 8: THE BAND -- what collapsing the board uncovers.
+   Collapse every tile and the bottom third of the screen opens up. On the
+   casino table that is where the wheel was all along, and it is the one thing
+   people find and keep: a treat you get for choosing the smallest view. So the
+   worlds that had nothing down there get one each -- and, like the wheel, each
+   one is drawn off the fleet's real state, not decoration. They exist only
+   while the board is collapsed and the terminal sheet is closed; script builds
+   one per world, the stylesheet draws it off the root's numbers.
+   ========================================================================== */
+.band{display:none; position:fixed; z-index:2; pointer-events:none}
+:root:has(.board.compact):not(:has(.sheet.on)) .band{display:block}
+
+/* ---- SONIC: Green Hill ------------------------------------------------------
+   The chequered soil under a lip of grass, and above it a row of rings, one
+   for every session that is working or stuck -- the ring count on the score
+   panel, made visible. Each ring turns on its own axis, offset from the next,
+   the way they do on the loop. */
+:root[data-theme="chequer"] .ghz{
+  left:0; right:0; bottom:var(--taken,0px); height:40px;
+  background:
+    linear-gradient(#5be04a, #35b83a) 0 0/100% 7px no-repeat,
+    linear-gradient(rgba(0,0,0,.28), transparent) 0 7px/100% 6px no-repeat,
+    repeating-conic-gradient(#a8652c 0 25%, #d9954e 0 50%) 0 7px/34px 34px;
+  box-shadow:0 -2px 0 #1c6b2a;
+}
+:root[data-theme="chequer"] .ghz .rings{
+  position:absolute; left:50%; bottom:52px; transform:translateX(-50%);
+  display:flex; gap:14px; perspective:220px;
+}
+:root[data-theme="chequer"] .ghz .rings b{
+  display:block; width:24px; height:24px; border-radius:50%; box-sizing:border-box;
+  border:4px solid #f7c62e; box-shadow:0 0 8px rgba(247,198,46,.65), inset 0 0 3px rgba(255,255,255,.85);
+  animation:ghz-turn 1.2s linear infinite; animation-delay:calc(var(--i, 0) * -.15s);
+}
+@keyframes ghz-turn{from{transform:rotateY(0)} to{transform:rotateY(360deg)}}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="chequer"] .ghz .rings b{animation:none} }
+
+/* ---- FALLOUT: S.P.E.C.I.A.L. ------------------------------------------------
+   The STAT tab. Seven attributes read straight off the gauges and the tally:
+   Strength is the CPU, Perception how much of the fleet is at work, Endurance
+   the battery, Charisma the agents' share of memory, Intelligence how many
+   sessions there are, Agility how many are moving, Luck the headroom left
+   before memory pressure. Ten pips each, in phosphor. */
+:root[data-theme="pipboy"] .special{
+  left:18px; bottom:calc(16px + var(--taken,0px)); width:292px; padding:9px 14px 11px;
+  color:var(--ink); font:13.5px/1.55 "Share Tech Mono", monospace; letter-spacing:.06em; text-transform:uppercase;
+  background:rgba(8,26,14,.72); border:1px solid rgba(53,235,82,.45); box-shadow:inset 0 0 0 3px rgba(8,26,14,.9), inset 0 0 0 4px rgba(53,235,82,.28), 0 0 18px rgba(53,235,82,.12);
+  text-shadow:0 0 6px rgba(53,235,82,.45);
+}
+:root[data-theme="pipboy"] .special h4{
+  margin:0 0 5px; padding:0 0 3px; font:inherit; font-weight:400; color:var(--accent);
+  border-bottom:1px solid rgba(53,235,82,.35); display:flex; justify-content:space-between;
+}
+:root[data-theme="pipboy"] .special h4 i{font-style:normal; color:var(--faint)}
+:root[data-theme="pipboy"] .special .row{display:grid; grid-template-columns:14px 1fr 106px 20px; align-items:center; gap:7px}
+:root[data-theme="pipboy"] .special .row b{font-weight:400; color:var(--accent)}
+:root[data-theme="pipboy"] .special .row em{font-style:normal; color:var(--dim)}
+:root[data-theme="pipboy"] .special .row i{
+  height:10px; background:linear-gradient(90deg, var(--accent) 0 calc(var(--v, 0) * 10%), rgba(53,235,82,.14) 0);
+  -webkit-mask:repeating-linear-gradient(90deg, #000 0 8.6px, transparent 8.6px 10.6px);
+  mask:repeating-linear-gradient(90deg, #000 0 8.6px, transparent 8.6px 10.6px);
+  transition:background .4s ease;
+}
+:root[data-theme="pipboy"] .special .row u{text-decoration:none; text-align:right; color:var(--ink)}
+
+/* ---- LORD OF THE RINGS: the beacons -----------------------------------------
+   Seven peaks along the bottom of the room, Amon Dîn to Halifirien, each with
+   its pyre. A session that is stuck or asking lights one; they catch in order
+   from the left, so a fleet with three questions has three hills burning. The
+   moment the first one goes up, the line. */
+:root[data-theme="vellum"] .beacons{left:0; right:0; bottom:var(--taken,0px); height:150px}
+:root[data-theme="vellum"] .beacons .peak{
+  position:absolute; bottom:0; left:calc(var(--i) * 13.5% + var(--o, 0%)); width:230px; height:var(--h, 90px);
+  margin-left:-115px; clip-path:polygon(50% 0, 100% 100%, 0 100%);
+  background:linear-gradient(180deg, #2a2114, #120c05);
+}
+:root[data-theme="vellum"] .beacons .peak::after{
+  content:""; position:absolute; inset:0; clip-path:polygon(50% 0, 62% 100%, 38% 100%);
+  background:linear-gradient(180deg, rgba(243,231,203,.14), transparent 40%);
+}
+:root[data-theme="vellum"] .beacons .fire{
+  position:absolute; left:50%; top:-10px; width:16px; height:22px; margin-left:-8px;
+  border-radius:50% 50% 45% 45% / 62% 62% 38% 38%;
+  background:radial-gradient(circle at 50% 78%, #fff6cc 0 18%, #ffb347 42%, #e2521d 68%, transparent 72%);
+  filter:drop-shadow(0 0 10px rgba(255,150,40,.85)) drop-shadow(0 0 26px rgba(255,120,20,.45));
+  opacity:0; transform:scale(.4); transform-origin:50% 100%;
+  transition:opacity .5s ease calc(var(--i) * .5s), transform .5s cubic-bezier(.2,1.3,.4,1) calc(var(--i) * .5s);
+}
+:root[data-theme="vellum"] .beacons .peak.lit .fire{opacity:1; transform:scale(1); animation:beacon-flicker .7s ease-in-out infinite alternate}
+@keyframes beacon-flicker{from{transform:scale(1) skewX(-3deg)} to{transform:scale(1.08, .94) skewX(4deg)}}
+:root[data-theme="vellum"] .beacons .cry{
+  position:absolute; left:50%; bottom:118px; transform:translateX(-50%); white-space:nowrap;
+  font:400 17px/1 "IM Fell English SC", "Cinzel", serif; letter-spacing:.14em; color:#efc45f;
+  text-shadow:0 0 14px rgba(239,196,95,.55), 0 1px 0 #000; opacity:0; transition:opacity .9s ease;
+}
+:root[data-theme="vellum"] .beacons .cry.on{opacity:1}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="vellum"] .beacons .peak.lit .fire{animation:none} }
+
+/* ---- PORTAL: the turret -----------------------------------------------------
+   One sentry, beside the chamber sign, with its eye on the board. It speaks
+   when a session changes state -- the state's own line, nothing it made up --
+   and the eye brightens while it does. Any arrival gets a hello. */
+:root[data-theme="aperture"] .turret{right:154px; bottom:calc(16px + var(--taken,0px)); width:44px; height:78px; transform:scale(1.3); transform-origin:100% 100%}
+:root[data-theme="aperture"] .turret .shell{
+  position:absolute; left:5px; top:0; width:34px; height:54px;
+  border-radius:50% 50% 46% 46% / 42% 42% 58% 58%;
+  background:linear-gradient(90deg, #f7f6f2, #ffffff 45%, #d9d7d0);
+  box-shadow:0 2px 0 #b8b5ac, 0 6px 12px -6px rgba(0,0,0,.45), inset 0 -8px 12px -8px rgba(0,0,0,.18);
+}
+:root[data-theme="aperture"] .turret .shell::before, :root[data-theme="aperture"] .turret .shell::after{
+  content:""; position:absolute; top:12px; width:6px; height:30px; background:#e8e6e0;
+  border:1px solid #c2bfb6; border-radius:3px;
+}
+:root[data-theme="aperture"] .turret .shell::before{left:-7px} :root[data-theme="aperture"] .turret .shell::after{right:-7px}
+:root[data-theme="aperture"] .turret .eye{
+  position:absolute; left:50%; top:20px; width:7px; height:7px; margin-left:-3.5px; border-radius:50%;
+  background:#ff2a1a; box-shadow:0 0 6px #ff2a1a, 0 0 14px rgba(255,42,26,.55); transition:box-shadow .3s ease;
+}
+:root[data-theme="aperture"] .turret.talking .eye{box-shadow:0 0 8px #ff2a1a, 0 0 24px rgba(255,42,26,.9), 0 0 40px rgba(255,42,26,.5); animation:turret-eye 1s ease-in-out infinite alternate}
+@keyframes turret-eye{from{transform:scale(1)} to{transform:scale(1.35)}}
+:root[data-theme="aperture"] .turret .leg{
+  position:absolute; top:50px; width:3px; height:28px; background:linear-gradient(#cfccc3, #8f8c83); border-radius:2px; transform-origin:50% 0;
+}
+:root[data-theme="aperture"] .turret .leg.l{left:12px; transform:rotate(22deg)} :root[data-theme="aperture"] .turret .leg.r{right:12px; transform:rotate(-22deg)}
+:root[data-theme="aperture"] .turret .leg.c{left:50%; margin-left:-1.5px; transform:none; top:52px}
+:root[data-theme="aperture"] .turret .say{
+  position:absolute; right:52px; top:6px; white-space:nowrap; padding:6px 10px;
+  background:#fff; color:#12161a; border:1px solid #c4c1b7; border-radius:8px 8px 2px 8px;
+  font:500 12.5px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-shadow:0 4px 10px -6px rgba(0,0,0,.4); opacity:0; transform:translateX(4px); transition:opacity .2s ease, transform .2s ease;
+}
+:root[data-theme="aperture"] .turret .say.on{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="aperture"] .turret.talking .eye{animation:none} }
+
+/* ---- PERSONA 5: the date ----------------------------------------------------
+   The calendar card from the top of the screen, slanted, with the time of
+   day the game would call this hour. Real date, real clock. */
+:root[data-theme="offcut"] .p5date{
+  left:26px; bottom:calc(30px + var(--taken,0px)); transform:rotate(-4deg);
+  padding:9px 16px 10px 14px; color:#f6f1e6;
+  font:900 38px/1 "Archivo Black", "Anton", Impact, sans-serif; letter-spacing:.02em; text-transform:uppercase;
+  display:flex; align-items:baseline; gap:10px;
+}
+/* the card is a layer under the text, so the cut corners do not clip the chip */
+:root[data-theme="offcut"] .p5date::before{
+  content:""; position:absolute; inset:0; z-index:-1; background:#0e0b0b; box-shadow:5px 5px 0 var(--accent);
+  clip-path:polygon(0 0, 100% 3%, 98% 100%, 2% 97%);
+}
+:root[data-theme="offcut"] .p5date b{font-weight:inherit}
+:root[data-theme="offcut"] .p5date i{font-style:normal; font-size:16px; color:var(--accent); transform:skewX(-8deg); display:inline-block}
+:root[data-theme="offcut"] .p5date span{
+  position:absolute; left:100%; top:-2px; margin-left:14px; white-space:nowrap; padding:4px 10px 4px 13px;
+  background:var(--accent); color:#0e0b0b; font-size:12px; letter-spacing:.14em;
+  clip-path:polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); transform:rotate(3deg);
+}
 </style>
 </head>
 <body>
@@ -5407,6 +5588,8 @@ function drawHud(d){
   rs.setProperty('--g-batt', whole(pw.pct != null ? pw.pct : 100));
   rs.setProperty('--n-active', String(active|0));
   rs.setProperty('--n-total',  String(d.total|0));
+  // ...and the tally itself, one integer per state, for the same reason.
+  STATES.forEach(k => rs.setProperty('--n-' + k, String(d.tally[k]|0)));
 
   const tk = d.tokens >= 1e6 ? (d.tokens/1e6).toFixed(1)+'M' : Math.round((d.tokens||0)/1000)+'k';
   // On the wall it runs plugged in, so this line is usually a quiet "100% AC".
@@ -5534,6 +5717,9 @@ function render(d){
 /* One-shot onset for the tiles that changed, and a message for anything else
    on the page that cares (the sound packs listen for it). */
 function afterPaint(diff){
+  // Every paint, first included: for the things a world draws off the board
+  // (the beacons, the rings) that need to redraw after the tiles do.
+  document.dispatchEvent(new CustomEvent('fleet:paint', {detail:diff}));
   if(diff.first) return;
   diff.changed.forEach(c => {
     const el = board.querySelector('.bubble[data-id="'+CSS.escape(c.id)+'"]');
@@ -5604,7 +5790,7 @@ function tile(s){
   // ellipsizes cleanly instead of being chopped mid-path. A long path is
   // folded to its last segment -- the tile's width is better spent on age.
   const rest = [s.updated ? age(s.updated) : '', s.turns ? s.turns+'t' : '',
-                shortPlace(where)].filter(Boolean).join(' · ');
+                shortPlace(where)].filter(Boolean).map(x => '<span>'+esc(x)+'</span>').join('');
   // A block that has sat unanswered escalates: a little louder after eight
   // minutes, an outline after thirty. Amplitude and area, never rate.
   const since = s.updated ? Date.now() - s.updated : 0;
@@ -5621,7 +5807,7 @@ function tile(s){
     + '<span class="gist'+(blank?' none':'')+(s.note?' said':'')+'">'
     + esc(blank ? voice('blank') : gist)+'</span>'
     + '<span class="foot"><i class="dot s-'+s.state+'"></i><b class="st">'+esc(voice(s.state))+'</b>'
-    + (rest ? '<span class="rest">'+esc(rest)+'</span>' : '') + '</span></button>';
+    + (rest ? '<span class="rest">'+rest+'</span>' : '') + '</span></button>';
 }
 // "~/Documents/Dev/casaradar" is three segments of nothing the tile needs;
 // keep the leaf and let the title attribute carry the full path.
@@ -5636,6 +5822,44 @@ function toggle(key){
   localStorage.setItem(MIN_KEY, JSON.stringify([...minimised]));
   if(latest) render(latest);
 }
+
+/* The peek (see .peek in the stylesheet). Only on the collapsed board, where
+   the gist is hidden; the expanded tile already shows it. A short delay so
+   sweeping the pointer across a group does not flash five cards. */
+(function(){
+  let el = null, t = 0, cur = null;
+  const hide = () => { clearTimeout(t); cur = null; if(el) el.classList.remove('on'); };
+  const show = b => {
+    const s = find(b.dataset.id); if(!s) return;
+    const gist = s.note || s.needs || s.now || s.brief || '';
+    if(!el){ el = document.createElement('div'); el.className = 'peek'; el.setAttribute('role','tooltip'); document.body.appendChild(el); }
+    el.style.setProperty('--rib', 'var(--' + (STATES.includes(s.state) ? s.state : 'unknown') + ')');
+    el.innerHTML = '<div class="gist' + (gist ? (s.note ? ' said' : '') : ' none') + '">' + esc(gist || voice('blank')) + '</div>'
+                 + (s.place ? '<div class="where">' + esc(s.place) + '</div>' : '');
+    const r = b.getBoundingClientRect();
+    el.style.left = Math.max(8, Math.min(r.left, innerWidth - el.offsetWidth - 8)) + 'px';
+    const sheet = document.getElementById('sheet');
+    const floor = (sheet && !sheet.hidden && sheet.classList.contains('on')) ? sheet.getBoundingClientRect().top : innerHeight;
+    const below = r.bottom + 6, h = el.offsetHeight;
+    el.style.top = (below + h < floor - 8 ? below : r.top - h - 6) + 'px';
+    el.classList.add('on'); cur = b;
+  };
+  const arm = (b, ms) => { if(!compact || b === cur) return; clearTimeout(t); ms ? (t = setTimeout(() => show(b), ms)) : show(b); };
+  board.addEventListener('pointerover', e => { const b = e.target.closest('.bubble'); if(b) arm(b, 160); else hide(); });
+  board.addEventListener('pointerout',  e => { const b = e.target.closest('.bubble'); if(b && !b.contains(e.relatedTarget)) hide(); });
+  board.addEventListener('focusin',  e => { const b = e.target.closest('.bubble'); if(b) arm(b, 0); });
+  board.addEventListener('focusout', hide);
+  board.addEventListener('scroll', hide, {passive:true, capture:true});
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') hide(); });
+  document.addEventListener('fleet:theme', hide);
+  addEventListener('resize', hide);
+  // A paint replaces the tiles under the pointer; follow the one being read.
+  document.addEventListener('fleet:paint', () => {
+    if(!cur) return;
+    const b = board.querySelector('.bubble[data-id="' + CSS.escape(cur.dataset.id) + '"]');
+    b ? show(b) : hide();
+  });
+})();
 
 /* Lay each group out as the widest grid its box allows, then give the rows all
    the height that is going, floored at a size that stays readable. Group boxes
@@ -6289,6 +6513,131 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   }, {passive:true});
   document.addEventListener('pointerleave', () => { if(el) el.classList.remove('lit'); });
   document.addEventListener('fleet:theme', () => { if(el) el.classList.remove('lit'); });
+})();
+
+/* ---- the band (pass 8) --------------------------------------------------- */
+/* One object per world in the space a collapsed board leaves; see .band in
+   the stylesheet for what each one is. Built once when its world comes on,
+   torn down when it goes, and refreshed after every paint from the numbers
+   the render already put on the root. */
+(function(){
+  const root = document.documentElement;
+  const rootNum = k => parseFloat(root.style.getPropertyValue(k)) || 0;
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className = cls; if(html != null) e.innerHTML = html; return e; };
+  const still = () => reducedMotion() || root.dataset.motion === 'off';
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  let cur = null, node = null, timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+
+  const WORLDS = {
+    /* Green Hill: the ground, and a ring per active session. */
+    chequer: {
+      make(){ const n = el('div', 'band ghz'); n.appendChild(el('i', 'rings')); return n; },
+      paint(n){
+        const want = Math.min(24, rootNum('--n-active')), row = n.firstChild;
+        while(row.children.length > want) row.lastChild.remove();
+        while(row.children.length < want){ const b = el('b'); b.style.setProperty('--i', row.children.length); row.appendChild(b); }
+      },
+    },
+    /* STAT > SPECIAL: seven attributes off the gauges and the tally. */
+    pipboy: {
+      make(){
+        const n = el('div', 'band special');
+        n.innerHTML = '<h4>STAT <i>S.P.E.C.I.A.L.</i></h4>' + [
+          ['S','Strength'], ['P','Perception'], ['E','Endurance'], ['C','Charisma'],
+          ['I','Intelligence'], ['A','Agility'], ['L','Luck']
+        ].map(([k, name]) => '<div class="row"><b>' + k + '</b><em>' + name + '</em><i></i><u>0</u></div>').join('');
+        return n;
+      },
+      paint(n){
+        const pips = v => Math.max(0, Math.min(10, Math.round(v / 10)));
+        const vals = [rootNum('--g-cpu'), rootNum('--g-live'), rootNum('--g-batt'), rootNum('--g-ram'),
+                      rootNum('--n-total') * 10, rootNum('--n-active') * 10, 100 - rootNum('--g-pres')].map(pips);
+        n.querySelectorAll('.row').forEach((r, i) => {
+          r.querySelector('i').style.setProperty('--v', vals[i]);
+          const u = r.querySelector('u'); if(u.textContent !== String(vals[i])) u.textContent = vals[i];
+        });
+      },
+    },
+    /* The beacons: one lit per session that is stuck or asking. */
+    vellum: {
+      make(){
+        const n = el('div', 'band beacons');
+        const H = [96, 124, 88, 140, 104, 132, 92], O = ['4%', '5%', '3%', '6%', '4%', '5%', '7%'];
+        for(let i = 0; i < 7; i++){
+          const p = el('i', 'peak'); p.style.setProperty('--i', i); p.style.setProperty('--h', H[i] + 'px'); p.style.setProperty('--o', O[i]);
+          p.appendChild(el('b', 'fire')); n.appendChild(p);
+        }
+        n.appendChild(el('span', 'cry', 'The beacons are lit — Gondor calls for aid'));
+        n.dataset.lit = '0';
+        return n;
+      },
+      paint(n, diff){
+        const want = Math.min(7, rootNum('--n-blocked') + rootNum('--n-waiting'));
+        const had = +n.dataset.lit;
+        n.querySelectorAll('.peak').forEach((p, i) => p.classList.toggle('lit', i < want));
+        n.dataset.lit = String(want);
+        // the line only when they go up on a board that was already being read
+        if(want && !had && diff && !diff.first){
+          const cry = n.querySelector('.cry');
+          later(() => cry.classList.add('on'), still() ? 0 : 1800);
+          later(() => cry.classList.remove('on'), 9000);
+        }
+      },
+    },
+    /* The turret. It only ever says the state's line. */
+    aperture: {
+      LINES: {
+        running: ['Target acquired.', 'There you are.', 'Activated.', 'I see you.'],
+        blocked: ['Critical error.', 'Malfunctioning.', 'Ow.', 'Something is wrong.'],
+        waiting: ['Hello?', 'Are you still there?', 'Is anyone there?', 'Could you come over here?'],
+        done:    ['Goodbye.', 'I don’t hate you.', 'Shutting down.', 'Thank you for your cooperation.'],
+        idle:    ['Sleep mode activated.', 'Resting.', 'Hibernating.', 'Nap time.'],
+        unknown: ['Searching…', 'Where are you?', 'Canvassing.', 'Hm?'],
+        arrived: ['Hello, friend.', 'Who’s there?', 'Deploying.', 'Preparing to dispense product.'],
+      },
+      make(){
+        const n = el('div', 'band turret');
+        n.innerHTML = '<i class="shell"><i class="eye"></i></i><i class="leg l"></i><i class="leg c"></i><i class="leg r"></i><span class="say" aria-live="polite"></span>';
+        return n;
+      },
+      paint(n, diff){
+        const lines = this.LINES;
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !lines[k]) return;
+        const say = n.querySelector('.say'); say.textContent = pick(lines[k]);
+        say.classList.add('on'); n.classList.add('talking');
+        clearTimeout(n._t); n._t = setTimeout(() => { say.classList.remove('on'); n.classList.remove('talking'); }, 3800);
+      },
+    },
+    /* The calendar card, with the hour the game would print. */
+    offcut: {
+      make(){ return el('div', 'band p5date', '<b></b><i></i><span></span>'); },
+      paint(n){
+        const d = new Date(), h = d.getHours();
+        const phase = h < 5 ? 'Late night' : h < 7 ? 'Early morning' : h < 9 ? 'Morning' : h < 12 ? 'Daytime'
+                    : h < 13 ? 'Lunchtime' : h < 17 ? 'After school' : h < 20 ? 'Evening' : 'Late night';
+        const date = (d.getMonth() + 1) + '/' + d.getDate(), day = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+        const [b, i, sp] = n.children;
+        if(b.textContent !== date) b.textContent = date;
+        if(i.textContent !== day) i.textContent = day;
+        if(sp.textContent !== phase) sp.textContent = phase;
+      },
+    },
+  };
+
+  const sync = diff => {
+    const theme = root.dataset.theme, world = WORLDS[theme];
+    if(theme !== cur){
+      if(node){ node.remove(); node = null; }
+      timers.forEach(clearTimeout); timers = [];
+      cur = theme;
+      if(world){ node = world.make(); document.body.appendChild(node); }
+    }
+    if(node && world) world.paint(node, diff);
+  };
+  document.addEventListener('fleet:paint', e => sync(e.detail));
+  document.addEventListener('fleet:theme', () => sync(null));
 })();
 
 /* ---------------- settings ---------------- */

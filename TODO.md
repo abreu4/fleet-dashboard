@@ -10,8 +10,12 @@
 - [x] Raise Pokémon card, metadata, and project-header contrast.
 - [x] Sounds actually play: the engine only cued on `blocked`/`waiting`/`done`, states no collector emits; a running session going idle now plays the done cue.
 
+- [x] The band (pass 8): collapsing the board uncovers one state-driven object per world — Sonic's rings on Green Hill, Fallout's S.P.E.C.I.A.L., the beacons of Gondor, Portal's turret, Persona's date card — beside the casino wheel that started it.
+- [x] Collapsed tiles: the foot drops its path/turns whole instead of truncating to `…/FLE…`; resting on a collapsed tile peeks its line of context.
+
 ### Next — specialized interactive gimmicks
-- [ ] Casino Royale (`staunton`): prototype one focused table toy — either a clickable roulette wheel or a keyboard-accessible, endlessly loopable deck of cards.
+- [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7). Still open: a clickable wheel or a loopable deck of cards.
+- [ ] Bare bands left: earth, cyber, neutral, paper (base themes — keep calm), cyberpunk (`signal`), hollow knight (`chitin`), skyrim (`hoarstone`), pokémon (`cardstock`), team fortress (`ochre`).
 - [ ] Minecraft (`cobble`): make the inventory slots clickable and tie them to real dashboard actions.
 - [ ] Give each game theme one purpose-built interaction; avoid generic ornaments shared between worlds.
 - [ ] Add reduced-motion, keyboard, focus, and narrow-window acceptance checks for every interactive gimmick.
