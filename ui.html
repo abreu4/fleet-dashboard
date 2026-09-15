@@ -4316,30 +4316,55 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="cobble"] .rail svg, :root[data-theme="cobble"] .hrail svg{color:#2a1c0f; filter:none; opacity:1}
 /* 4. The survival HUD, bottom centre, off the root numbers: ten hearts for
    the memory left, the XP bar for the CPU, the level for the sessions that
-   are working, and the hotbar under it all with the torch selected. */
-:root[data-theme="cobble"] .board::before{
-  content:"\2665\2665\2665\2665\2665\2665\2665\2665\2665\2665"; position:fixed; left:50%; bottom:calc(36px + var(--taken,0px));
-  transform:translateX(-50%); width:216px; height:16px; z-index:2; pointer-events:none; text-align:left;
-  font:15px/16px "Silkscreen", Krungthep, monospace; letter-spacing:-.06em;
+   are working, and the hotbar under it all with the torch selected. The
+   script builds it (the worlds at the end of the band script) and captions
+   each reading in the same pixel face, so the hearts say what they count. */
+:root[data-theme="cobble"] .ghud.survival{
+  left:50%; bottom:calc(6px + var(--taken,0px)); transform:translateX(-50%);
+  width:216px; height:50px; font:700 10px/1 "Silkscreen", Krungthep, monospace;
+}
+:root[data-theme="cobble"] .ghud.survival > *{position:absolute; display:block; font-style:normal; white-space:nowrap}
+/* The hearts shrink to their own ten glyphs, so the red covers the share of
+   hearts the number says -- stretched over the hotbar's full width it ran
+   out three hearts late, whatever the memory did. */
+:root[data-theme="cobble"] .ghud.survival .hearts{
+  left:0; top:0; width:auto; height:16px; text-align:left;
+  font:20px/16px "Silkscreen", Krungthep, monospace; letter-spacing:-.06em;
   -webkit-text-stroke:1px #1a0404; paint-order:stroke fill; color:transparent;
-  background:linear-gradient(90deg, #ff1313 0 calc((100 - var(--g-mem, 0)) * 1%), #3a0d0d calc((100 - var(--g-mem, 0)) * 1%));
+  background:linear-gradient(90deg, #ff1313 0 calc(var(--v, 0) * 1%), #3a0d0d calc(var(--v, 0) * 1%));
   -webkit-background-clip:text; background-clip:text;
 }
-:root[data-theme="cobble"] .board::after{
-  counter-reset:lvl var(--n-active, 0); content:counter(lvl); position:fixed; left:50%; bottom:calc(6px + var(--taken,0px));
-  transform:translateX(-50%); width:216px; height:32px; z-index:2; pointer-events:none; box-sizing:border-box;
-  padding-top:0; text-align:center; font:700 10px/1 "Silkscreen", Krungthep, monospace; color:#7fdc2a;
-  text-shadow:1px 1px 0 #1a3a05, -1px -1px 0 #1a3a05, 1px -1px 0 #1a3a05, -1px 1px 0 #1a3a05;
-  opacity:.94; mix-blend-mode:normal;
+:root[data-theme="cobble"] .ghud.survival .xp{
+  left:0; top:16px; width:216px; height:5px;
   background:
-    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='28'%20height='28'%20viewBox='0%200%2028%2028'%20shape-rendering='crispEdges'%3E%3Crect%20x='1'%20y='1'%20width='26'%20height='26'%20fill='none'%20stroke='%23fff'%20stroke-width='2'/%3E%3C/svg%3E") 94px 4px/28px 28px no-repeat,
-    linear-gradient(#5d9c3a 0 5px, #79553a 5px) 7px 11px/14px 14px no-repeat,
-    linear-gradient(#ffd86b 0 4px, #7a4f21 4px) 107px 10px/4px 15px no-repeat,
-    linear-gradient(90deg, #7fdc2a 0 calc(var(--g-cpu, 0) * 1%), #2b2b2b calc(var(--g-cpu, 0) * 1%)) 0 0/216px 5px no-repeat,
-    repeating-linear-gradient(90deg, transparent 0 17px, #1a1a1a 17px 18px) 0 0/216px 5px no-repeat,
-    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20shape-rendering='crispEdges'%3E%3Crect%20width='24'%20height='24'%20fill='%23000'%20fill-opacity='.5'/%3E%3Crect%20x='2'%20y='2'%20width='20'%20height='20'%20fill='%238b8b8b'%20fill-opacity='.22'/%3E%3Crect%20x='2'%20y='2'%20width='20'%20height='1'%20fill='%23373737'/%3E%3Crect%20x='2'%20y='2'%20width='1'%20height='20'%20fill='%23373737'/%3E%3Crect%20x='2'%20y='21'%20width='20'%20height='1'%20fill='%23fff'%20fill-opacity='.55'/%3E%3Crect%20x='21'%20y='2'%20width='1'%20height='20'%20fill='%23fff'%20fill-opacity='.55'/%3E%3C/svg%3E") 0 6px/24px 24px repeat-x;
-  background-clip:border-box; box-shadow:none;
+    linear-gradient(90deg, #7fdc2a 0 calc(var(--v, 0) * 1%), #2b2b2b calc(var(--v, 0) * 1%)) 0 0/216px 5px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 17px, #1a1a1a 17px 18px) 0 0/216px 5px no-repeat;
 }
+:root[data-theme="cobble"] .ghud.survival .lvl{
+  left:0; top:13px; width:216px; text-align:center; color:#7fdc2a; font-weight:700;
+  text-shadow:1px 1px 0 #1a3a05, -1px -1px 0 #1a3a05, 1px -1px 0 #1a3a05, -1px 1px 0 #1a3a05;
+}
+:root[data-theme="cobble"] .ghud.survival .lvl small{font-size:7px; letter-spacing:.04em}
+:root[data-theme="cobble"] .ghud.survival .hotbar{
+  left:0; top:20px; width:216px; height:30px;
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='28'%20height='28'%20viewBox='0%200%2028%2028'%20shape-rendering='crispEdges'%3E%3Crect%20x='1'%20y='1'%20width='26'%20height='26'%20fill='none'%20stroke='%23fff'%20stroke-width='2'/%3E%3C/svg%3E") 94px 0/28px 28px no-repeat,
+    linear-gradient(#5d9c3a 0 5px, #79553a 5px) 7px 7px/14px 14px no-repeat,
+    linear-gradient(#ffd86b 0 4px, #7a4f21 4px) 107px 6px/4px 15px no-repeat,
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20shape-rendering='crispEdges'%3E%3Crect%20width='24'%20height='24'%20fill='%23000'%20fill-opacity='.5'/%3E%3Crect%20x='2'%20y='2'%20width='20'%20height='20'%20fill='%238b8b8b'%20fill-opacity='.22'/%3E%3Crect%20x='2'%20y='2'%20width='20'%20height='1'%20fill='%23373737'/%3E%3Crect%20x='2'%20y='2'%20width='1'%20height='20'%20fill='%23373737'/%3E%3Crect%20x='2'%20y='21'%20width='20'%20height='1'%20fill='%23fff'%20fill-opacity='.55'/%3E%3Crect%20x='21'%20y='2'%20width='1'%20height='20'%20fill='%23fff'%20fill-opacity='.55'/%3E%3C/svg%3E") 0 2px/24px 24px repeat-x;
+}
+/* The captions, to the left of what they explain, white with the HUD's dark
+   outline; the figure takes the colour of the thing it reads. */
+:root[data-theme="cobble"] .ghud.survival .cap{
+  right:calc(100% + 8px); text-align:right; font:700 8px/1 "Silkscreen", Krungthep, monospace; color:#fff;
+  text-shadow:1px 1px 0 #2a2a2a, -1px -1px 0 #2a2a2a, 1px -1px 0 #2a2a2a, -1px 1px 0 #2a2a2a;
+}
+:root[data-theme="cobble"] .ghud.survival .cap.mem{top:4px}
+:root[data-theme="cobble"] .ghud.survival .cap.mem b{color:#ff5a5a}
+:root[data-theme="cobble"] .ghud.survival .cap.cpu{top:14px}
+:root[data-theme="cobble"] .ghud.survival .cap.cpu b{color:#7fdc2a}
+/* the old torch glow lived on .board::after; the HUD replaced it, and stays replaced */
+:root[data-theme="cobble"] .board::after{display:none}
 /* 5. The buttons are the game's: grey slab, lit top-left, dark bottom-right,
    text yellow when the cursor is over it. */
 :root[data-theme="cobble"] button.ghost, :root[data-theme="cobble"] .ctl select, :root[data-theme="cobble"] .acts button{
@@ -4410,35 +4435,40 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 /* 4. THE BARS. Magicka, health, stamina: three thin bars at the foot of the
    screen, blue, red, green, in that order, each in its hairline frame with
-   the little end ticks. Live: magicka is the memory left, health the
-   pressure headroom, stamina the CPU not yet spent. */
-:root[data-theme="hoarstone"] .board::before{
-  content:""; position:fixed; left:50%; bottom:calc(12px + var(--taken,0px)); transform:translateX(-50%);
-  width:600px; height:14px; z-index:2; pointer-events:none; opacity:.92;
-  --mag:calc((100 - var(--g-mem, 0)) * 1.8px);
-  --hp:calc((100 - var(--g-pres, 0)) * 1.8px);
-  --sta:calc((100 - var(--g-cpu, 0)) * 1.8px);
-  background:
-    linear-gradient(180deg,#9cc0ff,#3563c4) 0 4px/var(--mag) 6px no-repeat,
-    linear-gradient(180deg,#ff8a78,#b3231c) 210px 4px/var(--hp) 6px no-repeat,
-    linear-gradient(180deg,#a8e694,#3e9438) 420px 4px/var(--sta) 6px no-repeat,
-    linear-gradient(rgba(8,11,14,.9),rgba(8,11,14,.9)) 0 4px/180px 6px no-repeat,
-    linear-gradient(rgba(8,11,14,.9),rgba(8,11,14,.9)) 210px 4px/180px 6px no-repeat,
-    linear-gradient(rgba(8,11,14,.9),rgba(8,11,14,.9)) 420px 4px/180px 6px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 0 2px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 210px 2px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 420px 2px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 0 11px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 210px 11px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 420px 11px/180px 1px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 0 0/2px 14px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 178px 0/2px 14px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 210px 0/2px 14px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 388px 0/2px 14px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 420px 0/2px 14px no-repeat,
-    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 598px 0/2px 14px no-repeat;
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));
+   the little end ticks. Live, and each says what it reads: magicka is the
+   memory left, health the pressure headroom, stamina the CPU not yet spent.
+   The script builds the three (the worlds at the end of the band script)
+   and sets --v, 0..100, on each; the fill and the caption's number are the
+   same figure. */
+:root[data-theme="hoarstone"] .ghud.stats{
+  left:50%; bottom:calc(24px + var(--taken,0px)); transform:translateX(-50%);
+  display:flex; gap:30px; opacity:.92; filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));
 }
+:root[data-theme="hoarstone"] .ghud.stats .bar{position:relative; display:block; width:180px; height:14px; font-style:normal}
+:root[data-theme="hoarstone"] .ghud.stats .bar b{
+  position:absolute; inset:0;
+  background:
+    linear-gradient(180deg, var(--lit), var(--deep)) 0 4px/calc(var(--v, 0) * 1%) 6px no-repeat,
+    linear-gradient(rgba(8,11,14,.9),rgba(8,11,14,.9)) 0 4px/100% 6px no-repeat,
+    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 0 2px/100% 1px no-repeat,
+    linear-gradient(rgba(236,242,247,.75),rgba(236,242,247,.75)) 0 11px/100% 1px no-repeat,
+    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 0 0/2px 14px no-repeat,
+    linear-gradient(rgba(236,242,247,.9),rgba(236,242,247,.9)) 100% 0/2px 14px no-repeat;
+  transition:background-size .6s ease;
+}
+:root[data-theme="hoarstone"] .ghud.stats .mag{--lit:#9cc0ff; --deep:#3563c4}
+:root[data-theme="hoarstone"] .ghud.stats .hp{--lit:#ff8a78; --deep:#b3231c}
+:root[data-theme="hoarstone"] .ghud.stats .sta{--lit:#a8e694; --deep:#3e9438}
+/* The caption, in the menu's tracked caps: the attribute above the bar on
+   the left, what it reads and the figure under it on the right. */
+:root[data-theme="hoarstone"] .ghud.stats .bar em, :root[data-theme="hoarstone"] .ghud.stats .bar u{
+  position:absolute; font:500 9px/1 var(--face-chrome); letter-spacing:.2em; text-transform:uppercase;
+  text-decoration:none; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.95);
+}
+:root[data-theme="hoarstone"] .ghud.stats .bar em{left:0; top:-14px; color:#e9eff4}
+:root[data-theme="hoarstone"] .ghud.stats .bar u{right:0; bottom:-14px; color:#a9b7c3}
+:root[data-theme="hoarstone"] .ghud.stats .bar u span{color:#e9eff4}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="hoarstone"] .ghud.stats .bar b{transition:none} }
 /* 5. The sky. An aurora across the top of the room, a few stars in it, and
    snow -- two sheets, sparse, falling slowly -- over the vignette. Screen
    blend, so it only ever lightens what it crosses. */
@@ -5147,6 +5177,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    ========================================================================== */
 .band{display:none; position:fixed; z-index:2; pointer-events:none}
 :root:has(.board.compact):not(:has(.sheet.on)) .band{display:block}
+/* A world's own instruments, built the same way but always on: Skyrim's
+   three bars, Minecraft's survival HUD. Drawn off the gauges every second,
+   and every reading is captioned with what it is. */
+.ghud{position:fixed; z-index:2; pointer-events:none}
 
 /* ---- SONIC: Green Hill ------------------------------------------------------
    The chequered soil under a lip of grass, and above it a row of rings, one
@@ -5803,6 +5837,9 @@ function drawHud(d){
   rs.setProperty('--n-total',  String(d.total|0));
   // ...and the tally itself, one integer per state, for the same reason.
   STATES.forEach(k => rs.setProperty('--n-' + k, String(d.tally[k]|0)));
+  // The tiles repaint only when they change; an instrument drawn off these
+  // numbers wants to follow them every second, like the gauges do.
+  document.dispatchEvent(new CustomEvent('fleet:hud'));
 
   const tk = d.tokens >= 1e6 ? (d.tokens/1e6).toFixed(1)+'M' : Math.round((d.tokens||0)/1000)+'k';
   // On the wall it runs plugged in, so this line is usually a quiet "100% AC".
@@ -6740,17 +6777,20 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
 })();
 
 /* ---- the band (pass 8) --------------------------------------------------- */
-/* One object per world in the space a collapsed board leaves; see .band in
-   the stylesheet for what each one is. Built once when its world comes on,
-   torn down when it goes, and refreshed after every paint from the numbers
-   the render already put on the root. */
+/* One object per world in the space a collapsed board leaves (`make`/`paint`;
+   see .band in the stylesheet for what each one is), and, for the worlds
+   that have one, the game's own HUD, always on (`hud`/`paintHud`; .ghud).
+   Built once when its world comes on, torn down when it goes, and refreshed
+   from the numbers the render already put on the root: the band after every
+   paint, the HUD every second with the gauges. */
 (function(){
   const root = document.documentElement;
   const rootNum = k => parseFloat(root.style.getPropertyValue(k)) || 0;
   const el = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className = cls; if(html != null) e.innerHTML = html; return e; };
   const still = () => reducedMotion() || root.dataset.motion === 'off';
   const pick = a => a[Math.floor(Math.random() * a.length)];
-  let cur = null, node = null, timers = [];
+  const pct = v => Math.max(0, Math.min(100, Math.round(v)));
+  let cur = null, node = null, hud = null, timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
@@ -6883,6 +6923,46 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6500);
       },
     },
+    /* Skyrim's three bars: magicka is the memory left, health the pressure
+       headroom, stamina the CPU not yet spent. Each captioned with what it
+       reads, because blue-means-memory is not something a glance can know. */
+    hoarstone: {
+      BARS: [['mag', 'Magicka', 'memory free', '--g-mem'],
+             ['hp',  'Health',  'pressure headroom', '--g-pres'],
+             ['sta', 'Stamina', 'cpu idle', '--g-cpu']],
+      hud(){
+        const n = el('div', 'ghud stats');
+        n.innerHTML = this.BARS.map(([k, name, what]) =>
+          '<i class="bar ' + k + '"><b></b><em>' + name + '</em><u>' + what + ' <span>\u2014</span></u></i>').join('');
+        return n;
+      },
+      paintHud(n){
+        this.BARS.forEach(([, , , v], i) => {
+          const left = pct(100 - rootNum(v)), bar = n.children[i], sp = bar.querySelector('span');
+          bar.style.setProperty('--v', left);
+          if(sp.textContent !== left + '%') sp.textContent = left + '%';
+        });
+      },
+    },
+    /* Minecraft's survival HUD: hearts for the memory left (they drain as it
+       fills), the XP bar for the CPU, the level for the sessions at work. */
+    cobble: {
+      hud(){
+        const n = el('div', 'ghud survival');
+        n.innerHTML = '<i class="hearts">' + '\u2665'.repeat(10) + '</i>'
+          + '<span class="cap mem">memory free <b>\u2014</b></span>'
+          + '<i class="xp"></i><span class="cap cpu">cpu <b>\u2014</b></span>'
+          + '<b class="lvl"><span>0</span> <small>working</small></b><i class="hotbar"></i>';
+        return n;
+      },
+      paintHud(n){
+        const set = (sel, v) => { const e = n.querySelector(sel); if(e.textContent !== v) e.textContent = v; };
+        const mem = pct(100 - rootNum('--g-mem')), cpu = pct(rootNum('--g-cpu')), lvl = rootNum('--n-active') | 0;
+        n.querySelector('.hearts').style.setProperty('--v', mem);
+        n.querySelector('.xp').style.setProperty('--v', cpu);
+        set('.cap.mem b', mem + '%'); set('.cap.cpu b', cpu + '%'); set('.lvl span', String(lvl));
+      },
+    },
     /* The calendar card, with the hour the game would print. */
     offcut: {
       make(){ return el('div', 'band p5date', '<b></b><i></i><span></span>'); },
@@ -6903,14 +6983,18 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     const theme = root.dataset.theme, world = WORLDS[theme];
     if(theme !== cur){
       if(node){ node.remove(); node = null; }
+      if(hud){ hud.remove(); hud = null; }
       timers.forEach(clearTimeout); timers = [];
       cur = theme;
-      if(world){ node = world.make(); document.body.appendChild(node); }
+      if(world && world.make){ node = world.make(); document.body.appendChild(node); }
+      if(world && world.hud){ hud = world.hud(); document.body.appendChild(hud); }
     }
     if(node && world) world.paint(node, diff);
+    if(hud && world) world.paintHud(hud, diff);
   };
   document.addEventListener('fleet:paint', e => sync(e.detail));
   document.addEventListener('fleet:theme', () => sync(null));
+  document.addEventListener('fleet:hud', () => { if(hud && WORLDS[cur]) WORLDS[cur].paintHud(hud, null); });
 })();
 
 /* ---------------- settings ---------------- */

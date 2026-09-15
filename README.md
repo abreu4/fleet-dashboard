@@ -145,7 +145,7 @@ count of how often each theme has been picked from the menu.
 | **Cyberpunk 2077** | black-and-yellow warning graphics |
 | **Portal** | clean test-chamber white with orange/blue portals |
 | **Lord of the Rings** | candlelit vellum and illuminated-page details |
-| **Skyrim** | black glass, hairlines and diamonds, magicka/health/stamina bars, an aurora |
+| **Skyrim** | black glass, hairlines and diamonds, an aurora; magicka/health/stamina bars that are the memory left, the pressure headroom and the CPU idle, each captioned with its reading |
 | **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |
 | **Team Fortress** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles, a kill feed |
@@ -153,7 +153,7 @@ count of how often each theme has been picked from the menu.
 | **Fallout** | a Pip-Boy tube: P1 phosphor behind curved glass, scanlines, amber for what needs you |
 | **Matrix** | black terminal with the rain behind the glass, P31 mint, a blinking cursor for a sigil |
 | **Persona 5** | a two-colour print job: vermilion on newsprint black, every tile snipped with scissors, zero glow |
-| **Minecraft** | quarried stone by torchlight, grass-block headers, the survival HUD, a splash on the title |
+| **Minecraft** | quarried stone by torchlight, grass-block headers, a splash on the title; the survival HUD is live and captioned -- hearts for the memory left, the XP bar for the CPU, the level for the sessions at work |
 | **Hollow Knight** | layered indigo void, bone hairlines on the top edge only, souls drifting up, a bench to rest on |
 | **Apollo** | Mission Control, 1969: grey-green console bays under the plotboard wall, every status dot a square indicator lamp; collapsing the board uncovers the GO/NO GO poll — a station plaque per session, the GET clock, MASTER ALARM while anything is NO GO |
 
