@@ -5492,6 +5492,176 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 
 /* ============================================================================
+   NERV  --  Central Dogma, the command deck
+   The material is the MAGI's own display: black, orange, the corners of
+   every panel cut, a hex grid behind the instruments, and the warnings in
+   red on black stripes. Latin in heavy condensed capitals, the MAGI's
+   verdicts in Mincho. Nothing is decorative: the orange is what the deck
+   reads by.
+
+   Why the deck fits this board: three computers deliberate, each casts a
+   vote, and the room acts on the resolution. Three providers sit on this
+   board. Melchior, Balthasar and Casper are Claude, Antigravity and Codex.
+
+   The tell is the hexagon: every status dot is one, and a stuck session
+   is PATTERN BLUE -- red hazard rib, a tag that flashes. Always on: the
+   sync ratio (the cpu) and the A.T. field (the memory headroom), and the
+   power source -- external on the cable, internal on the battery, with
+   the activity limit counting down. Collapse the board for the MAGI.
+   Measured on --tile #1a1a1a: --faint 5.4:1, --dim 8.8:1, --ink 14.2:1.
+   ========================================================================== */
+:root[data-theme="nerv"]{
+  color-scheme:dark;
+  --void:#050505; --panel:#0c0c0c; --cell:#131313; --tile:#1a1a1a; --tile-hi:#242424;
+  --edge:#3d2a10; --edge-hot:#ff8c00;
+  --ink:#ffe2bf; --dim:#e2ac6a; --faint:#b3803f;
+  --accent:#ff8c00;
+  --blocked:#ff3b3b; --running:#3dff8f; --idle:#6fa8ff; --done:#ffe36e; --unknown:#8a8a8a;
+  --good:#3dff8f; --warn:#ffb020; --waiting:#ffb020;
+  --glow:.6; --sigil:"\2B21";                          /* a hexagon */
+  --scan:rgba(255,140,0,.03); --halo:rgba(255,140,0,.12);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96'%3E%3Cg fill='none' stroke='%23ff8c00' stroke-opacity='.09'%3E%3Cpath d='M28 2L54 17V47L28 62L2 47V17Z'/%3E%3Cpath d='M28 62V96M2 47L2 96M54 47V96'/%3E%3C/g%3E%3C/svg%3E");
+  --hud-a:#141414; --hud-b:#0a0a0a; --rail-a:#151515; --rail-b:#0b0b0b;
+  --hud-inset:46px;
+}
+:root[data-theme="nerv"]{
+  --face-data:   ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: "Archivo Black", "Anton", "Helvetica Neue", Impact, sans-serif;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:.92; --fs-data:1; --fs-prose:1; --tr-chrome:1.05;
+}
+:root[data-theme="nerv"] .brand b, :root[data-theme="nerv"] .rail .vlabel,
+:root[data-theme="nerv"] .hrail .who, :root[data-theme="nerv"] .project > header,
+:root[data-theme="nerv"] .gauge .lab, :root[data-theme="nerv"] .trace .cap,
+:root[data-theme="nerv"] .panel section h3, :root[data-theme="nerv"] .stat .k,
+:root[data-theme="nerv"] .bubble .foot .st{text-transform:uppercase}
+:root[data-theme="nerv"] .bubble .foot .st{font-family:var(--face-chrome); letter-spacing:.08em; font-weight:400}
+/* THE PANELS. Two corners cut off everything the deck draws. */
+:root[data-theme="nerv"] .gauge, :root[data-theme="nerv"] .readout, :root[data-theme="nerv"] .trace,
+:root[data-theme="nerv"] .stat, :root[data-theme="nerv"] .bubble, :root[data-theme="nerv"] .chip{
+  border-radius:0; clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+:root[data-theme="nerv"] .lane, :root[data-theme="nerv"] .project{border-radius:0}
+:root[data-theme="nerv"] .hud{
+  background-image:var(--grain), linear-gradient(180deg, var(--hud-a), var(--hud-b));
+  border-bottom:2px solid var(--accent); box-shadow:0 0 18px -6px rgba(255,140,0,.6);
+}
+:root[data-theme="nerv"] .brand b{color:#ffe2bf; letter-spacing:.14em; text-shadow:0 0 12px rgba(255,140,0,.5)}
+:root[data-theme="nerv"] .brand b::after{color:var(--accent)}
+/* EGG: the wordmark's plate reads the organisation. */
+:root[data-theme="nerv"] .brand:hover b::after{content:"NERV"; font-family:var(--face-chrome); font-size:12px; letter-spacing:.2em; opacity:1}
+:root[data-theme="nerv"] .gauge .val, :root[data-theme="nerv"] .readout dd b, :root[data-theme="nerv"] .chip .n{color:var(--accent)}
+:root[data-theme="nerv"] .trace{background-image:var(--grain); background-color:#0a0a0a}
+/* THE CAGES. Lanes are the cages; every project is a unit with its number. */
+:root[data-theme="nerv"] .lane{counter-reset:unit; background-image:var(--grain)}
+:root[data-theme="nerv"] .project{counter-increment:unit}
+:root[data-theme="nerv"] .project > header{
+  color:#ffd9a8; background:linear-gradient(90deg, #2a1a08, #161616 60%); border-bottom:1px solid #3d2a10;
+  font-family:var(--face-chrome); letter-spacing:.06em;
+}
+:root[data-theme="nerv"] .project > header .nm::before{
+  content:"UNIT-" counter(unit, decimal-leading-zero) "\00a0\00a0"; color:var(--accent);
+}
+/* THE UNITS. A tile is a unit's status panel; the rib is its power feed. */
+:root[data-theme="nerv"] .bubble{background-image:linear-gradient(180deg, rgba(255,140,0,.04), transparent 45%); box-shadow:inset 0 0 0 1px #3d2a10}
+:root[data-theme="nerv"] .bubble:hover{box-shadow:inset 0 0 0 1px var(--accent), 0 0 16px -6px rgba(255,140,0,.6)}
+:root[data-theme="nerv"] .bubble.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+/* 1. THE TELL -- the hexagon. Every status dot, in the deck's own shape. */
+:root[data-theme="nerv"] .bubble .foot .dot, :root[data-theme="nerv"] .chip .dot{
+  width:10px; height:9px; border-radius:0; clip-path:polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+/* 2. PATTERN BLUE. A stuck unit: hazard stripes for a rib, a tag that
+   flashes in steps, the face tinted. */
+:root[data-theme="nerv"] .bubble[data-state="blocked"]{background-color:#241010}
+:root[data-theme="nerv"] .bubble[data-state="blocked"]::before{
+  width:8px; animation:none; box-shadow:none;
+  background:repeating-linear-gradient(-45deg, #ff3b3b 0 6px, #1a0808 6px 12px);
+}
+:root[data-theme="nerv"] .bubble[data-state="blocked"]::after{
+  content:"PATTERN BLUE"; position:absolute; right:24px; top:6px; z-index:3; padding:1px 5px;
+  font:10px/1.3 var(--face-chrome); letter-spacing:.08em; color:#1a0808; background:var(--blocked);
+  animation:nerv-invert 1s steps(1, end) infinite;
+}
+:root[data-theme="nerv"] .bubble[data-state="blocked"] .nm{padding-right:104px}   /* room for the tag */
+@keyframes nerv-invert{50%{color:var(--blocked); background:#2a0c0c; box-shadow:inset 0 0 0 1px var(--blocked)}}
+@keyframes nerv-flash{50%{opacity:.25}}
+/* A unit awaiting orders: amber, and the rib carries the chevrons. */
+:root[data-theme="nerv"] .bubble[data-state="waiting"]::before{
+  width:6px; background:repeating-linear-gradient(180deg, var(--waiting) 0 8px, transparent 8px 12px);
+}
+/* THE READOUT, always on: sync ratio, A.T. field, the power source. */
+:root[data-theme="nerv"] .ghud.sync{
+  left:50%; bottom:calc(10px + var(--taken,0px)); transform:translateX(-50%); display:flex; gap:0; font-style:normal;
+  clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  background:#0c0c0c; box-shadow:inset 0 0 0 1px var(--accent);
+}
+:root[data-theme="nerv"] .ghud.sync > span{display:grid; grid-template-rows:auto auto; gap:2px; padding:5px 14px 5px; border-right:1px solid #3d2a10; min-width:96px}
+:root[data-theme="nerv"] .ghud.sync > span:last-child{border-right:0}
+:root[data-theme="nerv"] .ghud.sync em{font:9px/1 var(--face-chrome); letter-spacing:.14em; color:var(--faint); text-transform:uppercase; font-style:normal; white-space:nowrap}
+:root[data-theme="nerv"] .ghud.sync b{font:700 14px/1 var(--face-data); color:var(--accent); letter-spacing:.02em; white-space:nowrap}
+:root[data-theme="nerv"] .ghud.sync b small{font:9px/1 var(--face-chrome); color:var(--faint); margin-left:6px; letter-spacing:.1em; text-transform:uppercase}
+:root[data-theme="nerv"] .ghud.sync .power b{color:var(--running)}
+:root[data-theme="nerv"] .ghud.sync .power[data-s="internal"] b{color:var(--blocked); animation:nerv-flash 1s steps(1, end) infinite}
+/* THE MAGI (the band). Three computers, one per provider, each with its
+   verdict in Mincho and the reason under it; the resolution across the
+   foot; PATTERN BLUE along the top while anything on the deck is stuck. */
+:root[data-theme="nerv"] .magi{
+  left:18px; right:18px; bottom:calc(64px + var(--taken,0px)); padding:34px 14px 14px; color:var(--ink);
+  background:var(--grain), #0a0a0a; clip-path:polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  box-shadow:inset 0 0 0 1px var(--accent); font:10px/1.4 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase;
+}
+:root[data-theme="nerv"] .magi .warn{
+  position:absolute; left:0; right:0; top:0; height:22px; display:flex; align-items:center; justify-content:center; gap:40px;
+  font:12px/1 var(--face-chrome); letter-spacing:.3em; color:#1a0808;
+  background:repeating-linear-gradient(-45deg, var(--blocked) 0 14px, #1a0808 14px 28px); opacity:0; transition:opacity .3s;
+}
+:root[data-theme="nerv"] .magi .warn span{background:var(--blocked); padding:2px 10px}
+:root[data-theme="nerv"] .magi[data-alarm="1"] .warn{opacity:1; animation:nerv-flash 1s steps(1, end) infinite}
+:root[data-theme="nerv"] .magi .heads{position:absolute; left:16px; right:16px; top:5px; display:flex; justify-content:space-between; color:var(--faint); font-size:9px; letter-spacing:.2em}
+:root[data-theme="nerv"] .magi[data-alarm="1"] .heads{display:none}
+:root[data-theme="nerv"] .magi .say{color:var(--warn); opacity:0; transition:opacity .35s}
+:root[data-theme="nerv"] .magi .say.on{opacity:1}
+:root[data-theme="nerv"] .magi .three{display:flex; gap:12px}
+:root[data-theme="nerv"] .magi .comp{
+  flex:1 1 0; display:grid; grid-template-rows:auto auto auto auto; gap:4px; padding:8px 10px 9px; min-width:0;
+  background:#131313; clip-path:polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow:inset 0 0 0 1px #3d2a10;
+}
+:root[data-theme="nerv"] .magi .comp em{font-style:normal; color:var(--accent); font-size:12px; letter-spacing:.14em}
+:root[data-theme="nerv"] .magi .comp em small{color:var(--faint); font-size:9px; margin-left:8px}
+:root[data-theme="nerv"] .magi .comp b{
+  font:500 30px/1.1 "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", "Noto Serif JP", serif; letter-spacing:.12em; color:#8a8a8a;
+}
+:root[data-theme="nerv"] .magi .comp b i{display:block; font:10px/1 var(--face-chrome); font-style:normal; letter-spacing:.24em; margin-top:2px; color:inherit; opacity:.85}
+:root[data-theme="nerv"] .magi .comp u{text-decoration:none; color:var(--dim); font-family:var(--face-data); font-size:10px; letter-spacing:.04em; text-transform:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="nerv"] .magi .comp[data-v="approve"] b{color:var(--running); text-shadow:0 0 12px rgba(61,255,143,.4)}
+:root[data-theme="nerv"] .magi .comp[data-v="deny"] b{color:var(--blocked); text-shadow:0 0 12px rgba(255,59,59,.5)}
+:root[data-theme="nerv"] .magi .comp[data-v="hold"] b{color:var(--waiting); text-shadow:0 0 12px rgba(255,176,32,.4)}
+:root[data-theme="nerv"] .magi .comp[data-v="deny"]{box-shadow:inset 0 0 0 1px var(--blocked)}
+:root[data-theme="nerv"] .magi .res{
+  margin-top:10px; padding:6px 12px; display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+  background:#131313; box-shadow:inset 0 0 0 1px #3d2a10;
+}
+:root[data-theme="nerv"] .magi .res b{font:500 18px/1 "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", serif; letter-spacing:.2em; color:var(--running)}
+:root[data-theme="nerv"] .magi .res b i{font:11px/1 var(--face-chrome); font-style:normal; letter-spacing:.22em; margin-left:14px}
+:root[data-theme="nerv"] .magi .res[data-v="deny"] b{color:var(--blocked)}
+:root[data-theme="nerv"] .magi .res[data-v="hold"] b{color:var(--waiting)}
+:root[data-theme="nerv"] .magi .res[data-v="absent"] b{color:#8a8a8a}
+:root[data-theme="nerv"] .magi .res span{color:var(--faint); font-size:9px; letter-spacing:.2em}
+/* chrome */
+:root[data-theme="nerv"] .toast{background:#131313; border-color:var(--accent); color:var(--ink); border-radius:0}
+:root[data-theme="nerv"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 #3d2a10, -26px 0 60px -30px rgba(0,0,0,.95)}
+:root[data-theme="nerv"] .scrim{background:rgba(0,0,0,.78)}
+:root[data-theme="nerv"] .acts button, :root[data-theme="nerv"] button.ghost{border-radius:0}
+:root[data-theme="nerv"] .acts button:hover, :root[data-theme="nerv"] button.ghost:hover{background:#242424; box-shadow:0 0 0 1px var(--accent)}
+:root[data-theme="nerv"] .empty, :root[data-theme="nerv"] .bubble .gist.none{color:var(--faint)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="nerv"] .bubble[data-state="blocked"]::after, :root[data-theme="nerv"] .magi[data-alarm="1"] .warn,
+  :root[data-theme="nerv"] .ghud.sync .power[data-s="internal"] b{animation:none}
+}
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -5813,6 +5983,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="houston">apollo</option>
           <option value="staunton">casino royale</option>
           <option value="signal">cyberpunk 2077</option>
+          <option value="nerv">evangelion</option>
           <option value="pipboy">fallout</option>
           <option value="chitin">hollow knight</option>
           <option value="miami86">hotline miami</option>
@@ -5918,6 +6089,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* nerv -- hexagons: plain, launching, and the MAGI's three */
+  nerv:{
+    claude:'<path d="M8 1.6L13.6 4.8V11.2L8 14.4L2.4 11.2V4.8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+    antigravity:'<path d="M8 1.6L13.6 4.8V11.2L8 14.4L2.4 11.2V4.8Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 11.2V5.4M5.6 7.8L8 5.4l2.4 2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    codex:'<path d="M8 1.6L13.6 4.8V11.2L8 14.4L2.4 11.2V4.8Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="5.6" r="1.1" fill="currentColor"/><circle cx="5.8" cy="9.6" r="1.1" fill="currentColor"/><circle cx="10.2" cy="9.6" r="1.1" fill="currentColor"/>',
+  },
   /* lumon -- the spiral on the badge, the elevator, a key card */
   lumon:{
     claude:'<path d="M8 8.4c0-1.6 1.3-2.6 2.6-2.6 2 0 3.4 1.7 3.4 3.7 0 2.8-2.3 4.9-5.2 4.9C4.9 14.4 2 11.6 2 8.1 2 4 5.2 1.4 8.9 1.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
@@ -6062,6 +6239,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* evangelion */
+  nerv:      {blocked:'berserk', waiting:'awaiting orders', running:'synchronised', idle:'in the cage', done:'mission complete', unknown:'unidentified',
+              blank:'no pilot data yet', quiet:'no units deployed', offline:'A.T. FIELD DOWN'},
   /* severance */
   lumon:     {blocked:'scary', waiting:'wellness check', running:'refining', idle:'break room', done:'quota met', unknown:'unsevered',
               blank:'no file assigned yet', quiet:'no refiners on this floor', offline:'SEVERED'},
@@ -7420,6 +7600,81 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* Central Dogma. Always on: the sync ratio (cpu), the A.T. field (memory
+       headroom) and the power source -- external on the cable, internal on
+       the battery with the activity limit counting down, five minutes at a
+       full charge. Collapsed: the MAGI -- Melchior, Balthasar, Casper, one
+       per provider, each voting off its own lane's states, and the
+       resolution. PATTERN BLUE along the top while anything is stuck. */
+    nerv: {
+      MAGI: [['claude', 'MELCHIOR', '1'], ['antigravity', 'BALTHASAR', '2'], ['codex', 'CASPER', '3']],
+      VOTE: {approve: ['承認', 'approved'], deny: ['否決', 'rejected'], hold: ['保留', 'hold'], absent: ['不在', 'absent']},
+      LINES: {arrived: '発進 — launch', blocked: '警告 — emergency', waiting: '命令待ち — awaiting orders',
+              done: '任務完了 — mission complete', idle: '待機 — standing by', running: '同期 — synchronised'},
+      RANK: {absent: 0, approve: 1, hold: 2, deny: 3},
+      hud(){
+        return el('i', 'ghud sync', '<span class="ratio"><em>sync ratio</em><b>—<small>cpu</small></b></span>'
+          + '<span class="field"><em>a.t. field</em><b>—<small>memory headroom</small></b></span>'
+          + '<span class="power"><em>power</em><b>—</b></span>');
+      },
+      paintHud(h){
+        const d = latest; if(!d) return;
+        const cpu = d.host?.cpu?.pct, mem = d.host?.memory?.pct, pw = d.host?.power || {};
+        const set = (sel, txt) => { const b = h.querySelector(sel + ' b'); if(b.firstChild.nodeValue !== txt) b.firstChild.nodeValue = txt; };
+        set('.ratio', cpu == null ? '—' : cpu.toFixed(1) + '%');
+        set('.field', mem == null ? '—' : Math.round(100 - mem) + '%');
+        const p = h.querySelector('.power'), internal = pw.source && pw.source !== 'AC';
+        p.dataset.s = internal ? 'internal' : 'external';
+        if(internal){
+          // the activity limit: five minutes at a full charge, less as it drains
+          const s = Math.round((pw.pct || 0) / 100 * 300), mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+          set('.power', 'internal · ' + mm + ':' + ss);
+        } else set('.power', 'external');
+      },
+      make(){
+        const n = el('div', 'band magi');
+        n.innerHTML = '<div class="warn"><span>pattern blue</span><span>emergency</span><span>pattern blue</span></div>'
+          + '<div class="heads"><span>magi system · deliberation</span><span class="say" aria-live="polite"></span><span class="n"></span></div>'
+          + '<div class="three">' + this.MAGI.map(([k, name, no]) => '<div class="comp" data-k="' + k + '"><em>' + name + '<small>' + no + '</small></em><b>—<i></i></b><u></u></div>').join('') + '</div>'
+          + '<div class="res"><b>—<i></i></b><span></span></div>';
+        return n;
+      },
+      vote(lane){
+        const c = {running: 0, blocked: 0, waiting: 0, idle: 0, done: 0, n: 0};
+        (lane.projects || []).forEach(p => (p.sessions || []).forEach(s => { c.n++; if(c[s.state] != null) c[s.state]++; }));
+        const v = !c.n ? 'absent' : c.blocked ? 'deny' : c.waiting ? 'hold' : 'approve';
+        const why = !c.n ? 'no units deployed' : [c.blocked && c.blocked + ' berserk', c.waiting && c.waiting + ' awaiting orders', c.running && c.running + ' synchronised', c.idle && c.idle + ' in the cage'].filter(Boolean).join(' · ');
+        return {v, why, c};
+      },
+      paint(n, diff){
+        const d = latest; if(!d) return;
+        let worst = 'absent', present = 0;
+        this.MAGI.forEach(([k]) => {
+          const lane = (d.lanes || []).find(l => l.key === k) || {}, r = this.vote(lane), c = n.querySelector('.comp[data-k="' + k + '"]');
+          if(c.dataset.v !== r.v) c.dataset.v = r.v;
+          const b = c.querySelector('b'), [jp, en] = this.VOTE[r.v];
+          if(b.firstChild.nodeValue !== jp) b.firstChild.nodeValue = jp;
+          if(b.lastChild.textContent !== en) b.lastChild.textContent = en;
+          if(c.querySelector('u').textContent !== r.why) c.querySelector('u').textContent = r.why;
+          if(r.v !== 'absent') present++;
+          if(this.RANK[r.v] > this.RANK[worst]) worst = r.v;
+        });
+        const res = n.querySelector('.res'), b = res.querySelector('b'), [jp, en] = this.VOTE[worst];
+        if(res.dataset.v !== worst) res.dataset.v = worst;
+        const word = worst === 'approve' ? (present === 3 ? 'unanimous' : 'approved') : en;
+        if(b.firstChild.nodeValue !== jp) b.firstChild.nodeValue = jp;
+        if(b.lastChild.textContent !== word) b.lastChild.textContent = word;
+        const note = present + ' of 3 computers reporting';
+        if(res.lastChild.textContent !== note) res.lastChild.textContent = note;
+        n.dataset.alarm = rootNum('--n-blocked') > 0 ? '1' : '0';
+        const t = rootNum('--n-active') + ' active · ' + rootNum('--n-total') + ' units';
+        if(n.querySelector('.heads .n').textContent !== t) n.querySelector('.heads .n').textContent = t;
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6000);
+      },
+    },
     /* The severed floor. Always on: the bins -- WO the cpu, FC the memory,
        DR the pressure, MA the disk, and the quota the four together -- each
        filling as its figure rises, captioned with what it is. Collapsed: the
@@ -8118,6 +8373,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  nerv:      'evangelion soundtrack shiro sagisu decisive battle',
   lumon:     'severance apple tv soundtrack theodore shapiro',
   console:   'deep electronic focus minimal tech ambient',
   cyber:     'dark cyberpunk industrial techno synthwave',

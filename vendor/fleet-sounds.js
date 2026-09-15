@@ -381,6 +381,20 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* Central Dogma (Evangelion): the deck's own telemetry. Digital blips
+     * for taps, a two-tone klaxon on hard square waves for alert, and the
+     * resolution -- a clean major triad -- for done. */
+    nerv: {
+      drive: { type: 'hard', k: 2.2 }, verb: { time: 0.22, mix: 0.1 },
+      tap:    [click({ hp: 3000, g: 0.4 }), S('square', 1320, { lp: 4200, a: 0.001, d: 0.025, g: 0.2 }), thump({ f: 120, g: 0.5 })],
+      tile:   [click({ hp: 2600, g: 0.4 }), S('square', 990, { lp: 3600, a: 0.001, d: 0.035, g: 0.22 }), at(0.04, S('square', 1320, { lp: 4200, a: 0.001, d: 0.025, g: 0.14 })), thump({ f: 130, g: 0.55 })],
+      switch: seq([1320, 880, 660], 0.05, function (f) { return S('square', f, { lp: 3600, a: 0.001, d: 0.06, g: 0.2 }); }).concat([thump({ g: 0.45 })]),
+      alert:  [0, 0.36, 0.72].map(function (t) { return at(t, S('square', 466, { lp: 2200, a: 0.004, d: 0.17, g: 0.34 })); })
+              .concat([0.18, 0.54, 0.9].map(function (t) { return at(t, S('sawtooth', 349, { lp: 1800, a: 0.004, d: 0.17, g: 0.3 })); }))
+              .concat([thump({ f: 80, g: 0.7 })]),
+      done:   [click({ hp: 5000, g: 0.2 }), S('sine', 523.3, { a: 0.003, d: 0.5, g: 0.28 }), S('sine', 659.3, { a: 0.003, d: 0.5, g: 0.24 }), S('sine', 784, { a: 0.003, d: 0.55, g: 0.22 }),
+               at(0.3, S('sine', 1046.5, { a: 0.003, d: 0.5, g: 0.16 }))]
+    },
     /* The severed floor (Severance): the MDR terminal's own voice -- soft,
      * rounded 80s electronics, nothing sharp. A wellness check for alert:
      * two slow tones, low then lower. Quota met: a small clean bell. */
