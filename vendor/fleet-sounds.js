@@ -381,6 +381,19 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* The severed floor (Severance): the MDR terminal's own voice -- soft,
+     * rounded 80s electronics, nothing sharp. A wellness check for alert:
+     * two slow tones, low then lower. Quota met: a small clean bell. */
+    lumon: {
+      drive: { type: 'soft', k: 1.2 }, verb: { time: 0.32, mix: 0.18 },
+      tap:    [click({ hp: 4200, d: 0.006, g: 0.3 }), S('sine', 880, { a: 0.002, d: 0.05, g: 0.3 }), thump({ f: 110, g: 0.4 })],
+      tile:   [click({ hp: 3600, d: 0.006, g: 0.3 }), S('sine', 660, { a: 0.002, d: 0.06, g: 0.32 }), at(0.05, S('sine', 880, { a: 0.002, d: 0.05, g: 0.18 })), thump({ f: 120, g: 0.45 })],
+      switch: seq([880, 740, 660], 0.07, function (f) { return S('sine', f, { a: 0.003, d: 0.1, g: 0.26 }); }).concat([thump({ g: 0.4 })]),
+      alert:  [S('sine', 523, { a: 0.02, d: 0.42, g: 0.34 }), S('sine', 1046, { a: 0.02, d: 0.3, g: 0.08 }),
+               at(0.42, S('sine', 415, { a: 0.02, d: 0.55, g: 0.34 })), at(0.42, S('sine', 830, { a: 0.02, d: 0.4, g: 0.08 })), thump({ f: 90, g: 0.5 })],
+      done:   [click({ hp: 6000, g: 0.15 }), S('sine', 1318, { a: 0.002, d: 0.5, g: 0.3 }), S('sine', 2636, { a: 0.002, d: 0.3, g: 0.1 }),
+               at(0.14, S('sine', 1760, { a: 0.002, d: 0.42, g: 0.2 })), at(0.28, S('sine', 2093, { a: 0.002, d: 0.6, g: 0.16 }))]
+    },
     /* quiet -- the pack for someone who does not want a pack. Sine and triangle
      * only, short envelopes, a small room, no drive to speak of. The alert is a
      * two-note descending chime ("your move"), done is the same two notes the

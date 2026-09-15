@@ -5346,6 +5346,152 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 
 /* ============================================================================
+   LUMON  --  Macrodata Refinement, the severed floor
+   The material is the MDR terminal: a curved glass in a cream bezel showing
+   pale blue-white on deep teal-black, and the office's own signage -- wide
+   tracked capitals in a plain geometric sans. Under everything, the numbers:
+   a field of small digits, most of them calm.
+
+   Why the floor fits this board: every refiner sits at a terminal with a
+   file, sorts what frightens them into bins, and the bins fill toward a
+   quota. That is a session tile, and the bins are the machine.
+
+   The tell is the scary numbers: a session that is stuck has its digits
+   tremble on the tile. The bins along the foot of the floor are the host's
+   own quota -- WO the cpu, FC the memory, DR the pressure, MA the disk --
+   filling as the figures rise. Collapse the board for the refinement field.
+   Measured on --tile #0e3448: --faint 5.1:1, --dim 8.9:1, --ink 12.6:1.
+   ========================================================================== */
+:root[data-theme="lumon"]{
+  color-scheme:dark;
+  --void:#04121c; --panel:#072030; --cell:#0a2a3d; --tile:#0e3448; --tile-hi:#134156;
+  --edge:#1f5670; --edge-hot:#3f8fb3;
+  --ink:#dcecf4; --dim:#a9c6d6; --faint:#7fa3b6;
+  --accent:#8fd0f0;                                    /* the terminal's phosphor */
+  --blocked:#ff7b7b; --running:#7ee0c0; --idle:#7fa3d6; --done:#f3e2a0; --unknown:#6f8b99;
+  --good:#7ee0c0; --warn:#ffcf70; --waiting:#ffcf70;
+  --glow:.5; --sigil:"\25CC";                          /* a dotted ring: the severance chip */
+  --scan:rgba(143,208,240,.028); --halo:rgba(143,208,240,.12);
+  /* the numbers: a tile of small digits, calm */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='96'%3E%3Cg font-family='Menlo,monospace' font-size='9' fill='%238fd0f0' fill-opacity='.13'%3E%3Ctext x='4' y='12'%3E4 7 2 9 1 8 3 6 0 5 7 2%3C/text%3E%3Ctext x='9' y='34'%3E8 1 5 3 9 0 6 4 2 7 1 9%3C/text%3E%3Ctext x='2' y='56'%3E0 6 3 8 4 1 7 5 9 2 8 3%3C/text%3E%3Ctext x='7' y='78'%3E5 2 9 7 0 6 1 8 3 4 6 0%3C/text%3E%3C/g%3E%3C/svg%3E");
+  --hud-a:#0b2c40; --hud-b:#061c29; --rail-a:#0a2a3d; --rail-b:#061a26;
+  --hud-inset:70px;
+}
+:root[data-theme="lumon"]{
+  --face-data:   ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:.96; --fs-data:1; --fs-prose:1; --tr-chrome:1.5;
+}
+:root[data-theme="lumon"] .brand b, :root[data-theme="lumon"] .rail .vlabel,
+:root[data-theme="lumon"] .hrail .who, :root[data-theme="lumon"] .project > header,
+:root[data-theme="lumon"] .gauge .lab, :root[data-theme="lumon"] .trace .cap,
+:root[data-theme="lumon"] .panel section h3, :root[data-theme="lumon"] .stat .k,
+:root[data-theme="lumon"] .bubble .foot .st{text-transform:uppercase; letter-spacing:.18em}
+/* THE GLASS. The HUD is the terminal's screen: a curved-glass vignette, the
+   numbers faint behind the instruments, a cream bezel line under it. */
+:root[data-theme="lumon"] .hud{
+  background-image:radial-gradient(120% 140% at 50% 50%, transparent 55%, rgba(0,0,0,.45) 100%), var(--grain), linear-gradient(180deg, var(--hud-a), var(--hud-b));
+  border-bottom:4px solid #e9e2cf;
+  box-shadow:inset 0 -1px 0 rgba(143,208,240,.25), 0 1px 0 #7d776a, 0 8px 20px -14px rgba(0,0,0,.9);
+}
+:root[data-theme="lumon"] .brand b{color:#dcecf4; letter-spacing:.32em; text-shadow:0 0 12px rgba(143,208,240,.45)}
+:root[data-theme="lumon"] .brand b::after{color:var(--accent)}
+/* EGG: point at the wordmark and the sign reads the company's name. */
+:root[data-theme="lumon"] .brand:hover b::after{content:"LUMON"; font-size:11px; letter-spacing:.34em; opacity:1}
+:root[data-theme="lumon"] .gauge .val, :root[data-theme="lumon"] .readout dd b, :root[data-theme="lumon"] .chip .n{color:var(--accent); text-shadow:0 0 8px rgba(143,208,240,.4)}
+:root[data-theme="lumon"] .gauge, :root[data-theme="lumon"] .readout, :root[data-theme="lumon"] .trace, :root[data-theme="lumon"] .stat{border-radius:10px}
+/* THE FLOOR. Lanes are departments; each project is a file with its number
+   on the door plate. */
+:root[data-theme="lumon"] .lane{border-radius:10px; background-image:var(--grain)}
+:root[data-theme="lumon"] .lane{counter-reset:file}
+:root[data-theme="lumon"] .project{counter-increment:file}
+:root[data-theme="lumon"] .project > header{
+  color:#cfe3ee; background:linear-gradient(180deg, #0f3b52, #0a2a3d); border-bottom:1px solid #1f5670;
+}
+:root[data-theme="lumon"] .project > header .nm::before{
+  content:"file " counter(file, decimal-leading-zero) "\00a0\00a0\00b7\00a0\00a0"; color:var(--accent); opacity:.85;
+}
+/* THE TERMINALS. A tile is one refiner's screen: rounded glass, the numbers
+   faint under the text, the phosphor keyline on hover. */
+:root[data-theme="lumon"] .bubble{
+  border-radius:9px; background-image:var(--grain), linear-gradient(180deg, rgba(143,208,240,.04), transparent 50%);
+  box-shadow:inset 0 1px 0 rgba(143,208,240,.12), inset 0 0 24px rgba(0,0,0,.25);
+}
+:root[data-theme="lumon"] .bubble:hover{box-shadow:inset 0 1px 0 rgba(143,208,240,.18), 0 0 0 1px rgba(143,208,240,.5), 0 0 18px -6px rgba(143,208,240,.5)}
+:root[data-theme="lumon"] .bubble .nm{letter-spacing:.02em}
+/* 1. THE TELL -- the scary numbers. A stuck session's digits tremble: a
+   layer of the same numbers over the tile, moved by transform in steps. */
+:root[data-theme="lumon"] .bubble[data-state="blocked"]{background-color:color-mix(in oklab, #ff7b7b 8%, var(--tile))}
+:root[data-theme="lumon"] .bubble[data-state="blocked"]::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.9;
+  background:var(--grain); mix-blend-mode:screen;
+  animation:lumon-scary .28s steps(2, end) infinite;
+}
+@keyframes lumon-scary{0%{transform:translate(0,0)} 25%{transform:translate(1px,-1px)} 50%{transform:translate(-1px,1px)} 75%{transform:translate(1px,1px)} 100%{transform:translate(0,0)}}
+/* A refiner waiting on you is a wellness check: amber, a slow breath. */
+:root[data-theme="lumon"] .bubble[data-state="waiting"] .foot .dot{animation:lumon-breathe 2.4s ease-in-out infinite}
+@keyframes lumon-breathe{0%,100%{box-shadow:0 0 0 0 rgba(255,207,112,.6)} 50%{box-shadow:0 0 0 5px rgba(255,207,112,0)}}
+/* THE BINS, always on: five boxes along the foot of the floor, the four
+   the host reports plus the quota, each filling toward the top. The script
+   sets the fill and prints the figure; the captions say what each one is. */
+:root[data-theme="lumon"] .ghud.bins{
+  left:50%; bottom:calc(8px + var(--taken,0px)); transform:translateX(-50%); display:flex; gap:22px; font-style:normal;
+}
+:root[data-theme="lumon"] .ghud.bins .bin{display:grid; grid-template-rows:auto auto auto; justify-items:center; gap:3px; min-width:74px}
+:root[data-theme="lumon"] .ghud.bins .bin em{font:600 9px/1 var(--face-chrome); letter-spacing:.24em; color:var(--faint); font-style:normal; text-transform:uppercase}
+:root[data-theme="lumon"] .ghud.bins .bin i{
+  position:relative; width:46px; height:26px; border-radius:3px 3px 5px 5px; overflow:hidden;
+  background:#04121c; box-shadow:inset 0 0 0 1px #3f8fb3, inset 0 2px 0 #1f5670, 0 0 10px -3px rgba(143,208,240,.5);
+}
+:root[data-theme="lumon"] .ghud.bins .bin i u{
+  position:absolute; left:2px; right:2px; bottom:2px; height:0; background:linear-gradient(180deg, #bfe6fa, #4aa6d8);
+  box-shadow:0 0 8px rgba(143,208,240,.6); transition:height .8s ease;
+}
+:root[data-theme="lumon"] .ghud.bins .bin span{font:9px/1 var(--face-chrome); letter-spacing:.14em; text-transform:uppercase; color:var(--faint); white-space:nowrap}
+:root[data-theme="lumon"] .ghud.bins .bin span strong{color:var(--ink); font-weight:600; font-family:var(--face-data)}
+:root[data-theme="lumon"] .ghud.bins .bin.quota i{box-shadow:inset 0 0 0 1px #ffcf70, inset 0 2px 0 #7a5d2a}
+:root[data-theme="lumon"] .ghud.bins .bin.quota i u{background:linear-gradient(180deg, #ffe7ab, #d9a63a); box-shadow:0 0 8px rgba(255,207,112,.6)}
+/* THE FIELD (the band). The refinement screen: the numbers, wide, and a box
+   drawn round every cluster that is frightening -- one per session stuck or
+   asking, its name on the box -- with the day's quote along the foot. */
+:root[data-theme="lumon"] .mdr{
+  left:18px; right:18px; bottom:calc(84px + var(--taken,0px)); height:clamp(150px, 26vh, 240px);
+  border-radius:12px; overflow:hidden; color:var(--ink);
+  background:radial-gradient(120% 140% at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%), var(--grain), #061c29;
+  background-size:auto, 132px 96px, auto; border:1px solid #1f5670;
+  box-shadow:inset 0 0 0 4px #e9e2cf, inset 0 0 0 5px #7d776a, 0 10px 24px -14px rgba(0,0,0,.9);
+  font:10px/1.4 var(--face-chrome); letter-spacing:.2em; text-transform:uppercase;
+}
+:root[data-theme="lumon"] .mdr .head{position:absolute; left:16px; right:16px; top:10px; display:flex; justify-content:space-between; gap:16px; color:var(--accent); white-space:nowrap}
+:root[data-theme="lumon"] .mdr .head .say{color:var(--warn); opacity:0; transition:opacity .35s; letter-spacing:.14em}
+:root[data-theme="lumon"] .mdr .head .say.on{opacity:1}
+:root[data-theme="lumon"] .mdr .quote{position:absolute; left:16px; right:16px; bottom:9px; color:var(--faint); text-align:center; font-style:italic; text-transform:none; letter-spacing:.08em; font-size:11px}
+:root[data-theme="lumon"] .mdr .box{
+  position:absolute; left:calc(var(--x) * 1%); top:calc(var(--y) * 1%); width:118px; height:54px; padding:4px 6px; box-sizing:border-box;
+  border:1px solid var(--waiting); border-radius:3px; color:var(--ink); background:rgba(6,28,41,.85);
+  font:600 9px/1 var(--face-chrome); letter-spacing:.14em; overflow:hidden;
+}
+:root[data-theme="lumon"] .mdr .box[data-s="blocked"]{border-color:var(--blocked)}
+:root[data-theme="lumon"] .mdr .box em{display:block; font-style:normal; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--waiting)}
+:root[data-theme="lumon"] .mdr .box[data-s="blocked"] em{color:var(--blocked)}
+:root[data-theme="lumon"] .mdr .box u{display:block; text-decoration:none; font:12px/1.35 var(--face-data); letter-spacing:.18em; color:var(--accent); margin-top:3px; white-space:pre}
+:root[data-theme="lumon"] .mdr .box[data-s="blocked"] u{animation:lumon-scary .28s steps(2, end) infinite}
+:root[data-theme="lumon"] .mdr .calm{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); text-align:center; color:var(--faint)}
+:root[data-theme="lumon"] .mdr .calm[hidden]{display:none}
+/* chrome */
+:root[data-theme="lumon"] .toast{background:#0a2a3d; border-color:#e9e2cf; color:var(--ink)}
+:root[data-theme="lumon"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 rgba(143,208,240,.12), -26px 0 60px -30px rgba(0,0,0,.95)}
+:root[data-theme="lumon"] .scrim{background:rgba(3,12,18,.75)}
+:root[data-theme="lumon"] .acts button:hover, :root[data-theme="lumon"] button.ghost:hover{background:#134156; box-shadow:0 0 0 1px rgba(143,208,240,.5)}
+:root[data-theme="lumon"] .empty, :root[data-theme="lumon"] .bubble .gist.none{font-style:italic; color:var(--faint)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="lumon"] .bubble[data-state="blocked"]::after, :root[data-theme="lumon"] .mdr .box u,
+  :root[data-theme="lumon"] .bubble[data-state="waiting"] .foot .dot{animation:none}
+}
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -5676,6 +5822,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="offcut">persona 5</option>
           <option value="cardstock">pokémon</option>
           <option value="aperture">portal</option>
+          <option value="lumon">severance</option>
           <option value="hoarstone">skyrim</option>
           <option value="chequer">sonic</option>
           <option value="ochre">team fortress</option>
@@ -5771,6 +5918,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* lumon -- the spiral on the badge, the elevator, a key card */
+  lumon:{
+    claude:'<path d="M8 8.4c0-1.6 1.3-2.6 2.6-2.6 2 0 3.4 1.7 3.4 3.7 0 2.8-2.3 4.9-5.2 4.9C4.9 14.4 2 11.6 2 8.1 2 4 5.2 1.4 8.9 1.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+    antigravity:'<rect x="3" y="1.5" width="10" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 11V5M5.6 7.4L8 5l2.4 2.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    codex:'<rect x="1.5" y="3.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 6.5h13" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>',
+  },
   claude:'<path d="M8 1v14M1 8h14M3.2 3.2l9.6 9.6M12.8 3.2L3.2 12.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>',
   antigravity:'<path d="M8 14.5V3M8 2l5 5M8 2L3 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
   codex:'<path d="M5.5 3.5l-4 4.5 4 4.5M10.5 3.5l4 4.5-4 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
@@ -5909,6 +6062,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* severance */
+  lumon:     {blocked:'scary', waiting:'wellness check', running:'refining', idle:'break room', done:'quota met', unknown:'unsevered',
+              blank:'no file assigned yet', quiet:'no refiners on this floor', offline:'SEVERED'},
   /* admiralty chart */
   console:   {running:'underway', idle:'at anchor', done:'berthed', unknown:'no fix', waiting:'hailing',
               blank:'no log entry yet', quiet:'no vessels underway', offline:'NO SIGNAL'},
@@ -7264,6 +7420,70 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* The severed floor. Always on: the bins -- WO the cpu, FC the memory,
+       DR the pressure, MA the disk, and the quota the four together -- each
+       filling as its figure rises, captioned with what it is. Collapsed: the
+       refinement field, with a box drawn round every session that is
+       frightening (stuck or asking), and the day's quote. */
+    lumon: {
+      BINS: [['wo', 'WO', 'cpu', '--g-cpu'], ['fc', 'FC', 'memory', '--g-mem'], ['dr', 'DR', 'pressure', '--g-pres'], ['ma', 'MA', 'disk', '--g-disk']],
+      QUOTES: ['The work is mysterious and important.', 'Be ever merry.', 'Let not weakness live in your veins.', 'A good person will follow the rules. A great person will follow himself.',
+               'Render not my creation in miniature.', 'Come now, children of my industry, and know the children of my blood.'],
+      LINES: {arrived: 'a new refiner has been assigned', blocked: 'the numbers are scary', waiting: 'wellness check requested',
+              done: 'quota met — a waffle party is in order', idle: 'to the break room', running: 'refining'},
+      hud(){
+        const h = el('i', 'ghud bins');
+        h.innerHTML = this.BINS.map(([k, name, what]) => '<b class="bin ' + k + '"><em>' + name + '</em><i><u></u></i><span>' + what + ' <strong>—</strong></span></b>').join('')
+          + '<b class="bin quota"><em>quota</em><i><u></u></i><span>all four <strong>—</strong></span></b>';
+        return h;
+      },
+      paintHud(h){
+        let sum = 0;
+        this.BINS.forEach(([k, , , v]) => {
+          const p = pct(rootNum(v)); sum += p;
+          const b = h.querySelector('.bin.' + k), u = b.querySelector('u'), s = b.querySelector('strong');
+          if(u.style.height !== p + '%') u.style.height = p + '%';
+          if(s.textContent !== p + '%') s.textContent = p + '%';
+        });
+        const q = Math.round(sum / this.BINS.length), b = h.querySelector('.bin.quota'), u = b.querySelector('u'), s = b.querySelector('strong');
+        if(u.style.height !== q + '%') u.style.height = q + '%';
+        if(s.textContent !== q + '%') s.textContent = q + '%';
+      },
+      make(){
+        const n = el('div', 'band mdr');
+        n.innerHTML = '<div class="head"><span class="dept">macrodata refinement</span><span class="say" aria-live="polite"></span><span class="tally"></span></div>'
+          + '<span class="calm">all numbers calm</span><div class="boxes"></div>'
+          + '<div class="quote">' + pick(this.QUOTES) + '</div>';
+        return n;
+      },
+      // a stable place on the field for a session, from its id
+      spot(id){ let h = 0; for(const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return [8 + (h % 70), 22 + ((h >> 8) % 48)]; },
+      digits(id){ let h = 0, s = ''; for(const c of id) h = (h * 33 + c.charCodeAt(0)) >>> 0; for(let i = 0; i < 12; i++){ h = (h * 1103515245 + 12345) >>> 0; s += (h >>> 16) % 10; s += i === 5 ? '\n' : ' '; } return s.trim(); },
+      paint(n, diff){
+        const tiles = Array.from(board.querySelectorAll('.bubble')).filter(t => t.dataset.state === 'blocked' || t.dataset.state === 'waiting');
+        const row = n.querySelector('.boxes'), seen = new Set();
+        tiles.forEach(t => {
+          const id = t.dataset.id; seen.add(id);
+          let b = row.querySelector('.box[data-id="' + CSS.escape(id) + '"]');
+          if(!b){
+            b = el('i', 'box', '<em></em><u></u>'); b.dataset.id = id;
+            const [x, y] = this.spot(id); b.style.setProperty('--x', x); b.style.setProperty('--y', y);
+            b.lastChild.textContent = this.digits(id); row.appendChild(b);
+          }
+          b.dataset.s = t.dataset.state;
+          const name = t.querySelector('.nm')?.textContent || '';
+          if(b.firstChild.textContent !== name) b.firstChild.textContent = name;
+        });
+        Array.from(row.children).forEach(b => { if(!seen.has(b.dataset.id)) b.remove(); });
+        n.querySelector('.calm').hidden = tiles.length > 0;
+        const tally = rootNum('--n-running') + ' refining · ' + tiles.length + ' scary';
+        if(n.querySelector('.tally').textContent !== tally) n.querySelector('.tally').textContent = tally;
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6000);
+      },
+    },
     /* Green Hill: the ground, and a ring per active session. */
     chequer: {
       make(){ const n = el('div', 'band ghz'); n.appendChild(el('i', 'rings')); return n; },
@@ -7898,6 +8118,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  lumon:     'severance apple tv soundtrack theodore shapiro',
   console:   'deep electronic focus minimal tech ambient',
   cyber:     'dark cyberpunk industrial techno synthwave',
   earth:     'acoustic guitar instrumental nature ambient focus',
