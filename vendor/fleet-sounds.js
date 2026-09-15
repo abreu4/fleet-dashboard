@@ -381,6 +381,19 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* The bridge (Star Trek): the library computer's chirps -- two quick
+     * sines rising -- for the taps, the red alert klaxon (a sawtooth sweep,
+     * twice) for alert, and the computer's acknowledgement, three rising
+     * notes, for done. Clean, no room. */
+    lcars: {
+      drive: { type: 'soft', k: 1.1 }, verb: { time: 0.08, mix: 0.04 },
+      tap:    [S('sine', 1760, { a: 0.001, d: 0.04, g: 0.3 }), at(0.05, S('sine', 2093, { a: 0.001, d: 0.05, g: 0.28 }))],
+      tile:   [S('sine', 1318, { a: 0.001, d: 0.05, g: 0.3 }), at(0.06, S('sine', 1760, { a: 0.001, d: 0.06, g: 0.26 }))],
+      switch: seq([2093, 1760, 1318], 0.05, function (f) { return S('sine', f, { a: 0.001, d: 0.06, g: 0.26 }); }),
+      alert:  [S('sawtooth', 440, { f2: 880, slide: 0.36, lp: 2400, a: 0.004, d: 0.4, g: 0.3 }), at(0.46, S('sawtooth', 440, { f2: 880, slide: 0.36, lp: 2400, a: 0.004, d: 0.4, g: 0.3 })),
+               thump({ f: 100, g: 0.4 })],
+      done:   seq([1046.5, 1318.5, 1568], 0.09, function (f) { return S('sine', f, { a: 0.001, d: 0.16, g: 0.28 }); }).concat([at(0.27, S('sine', 2093, { a: 0.001, d: 0.3, g: 0.16 }))])
+    },
     /* The lot (The Sims): build mode's xylophone for the taps, a Sim
      * mumbling for alert -- two short FM wobbles -- and the aspiration
      * chime, a rising major arpeggio, for done. Bright and bouncy. */

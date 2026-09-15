@@ -5926,6 +5926,164 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 @media (prefers-reduced-motion:reduce){ :root[data-theme="plumbob"] .bubble::after, :root[data-theme="plumbob"] .mood .bob{animation:none} }
 
 /* ============================================================================
+   LCARS  --  Starfleet, 2364
+   The material is the Enterprise's own interface: black, and on it the
+   library computer's bars -- orange, peach, tan, lavender, blue -- with
+   rounded ends and an elbow where a column meets a row, labels in black
+   on the colour, numbers in a condensed heavy face. Nothing glows; the
+   colour is the light.
+
+   Why the bridge fits this board: it is a fleet, and the ship's status
+   display was always a list of systems each with a figure and a
+   condition. The systems here are the host's, the crew is the fleet.
+
+   The tell is the elbow: every lane's rail is an LCARS column with the
+   bend at its top. Always on, the status line along the foot: stardate,
+   the condition -- green, yellow alert while a session waits on you, red
+   alert while one is stuck -- and warp (cpu), shields (memory free), life
+   support (pressure headroom). Collapse the board for the ship's systems.
+   Measured on black: peach 15.3:1, orange 10.2:1, lavender 6.3:1.
+   ========================================================================== */
+:root[data-theme="lcars"]{
+  color-scheme:dark;
+  --void:#000; --panel:#000; --cell:#0b0b0b; --tile:#000; --tile-hi:#141414;
+  --edge:#ff9966; --edge-hot:#ffcc99;
+  --ink:#ffcc99; --dim:#ff9966; --faint:#cc99cc;
+  --accent:#ff9966;
+  --blocked:#cc6666; --running:#9999ff; --idle:#cc99cc; --done:#ffcc99; --unknown:#666;
+  --good:#9999ff; --warn:#ffcc66; --waiting:#ffcc66;
+  --glow:0; --sigil:"\25B3";                            /* a delta */
+  --scan:rgba(0,0,0,0); --halo:rgba(255,153,102,.1);
+  --grain:none;
+  --hud-a:#000; --hud-b:#000; --rail-a:#ff9966; --rail-b:#ff9966;
+  --lc-orange:#ff9966; --lc-peach:#ffcc99; --lc-tan:#ffcc66; --lc-lav:#cc99cc; --lc-blue:#9999ff; --lc-red:#cc6666;
+  --hud-inset:32px;
+}
+:root[data-theme="lcars"]{
+  --face-data:   "Anton", "Helvetica Neue", "Arial Narrow", sans-serif;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: "Anton", "Helvetica Neue", "Arial Narrow", sans-serif;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:1.04; --fs-data:1.08; --fs-prose:1; --tr-chrome:1.1;
+}
+:root[data-theme="lcars"] .brand b, :root[data-theme="lcars"] .rail .vlabel,
+:root[data-theme="lcars"] .hrail .who, :root[data-theme="lcars"] .project > header,
+:root[data-theme="lcars"] .gauge .lab, :root[data-theme="lcars"] .trace .cap,
+:root[data-theme="lcars"] .panel section h3, :root[data-theme="lcars"] .stat .k,
+:root[data-theme="lcars"] .bubble .foot .st, :root[data-theme="lcars"] .chip .lb{text-transform:uppercase; font-family:var(--face-chrome); font-weight:400}
+/* THE FRAME. The HUD is the top bar of the frame: black, and under it the
+   orange rail with the black gaps the library computer draws. */
+:root[data-theme="lcars"] .hud{
+  background:#000; border-bottom:0; padding-bottom:16px;
+  box-shadow:inset 0 -10px 0 var(--lc-orange), inset 0 -13px 0 #000, inset 0 -16px 0 var(--lc-lav);
+}
+:root[data-theme="lcars"] .brand b{color:var(--lc-peach); letter-spacing:.06em; font-size:26px}
+:root[data-theme="lcars"] .brand b::after{color:var(--lc-orange)}
+/* EGG: the wordmark's plate reads the registry. */
+:root[data-theme="lcars"] .brand:hover b::after{content:"NCC-1701-D"; font-family:var(--face-chrome); font-size:13px; letter-spacing:.06em; opacity:1}
+:root[data-theme="lcars"] .gauge, :root[data-theme="lcars"] .readout, :root[data-theme="lcars"] .trace, :root[data-theme="lcars"] .stat{
+  background:#000; border:0; border-radius:18px; box-shadow:inset 0 0 0 2px var(--lc-lav);
+}
+:root[data-theme="lcars"] .gauge .val, :root[data-theme="lcars"] .readout dd b{color:var(--lc-peach); font-family:var(--face-data)}
+:root[data-theme="lcars"] .gauge .lab, :root[data-theme="lcars"] .readout dt{color:var(--lc-orange)}
+:root[data-theme="lcars"] .trace{box-shadow:inset 0 0 0 2px var(--lc-blue)}
+:root[data-theme="lcars"] .chip{background:var(--lc-tan); color:#000; border:0; border-radius:12px; padding:2px 10px}
+:root[data-theme="lcars"] .chip .lb, :root[data-theme="lcars"] .chip .n{color:#000}
+:root[data-theme="lcars"] .chip .dot{display:none}
+:root[data-theme="lcars"] .ctl select, :root[data-theme="lcars"] .ctl > button, :root[data-theme="lcars"] button.ghost{
+  background:var(--lc-orange); color:#000; border:0; border-radius:14px; font-family:var(--face-chrome); text-transform:uppercase;
+}
+:root[data-theme="lcars"] .ctl > button:hover, :root[data-theme="lcars"] button.ghost:hover{background:var(--lc-peach)}
+/* 1. THE TELL -- the elbow. A lane's rail is a column of the frame, bent at
+   the top into the row above, blocks of colour with black gaps between. */
+:root[data-theme="lcars"] .lane{
+  background:#000; border:0; border-radius:34px 6px 6px 6px; overflow:hidden;
+  box-shadow:inset 0 8px 0 var(--lc-orange), inset 0 11px 0 #000;
+  padding-top:11px;
+}
+:root[data-theme="lcars"] .rail{
+  width:40px; border:0; border-radius:0 0 0 6px; padding-top:14px;
+  background:linear-gradient(180deg, var(--lc-orange) 0 118px, #000 118px 121px, var(--lc-lav) 121px 190px, #000 190px 193px, var(--lc-tan) 193px 250px, #000 250px 253px, var(--lc-blue) 253px);
+}
+:root[data-theme="lcars"] .rail .vlabel, :root[data-theme="lcars"] .rail .rcount{color:#000; font-family:var(--face-chrome); font-size:12px}
+:root[data-theme="lcars"] .rail svg{color:#000}
+:root[data-theme="lcars"] .lane.flat{border-radius:6px 6px 6px 6px; padding-top:0; box-shadow:none}
+:root[data-theme="lcars"] .hrail{background:linear-gradient(90deg, var(--lc-lav) 0 32px, #000 32px 35px, #000 35px); color:var(--lc-peach)}
+:root[data-theme="lcars"] .hrail svg{color:#000; margin-left:2px}
+:root[data-theme="lcars"] .hrail .who{color:var(--lc-peach)} :root[data-theme="lcars"] .hrail .note{color:var(--lc-lav)}
+/* The rows: every project is a pill bar with its code at the right end. */
+:root[data-theme="lcars"] .project{border:0; background:#000}
+:root[data-theme="lcars"] .project > header{
+  background:var(--lc-lav); color:#000; border:0; border-radius:14px; margin:0 0 4px; padding:3px 12px; font-size:12px;
+}
+:root[data-theme="lcars"] .project > header:hover{color:#000; background:var(--lc-peach)}
+:root[data-theme="lcars"] .project > header .ct{color:#000; font-family:var(--face-chrome)}
+:root[data-theme="lcars"] .project > header .caret{color:#000}
+/* THE PANELS. A tile is a rounded panel with a cap in its state's colour. */
+:root[data-theme="lcars"] .bubble{border:2px solid var(--lc-peach); border-radius:16px 8px 8px 16px; padding-left:20px; background:#000}
+:root[data-theme="lcars"] .bubble:hover{border-color:#fff; background:#0b0b0b; box-shadow:none}
+:root[data-theme="lcars"] .bubble.sel{border-color:#fff; box-shadow:0 0 0 2px var(--lc-orange)}
+:root[data-theme="lcars"] .bubble::before{width:12px; border-radius:14px 0 0 14px; box-shadow:none; animation:none}
+:root[data-theme="lcars"] .bubble[data-state="blocked"]::before{animation:lcars-alert 1s steps(1, end) infinite}
+:root[data-theme="lcars"] .bubble .nm{color:var(--lc-peach); font-family:var(--face-prose); font-weight:700; letter-spacing:0}
+:root[data-theme="lcars"] .bubble .gist{color:#ddd}
+:root[data-theme="lcars"] .bubble .foot .dot{display:none}
+:root[data-theme="lcars"] .bubble .foot .st{font-size:11px; letter-spacing:.06em}
+/* RED ALERT / YELLOW ALERT: the frame's rails change colour while the
+   board has a session stuck or waiting, and red flashes. */
+:root:has(.bubble[data-state="waiting"])[data-theme="lcars"] .hud{box-shadow:inset 0 -10px 0 var(--lc-tan), inset 0 -13px 0 #000, inset 0 -16px 0 var(--lc-orange)}
+:root:has(.bubble[data-state="blocked"])[data-theme="lcars"] .hud{box-shadow:inset 0 -10px 0 var(--lc-red), inset 0 -13px 0 #000, inset 0 -16px 0 var(--lc-orange); animation:lcars-alert 1s steps(1, end) infinite}
+@keyframes lcars-alert{50%{opacity:.55}}
+/* THE STATUS LINE, always on, along the foot: pills, black on colour. */
+:root[data-theme="lcars"] .ghud.status{
+  left:14px; right:14px; bottom:calc(4px + var(--taken,0px)); height:24px; display:flex; gap:4px; font-style:normal;
+  font:14px/24px var(--face-chrome); text-transform:uppercase; letter-spacing:.04em; color:#000;
+}
+:root[data-theme="lcars"] .ghud.status > span{padding:0 12px; background:var(--lc-orange); white-space:nowrap; display:flex; gap:8px; align-items:baseline}
+:root[data-theme="lcars"] .ghud.status > span:first-child{border-radius:12px 0 0 12px; background:var(--lc-lav); min-width:36px}
+:root[data-theme="lcars"] .ghud.status > span:last-child{border-radius:0 12px 12px 0; flex:1; background:var(--lc-lav)}
+:root[data-theme="lcars"] .ghud.status > span small{font-size:10px; opacity:.75; letter-spacing:.08em}
+:root[data-theme="lcars"] .ghud.status .cond{background:var(--lc-blue)}
+:root[data-theme="lcars"] .ghud.status .cond[data-c="yellow"]{background:var(--lc-tan)}
+:root[data-theme="lcars"] .ghud.status .cond[data-c="red"]{background:var(--lc-red); color:#fff; animation:lcars-alert 1s steps(1, end) infinite}
+:root[data-theme="lcars"] .ghud.status .sys{background:var(--lc-peach)}
+/* THE SHIP (the band). The systems display: an elbow frame, one bar per
+   system filling with its figure, the condition across the top. */
+:root[data-theme="lcars"] .ship{
+  left:18px; right:18px; bottom:calc(36px + var(--taken,0px)); padding:14px 18px 14px 74px; color:var(--lc-peach);
+  background:#000; border-radius:40px 8px 8px 8px; overflow:hidden;
+  box-shadow:inset 0 12px 0 var(--lc-orange), inset 0 15px 0 #000, inset 56px 0 0 var(--lc-orange), inset 59px 0 0 #000;
+  font:13px/1.4 var(--face-chrome); text-transform:uppercase; letter-spacing:.05em;
+}
+:root[data-theme="lcars"] .ship .head{display:flex; justify-content:space-between; align-items:baseline; margin:10px 0 10px; gap:20px}
+:root[data-theme="lcars"] .ship .head b{font-size:20px; padding:0 14px; border-radius:12px; background:var(--lc-blue); color:#000}
+:root[data-theme="lcars"] .ship .head b[data-c="yellow"]{background:var(--lc-tan)}
+:root[data-theme="lcars"] .ship .head b[data-c="red"]{background:var(--lc-red); color:#fff; animation:lcars-alert 1s steps(1, end) infinite}
+:root[data-theme="lcars"] .ship .head .say{color:var(--lc-lav); opacity:0; transition:opacity .3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="lcars"] .ship .head .say.on{opacity:1}
+:root[data-theme="lcars"] .ship .head .sd{color:var(--lc-orange)}
+:root[data-theme="lcars"] .ship .sys{display:grid; grid-template-columns:150px 1fr 60px 150px; align-items:center; gap:4px 12px; margin:3px 0}
+:root[data-theme="lcars"] .ship .sys em{font-style:normal; text-align:right; color:var(--lc-orange)}
+:root[data-theme="lcars"] .ship .sys i{position:relative; height:14px; border-radius:7px; background:#1a1a1a}
+:root[data-theme="lcars"] .ship .sys i b{position:absolute; left:0; top:0; bottom:0; width:0; border-radius:7px; background:var(--lc-peach); transition:width .8s ease}
+:root[data-theme="lcars"] .ship .sys:nth-child(odd) i b{background:var(--lc-lav)}
+:root[data-theme="lcars"] .ship .sys[data-m="low"] i b{background:var(--lc-tan)}
+:root[data-theme="lcars"] .ship .sys[data-m="crit"] i b{background:var(--lc-red)}
+:root[data-theme="lcars"] .ship .sys u{text-decoration:none; text-align:right; color:#fff; font-size:15px}
+:root[data-theme="lcars"] .ship .sys small{color:var(--lc-lav); font-size:10px; letter-spacing:.08em}
+/* chrome */
+:root[data-theme="lcars"] .toast{background:var(--lc-peach); color:#000; border:0; border-radius:14px; font-family:var(--face-chrome); text-transform:uppercase}
+:root[data-theme="lcars"] .panel{background:#000; box-shadow:inset 8px 0 0 var(--lc-orange), inset 11px 0 0 #000}
+:root[data-theme="lcars"] .scrim{background:rgba(0,0,0,.7)}
+:root[data-theme="lcars"] .acts button{background:var(--lc-lav); color:#000; border:0; border-radius:14px; font-family:var(--face-chrome); text-transform:uppercase}
+:root[data-theme="lcars"] .acts button:hover{background:var(--lc-peach)}
+:root[data-theme="lcars"] .empty, :root[data-theme="lcars"] .bubble .gist.none{color:var(--lc-lav)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="lcars"] .bubble[data-state="blocked"]::before, :root:has(.bubble[data-state="blocked"])[data-theme="lcars"] .hud,
+  :root[data-theme="lcars"] .ghud.status .cond[data-c="red"], :root[data-theme="lcars"] .ship .head b[data-c="red"]{animation:none}
+}
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -6261,6 +6419,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="lumon">severance</option>
           <option value="hoarstone">skyrim</option>
           <option value="chequer">sonic</option>
+          <option value="lcars">star trek</option>
           <option value="ochre">team fortress</option>
           <option value="plumbob">the sims</option>
         </optgroup>
@@ -6355,6 +6514,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* lcars -- the delta, a pair of nacelles, an isolinear chip */
+  lcars:{
+    claude:'<path d="M8 1.5L13.5 14.5L8 10.6L2.5 14.5Z" fill="currentColor"/>',
+    antigravity:'<rect x="2" y="3" width="12" height="3.6" rx="1.8" fill="currentColor"/><rect x="2" y="9.4" width="12" height="3.6" rx="1.8" fill="currentColor"/>',
+    codex:'<rect x="2.5" y="2" width="11" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 5v6M8 5v6M10.5 5v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  },
   /* plumbob -- the diamond, a house on its lot, a book */
   plumbob:{
     claude:'<path d="M8 1.2L13.4 6.8L8 14.8L2.6 6.8Z" fill="currentColor"/><path d="M8 1.2L13.4 6.8L8 14.8Z" fill="#000" fill-opacity=".25"/>',
@@ -6517,6 +6682,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* star trek */
+  lcars:     {blocked:'red alert', waiting:'hailing', running:'engaged', idle:'at station', done:'mission complete', unknown:'no reading',
+              blank:'no log entry', quiet:'no crew on deck', offline:'NO SIGNAL'},
   /* the sims */
   plumbob:   {blocked:'bad mood', waiting:'wants attention', running:'working', idle:'napping', done:'aspiration met', unknown:'lost sim',
               blank:'no memories yet', quiet:'no sims on this lot', offline:'MOVED OUT'},
@@ -7884,6 +8052,59 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* The bridge. Always on: the status line -- stardate, the condition
+       (green; yellow alert while a session waits on you; red alert while one
+       is stuck), warp (cpu), shields (memory free), life support (pressure
+       headroom). Collapsed: the ship's systems, one bar each, and the crew. */
+    lcars: {
+      SYS: [['warp', 'warp core', 'cpu', () => rootNum('--g-cpu'), 'up'], ['shields', 'shields', 'memory free', () => 100 - rootNum('--g-mem'), 'down'],
+            ['life', 'life support', 'pressure headroom', () => 100 - rootNum('--g-pres'), 'down'], ['deflector', 'deflector', 'disk free', () => 100 - rootNum('--g-disk'), 'down'],
+            ['crew', 'crew', 'at stations', () => rootNum('--n-total') ? 100 * rootNum('--n-active') / rootNum('--n-total') : 0, 'none']],
+      LINES: {arrived: 'a vessel decloaks', blocked: 'hull breach', waiting: 'incoming hail', done: 'mission complete', idle: 'standing down', running: 'engaged'},
+      stardate(){ const d = new Date(), y = d.getFullYear(), doy = Math.floor((d - new Date(y, 0, 0)) / 864e5); return y + '.' + String(doy).padStart(3, '0'); },
+      condition(){ return rootNum('--n-blocked') > 0 ? 'red' : rootNum('--n-waiting') > 0 ? 'yellow' : 'green'; },
+      hud(){
+        return el('i', 'ghud status', '<span></span><span class="sd">stardate <b>—</b></span><span class="cond">condition <b>green</b></span>'
+          + '<span class="sys">warp <b>—</b><small>cpu</small></span><span class="sys">shields <b>—</b><small>memory free</small></span>'
+          + '<span class="sys">life support <b>—</b><small>pressure headroom</small></span><span></span>');
+      },
+      paintHud(h){
+        const put = (sel, v) => { const b = h.querySelector(sel + ' b'); if(b.textContent !== v) b.textContent = v; };
+        put('.sd', this.stardate());
+        const c = this.condition(), cond = h.querySelector('.cond');
+        if(cond.dataset.c !== c) cond.dataset.c = c;
+        put('.cond', c === 'red' ? 'red alert' : c === 'yellow' ? 'yellow alert' : 'green');
+        const s = h.querySelectorAll('.sys'), v = [pct(rootNum('--g-cpu')), pct(100 - rootNum('--g-mem')), pct(100 - rootNum('--g-pres'))];
+        v.forEach((n, i) => { const b = s[i].querySelector('b'); if(b.textContent !== n + '%') b.textContent = n + '%'; });
+      },
+      make(){
+        const n = el('div', 'band ship');
+        n.innerHTML = '<div class="head"><b>—</b><span class="say" aria-live="polite"></span><span class="sd">stardate —</span></div>'
+          + this.SYS.map(([k, name, what]) => '<div class="sys ' + k + '"><em>' + name + '</em><i><b></b></i><u>—</u><small>' + what + '</small></div>').join('');
+        return n;
+      },
+      paint(n, diff){
+        const c = this.condition(), b = n.querySelector('.head b');
+        if(b.dataset.c !== c) b.dataset.c = c;
+        const word = c === 'red' ? 'red alert' : c === 'yellow' ? 'yellow alert' : 'condition green';
+        if(b.textContent !== word) b.textContent = word;
+        const sd = n.querySelector('.head .sd'), sdt = 'stardate ' + this.stardate();
+        if(sd.textContent !== sdt) sd.textContent = sdt;
+        this.SYS.forEach(([k, , , read, bad]) => {
+          const v = pct(read()), row = n.querySelector('.sys.' + k), f = row.querySelector('i b'), u = row.querySelector('u');
+          // 'up' means high is bad (the core running hot); 'down' means low is bad
+          const m = bad === 'up' ? (v > 90 ? 'crit' : v > 75 ? 'low' : 'ok') : bad === 'down' ? (v < 15 ? 'crit' : v < 30 ? 'low' : 'ok') : 'ok';
+          if(f.style.width !== v + '%') f.style.width = v + '%';
+          if(row.dataset.m !== m) row.dataset.m = m;
+          if(u.textContent !== v + '%') u.textContent = v + '%';
+        });
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const who = k !== 'arrived' && diff.changed[0] ? (board.querySelector('.bubble[data-id="' + CSS.escape(diff.changed[0].id) + '"] .nm')?.textContent || '') : '';
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k] + (who ? ' — ' + who : ''); say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6000);
+      },
+    },
     /* The lot. Always on: the needs -- Energy the cpu idle, Hunger the
        memory free, Comfort the pressure headroom, Bladder the disk free,
        Social the share of sessions at work, Fun the share finished -- each
@@ -8790,6 +9011,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  lcars:     'star trek next generation bridge ambient engine hum',
   plumbob:   'the sims 1 build mode piano soundtrack',
   e1m1:      'doom 1993 e1m1 at dooms gate soundtrack',
   nerv:      'evangelion soundtrack shiro sagisu decisive battle',
