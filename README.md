@@ -149,7 +149,7 @@ count of how often each theme has been picked from the menu.
 | **Skyrim** | black glass, hairlines and diamonds, an aurora; magicka/health/stamina bars that are the memory left, the pressure headroom and the CPU idle, each captioned with its reading |
 | **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |
-| **Team Fortress** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles, a kill feed |
+| **Team Fortress** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles, a kill feed; a quiet lane's RED/BLU bar is a control point — the ceasefire stripe sits at the cpu (then memory, then pressure), prints the figure, and the legend says which side is which |
 | **Casino Royale** | racing green and marble, yellow inlay, a roulette wheel turning in the corner |
 | **Fallout** | a Pip-Boy tube: P1 phosphor behind curved glass, scanlines, amber for what needs you |
 | **Matrix** | black terminal with the rain behind the glass, P31 mint, a blinking cursor for a sigil |

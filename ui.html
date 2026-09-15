@@ -1815,13 +1815,38 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   background-size:7px 7px, auto;
   border-right:2px solid var(--charcoal);
 }
+/* The ceasefire bars are control points: where RED meets BLU is a reading.
+   The first quiet lane is the cpu (RED holds the busy share, BLU the idle),
+   the next the memory, a third the memory pressure. The stripe sits at the
+   figure and prints it; the far end says which side is which. --split is
+   registered so the stripe slides between readings instead of jumping. */
+@property --split { syntax:"<number>"; inherits:false; initial-value:50; }
 :root[data-theme="ochre"] .hrail{
-  color:#fff1d2;
+  color:#fff1d2; position:relative;
+  --n:var(--g-cpu, 50); --split:var(--g-cpu, 50); --what:"cpu"; --red:"busy"; --blu:"idle";
+  --at:clamp(330px, var(--split) * 1%, 100% - 190px);   /* clear of the name on the left, the control point on the right */
+  transition:--split 1s ease;
   background-image:
     radial-gradient(circle at 2px 2px, rgba(255,241,210,.13) 1px, transparent 1.2px),
-    linear-gradient(90deg, var(--team-red) 0 47%, var(--cream) 47% 53%, var(--team-blu) 53%);
+    linear-gradient(90deg, var(--team-red) 0 calc(var(--at) - 34px), var(--cream) calc(var(--at) - 34px) calc(var(--at) + 34px), var(--team-blu) calc(var(--at) + 34px));
   background-size:7px 7px, auto;
 }
+:root[data-theme="ochre"] .lane.flat ~ .lane.flat .hrail{--n:var(--g-mem, 50); --split:var(--g-mem, 50); --what:"mem"; --red:"used"; --blu:"free"}
+:root[data-theme="ochre"] .lane.flat ~ .lane.flat ~ .lane.flat .hrail{--n:var(--g-pres, 50); --split:var(--g-pres, 50); --what:"pressure"; --red:"pressed"; --blu:"headroom"}
+/* the figure, on the stripe */
+:root[data-theme="ochre"] .hrail::after{
+  counter-reset:v var(--n); content:var(--what) " " counter(v) "%";
+  position:absolute; top:50%; left:var(--at); transform:translate(-50%, -50%);
+  font:800 10px/1 Rockwell, "Superclarendon", Georgia, serif; letter-spacing:.06em; text-transform:uppercase;
+  color:#2a231b; white-space:nowrap; pointer-events:none;
+}
+/* the legend, after the lane's name, so the stripe has the whole bar */
+:root[data-theme="ochre"] .hrail::before{
+  content:"RED " var(--red) " \00b7 BLU " var(--blu); order:9; margin-left:4px;
+  font:700 9px/1 Rockwell, "Superclarendon", Georgia, serif; letter-spacing:.1em; text-transform:uppercase;
+  color:#fff1d2; text-shadow:1px 1px 0 rgba(41,39,34,.55); opacity:.9; white-space:nowrap; pointer-events:none;
+}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="ochre"] .hrail{transition:none} }
 :root[data-theme="ochre"] .rail .vlabel,
 :root[data-theme="ochre"] .rail .rcount,
 :root[data-theme="ochre"] .hrail .who,
