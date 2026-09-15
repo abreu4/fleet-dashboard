@@ -6084,6 +6084,143 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 
 /* ============================================================================
+   STARDEW  --  Stardew Valley, the farm
+   The material is the game's own menus: dark wood frames with a bright
+   inner edge, cream parchment inside, brown pixel lettering, gold for the
+   numbers, and the little clock box in the corner with the day, the
+   weather, the time and the gold. A warm world in daylight.
+
+   Why the farm fits this board: every crop is a thing you planted and
+   left to grow, and you walk the rows to see which need water, which
+   have wilted and which are ready. That is a glance at the fleet.
+
+   The tell is the wood: every lane is a framed panel, every project a
+   hanging sign, every tile a parchment card. Always on, the clock box --
+   the real day and season, the weather off the board's mood (stormy while
+   anything is stuck, rain while one waits on you), the time, the gold (the
+   turns taken today) -- and the energy bar beside it, the cpu idle.
+   Collapse the board for the field: one crop per session, grown by its
+   state. Measured on --tile #fdf1d4: --faint 4.6:1, --dim 7.2:1, --ink 10.8:1.
+   ========================================================================== */
+:root[data-theme="stardew"]{
+  color-scheme:light;
+  --void:#8a5a2c; --panel:#f3dcae; --cell:#ecd29b; --tile:#fdf1d4; --tile-hi:#fff8e6;
+  --edge:#b8834a; --edge-hot:#6e4318;
+  --ink:#4a2e12; --dim:#6e4a26; --faint:#8a6540;
+  --accent:#e0862a;
+  --blocked:#c93c2b; --running:#4fa83a; --idle:#8f7aa8; --done:#d9961c; --unknown:#a08b70;
+  --good:#4fa83a; --warn:#d97a1b; --waiting:#d97a1b;
+  --glow:0; --sigil:"\2618";
+  --scan:rgba(0,0,0,0); --halo:rgba(224,134,42,.1);
+  /* planks: a seam every 46px, a lighter grain line between */
+  --grain:repeating-linear-gradient(180deg, rgba(0,0,0,.14) 0 2px, transparent 2px 46px), repeating-linear-gradient(180deg, transparent 0 11px, rgba(255,255,255,.06) 11px 12px, transparent 12px 23px);
+  --hud-a:#a8703f; --hud-b:#8a5a2c; --rail-a:#a8703f; --rail-b:#8a5a2c;
+  --shade:rgba(74,46,18,.22); --shade-deep:rgba(74,46,18,.35);
+  --hud-inset:74px;
+}
+:root[data-theme="stardew"]{
+  --face-data:   "Silkscreen", Krungthep, ui-monospace, monospace;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: "Silkscreen", Krungthep, ui-monospace, monospace;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:.78; --fs-data:.82; --fs-prose:1; --tr-chrome:1;
+}
+:root[data-theme="stardew"] .brand b, :root[data-theme="stardew"] .rail .vlabel,
+:root[data-theme="stardew"] .hrail .who, :root[data-theme="stardew"] .project > header,
+:root[data-theme="stardew"] .gauge .lab, :root[data-theme="stardew"] .trace .cap,
+:root[data-theme="stardew"] .panel section h3, :root[data-theme="stardew"] .stat .k{text-transform:none}
+:root[data-theme="stardew"] .bubble .nm{font-family:-apple-system, system-ui, sans-serif; font-weight:700; color:#4a2e12}
+/* THE FRAME. Wood with a bright inner edge, the way every menu is built. */
+:root[data-theme="stardew"] .hud{
+  background-image:var(--grain), linear-gradient(180deg, var(--hud-a), var(--hud-b)); border-bottom:4px solid #4a2e12;
+  box-shadow:inset 0 2px 0 #d9a86a, inset 0 -2px 0 #6e4318;
+}
+:root[data-theme="stardew"] .gauge, :root[data-theme="stardew"] .readout, :root[data-theme="stardew"] .trace, :root[data-theme="stardew"] .stat, :root[data-theme="stardew"] .chip{
+  border-radius:4px; background:#fdf1d4; border:2px solid #4a2e12; box-shadow:inset 0 0 0 2px #e6c07a, 2px 2px 0 rgba(0,0,0,.25);
+}
+:root[data-theme="stardew"] .gauge .val, :root[data-theme="stardew"] .readout dd b, :root[data-theme="stardew"] .chip .n{color:#c9781a; text-shadow:1px 1px 0 rgba(0,0,0,.15)}
+:root[data-theme="stardew"] .brand b{color:#fff3d6; letter-spacing:.04em; text-shadow:2px 2px 0 #4a2e12}
+:root[data-theme="stardew"] #clock, :root[data-theme="stardew"] .brand .sub{color:#f3dcae; text-shadow:1px 1px 0 #4a2e12}
+:root[data-theme="stardew"] .brand b::after{color:#ffd45c; text-shadow:1px 1px 0 #4a2e12}
+/* EGG: the wordmark's plate names the farm. */
+:root[data-theme="stardew"] .brand:hover b::after{content:"Fleet Farm"; font-family:var(--face-chrome); font-size:9px; opacity:1}
+:root[data-theme="stardew"] .ctl select, :root[data-theme="stardew"] .ctl > button, :root[data-theme="stardew"] button.ghost{
+  background:#fdf1d4; color:#4a2e12; border:2px solid #4a2e12; border-radius:4px; box-shadow:inset 0 0 0 1px #e6c07a;
+}
+:root[data-theme="stardew"] .rail{border-right:2px solid #4a2e12; box-shadow:inset -2px 0 0 #d9a86a}
+:root[data-theme="stardew"] .rail .vlabel, :root[data-theme="stardew"] .rail .rcount, :root[data-theme="stardew"] .hrail .who{color:#fff3d6; text-shadow:1px 1px 0 #4a2e12}
+:root[data-theme="stardew"] .rail svg, :root[data-theme="stardew"] .hrail svg{color:#fff3d6; filter:drop-shadow(1px 1px 0 #4a2e12)}
+:root[data-theme="stardew"] .hrail .note{color:#f3dcae}
+:root[data-theme="stardew"] .lane{
+  border:3px solid #4a2e12; border-radius:6px; background:#f3dcae; box-shadow:inset 0 0 0 2px #e6c07a, 3px 3px 0 rgba(0,0,0,.25);
+}
+:root[data-theme="stardew"] .lane.flat{background-image:var(--grain), linear-gradient(180deg, var(--rail-a), var(--rail-b))}
+/* the signs */
+:root[data-theme="stardew"] .project{border:2px solid #4a2e12; border-radius:4px; background:#ecd29b; box-shadow:inset 0 0 0 1px #fff3d6}
+:root[data-theme="stardew"] .project > header{
+  color:#fff3d6; background-image:var(--grain), linear-gradient(180deg, #b47a44, #8a5a2c); border-bottom:2px solid #4a2e12; text-shadow:1px 1px 0 #4a2e12;
+  font-family:var(--face-chrome); letter-spacing:.02em;
+}
+:root[data-theme="stardew"] .project > header:hover{color:#ffd45c}
+:root[data-theme="stardew"] .project > header .ct{color:#ffd45c}
+/* THE CARDS. Parchment, a brown pixel edge, the rib a coloured stripe. */
+:root[data-theme="stardew"] .bubble{border:2px solid #4a2e12; border-radius:4px; box-shadow:inset 0 0 0 1px #fff8e6, 2px 2px 0 rgba(0,0,0,.2)}
+:root[data-theme="stardew"] .bubble:hover{box-shadow:inset 0 0 0 1px #fff8e6, 0 0 0 2px #e0862a, 2px 2px 0 rgba(0,0,0,.2)}
+:root[data-theme="stardew"] .bubble.sel{box-shadow:inset 0 0 0 1px #fff8e6, 0 0 0 2px #e0862a}
+:root[data-theme="stardew"] .bubble::before{width:6px}
+:root[data-theme="stardew"] .bubble[data-state="blocked"]{background-color:#f7d9c8}
+:root[data-theme="stardew"] .bubble[data-state="waiting"]{background-color:#fbe6c2}
+:root[data-theme="stardew"] .bubble .foot .st{font-family:var(--face-chrome); font-size:9px; text-transform:none}
+:root[data-theme="stardew"] .bubble .foot .dot{border-radius:1px; width:7px; height:7px; box-shadow:1px 1px 0 rgba(0,0,0,.25)}
+/* THE CLOCK BOX, always on, bottom right, with the energy bar beside it. */
+:root[data-theme="stardew"] .ghud.day{
+  right:16px; bottom:calc(8px + var(--taken,0px)); display:flex; align-items:stretch; gap:8px; font-style:normal;
+}
+:root[data-theme="stardew"] .ghud.day .box{
+  display:grid; grid-template-columns:auto auto; grid-template-rows:auto auto auto; gap:2px 14px; padding:6px 10px; min-width:150px;
+  background:#fdf1d4; border:3px solid #4a2e12; border-radius:5px; box-shadow:inset 0 0 0 2px #e6c07a, 3px 3px 0 rgba(0,0,0,.25);
+  font:9px/1.3 var(--face-chrome); color:#4a2e12;
+}
+:root[data-theme="stardew"] .ghud.day .box .d{font-size:11px; grid-column:1} :root[data-theme="stardew"] .ghud.day .box .w{grid-column:2; text-align:right; font-size:14px; line-height:1}
+:root[data-theme="stardew"] .ghud.day .box .t{font-size:12px; grid-column:1 / 3; text-align:center; border-top:2px solid #e6c07a; padding-top:3px}
+:root[data-theme="stardew"] .ghud.day .box .g{grid-column:1 / 3; text-align:right; color:#c9781a}
+:root[data-theme="stardew"] .ghud.day .box .g u{text-decoration:none; color:#8a6540; margin-right:6px}
+:root[data-theme="stardew"] .ghud.day .bar{
+  position:relative; width:22px; background:#fdf1d4; border:3px solid #4a2e12; border-radius:5px; box-shadow:inset 0 0 0 2px #e6c07a, 3px 3px 0 rgba(0,0,0,.25);
+}
+:root[data-theme="stardew"] .ghud.day .bar b{position:absolute; left:3px; right:3px; bottom:3px; height:0; border-radius:2px; background:var(--k, #4fa83a); transition:height .8s ease, background .8s}
+:root[data-theme="stardew"] .ghud.day .bar[data-m="ok"] b{--k:linear-gradient(180deg, #8fe25a, #4fa83a)}
+:root[data-theme="stardew"] .ghud.day .bar[data-m="meh"] b{--k:linear-gradient(180deg, #ffd45c, #e0a52a)}
+:root[data-theme="stardew"] .ghud.day .bar[data-m="bad"] b{--k:linear-gradient(180deg, #ff7a5c, #c93c2b)}
+:root[data-theme="stardew"] .ghud.day .bar em{position:absolute; left:50%; top:-2px; transform:translate(-50%, -100%); font:9px/1 var(--face-chrome); font-style:normal; color:#fff3d6; text-shadow:1px 1px 0 #4a2e12; white-space:nowrap}
+:root[data-theme="stardew"] .ghud.day .bar u{position:absolute; right:calc(100% + 6px); bottom:2px; font:8px/1 var(--face-chrome); color:#fff3d6; text-shadow:1px 1px 0 #4a2e12; text-decoration:none; white-space:nowrap; writing-mode:vertical-rl; transform:rotate(180deg)}
+/* THE FIELD (the band). Soil, and a crop per session. */
+:root[data-theme="stardew"] .field{
+  left:18px; right:18px; bottom:calc(88px + var(--taken,0px)); height:150px; overflow:hidden; border:3px solid #4a2e12; border-radius:6px;
+  background:linear-gradient(180deg, #8fd0f0 0 52%, #6fbf4a 52% 60%, #7a4b22 60%, #6a3e1c); box-shadow:inset 0 0 0 2px #e6c07a, 3px 3px 0 rgba(0,0,0,.25);
+}
+:root[data-theme="stardew"] .field .rows{position:absolute; left:16px; right:120px; bottom:8px; display:flex; gap:10px; align-items:flex-end; flex-wrap:nowrap; overflow:hidden}
+:root[data-theme="stardew"] .field .crop{position:relative; flex:0 0 74px; height:112px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end}
+:root[data-theme="stardew"] .field .crop svg{width:48px; height:60px; image-rendering:pixelated; shape-rendering:crispEdges}
+:root[data-theme="stardew"] .field .crop em{display:block; margin-top:3px; max-width:74px; font:7px/1.2 var(--face-chrome); font-style:normal; color:#fff3d6; text-shadow:1px 1px 0 #4a2e12; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+:root[data-theme="stardew"] .field .crop u{position:absolute; top:6px; left:50%; transform:translateX(-50%); font:9px/1 var(--face-chrome); text-decoration:none; color:#4a2e12; background:#fff3d6; border:2px solid #4a2e12; padding:2px 4px; border-radius:3px; opacity:0}
+:root[data-theme="stardew"] .field .crop[data-s="waiting"] u{opacity:1}
+:root[data-theme="stardew"] .field .crop[data-s="done"] svg{filter:drop-shadow(0 0 6px rgba(255,212,92,.9))}
+:root[data-theme="stardew"] .field .sky{position:absolute; left:14px; top:8px; font:9px/1.3 var(--face-chrome); color:#4a2e12}
+:root[data-theme="stardew"] .field .say{position:absolute; right:14px; top:8px; font:9px/1.3 var(--face-chrome); color:#4a2e12; opacity:0; transition:opacity .3s}
+:root[data-theme="stardew"] .field .say.on{opacity:1}
+:root[data-theme="stardew"] .field .scarecrow{position:absolute; right:30px; bottom:10px; width:48px; height:96px}
+:root[data-theme="stardew"] .field .none{position:absolute; left:0; right:0; bottom:22px; text-align:center; font:9px/1 var(--face-chrome); color:#fff3d6; text-shadow:1px 1px 0 #4a2e12}
+:root[data-theme="stardew"] .field .none[hidden]{display:none}
+/* chrome */
+:root[data-theme="stardew"] .toast{background:#fdf1d4; color:#4a2e12; border:2px solid #4a2e12; border-radius:4px; box-shadow:inset 0 0 0 2px #e6c07a, 3px 3px 0 rgba(0,0,0,.25)}
+:root[data-theme="stardew"] .panel{background:#f3dcae; box-shadow:inset 3px 0 0 #4a2e12, inset 5px 0 0 #e6c07a}
+:root[data-theme="stardew"] .scrim{background:rgba(74,46,18,.45)}
+:root[data-theme="stardew"] .acts button{background:#fdf1d4; color:#4a2e12; border:2px solid #4a2e12; border-radius:4px}
+:root[data-theme="stardew"] .acts button:hover, :root[data-theme="stardew"] button.ghost:hover{background:#fff8e6; box-shadow:0 0 0 2px #e0862a}
+:root[data-theme="stardew"] .empty, :root[data-theme="stardew"] .bubble .gist.none{font-style:italic; color:var(--faint)}
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -6420,6 +6557,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="hoarstone">skyrim</option>
           <option value="chequer">sonic</option>
           <option value="lcars">star trek</option>
+          <option value="stardew">stardew valley</option>
           <option value="ochre">team fortress</option>
           <option value="plumbob">the sims</option>
         </optgroup>
@@ -6514,6 +6652,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* stardew -- a parsnip, a watering can, a hoe, on the pixel grid */
+  stardew:{
+    claude:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="7" y="1" width="2" height="4"/><rect x="4" y="2" width="3" height="2"/><rect x="9" y="2" width="3" height="2"/><rect x="5" y="5" width="6" height="4"/><rect x="6" y="9" width="4" height="3"/><rect x="7" y="12" width="2" height="3"/></g>',
+    antigravity:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="4" y="6" width="8" height="7"/><rect x="6" y="3" width="4" height="3"/><rect x="12" y="7" width="2" height="2"/><rect x="14" y="5" width="1" height="2"/><rect x="2" y="7" width="2" height="4"/></g>',
+    codex:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="7" y="1" width="2" height="10"/><rect x="3" y="11" width="10" height="3"/><rect x="2" y="13" width="1" height="2"/></g>',
+  },
   /* lcars -- the delta, a pair of nacelles, an isolinear chip */
   lcars:{
     claude:'<path d="M8 1.5L13.5 14.5L8 10.6L2.5 14.5Z" fill="currentColor"/>',
@@ -6682,6 +6826,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* stardew valley */
+  stardew:   {blocked:'wilted', waiting:'at the door', running:'watering', idle:'asleep', done:'harvested', unknown:'unplanted',
+              blank:'nothing planted yet', quiet:'no crops on this farm', offline:'WINTER'},
   /* star trek */
   lcars:     {blocked:'red alert', waiting:'hailing', running:'engaged', idle:'at station', done:'mission complete', unknown:'no reading',
               blank:'no log entry', quiet:'no crew on deck', offline:'NO SIGNAL'},
@@ -8052,6 +8199,79 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* The farm. Always on: the clock box -- the real day and season, the
+       weather off the board's mood, the time, the gold (the turns taken by
+       every session on the board) -- and the energy bar, the cpu idle.
+       Collapsed: the field, one crop per session grown by its state and,
+       for a session at work, by how far it has run. */
+    stardew: {
+      SEASON: ['Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Fall', 'Fall', 'Fall', 'Winter'],
+      DAY: ['Sun.', 'Mon.', 'Tue.', 'Wed.', 'Thu.', 'Fri.', 'Sat.'],
+      LINES: {arrived: 'a new crop is planted', blocked: 'a crop has wilted', waiting: 'someone is at the door', done: 'harvested!', idle: 'off to bed', running: 'watered'},
+      // pixel crops on a 12 x 15 grid: soil mound, sprout, growing, tall, ripe, wilted
+      CROP: {
+        seed:   '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="4" y="11" width="4" height="1" fill="#7a4b22"/>',
+        sprout: '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="5" y="8" width="2" height="4" fill="#4fa83a"/><rect x="3" y="8" width="2" height="2" fill="#6fd44a"/><rect x="7" y="7" width="2" height="2" fill="#6fd44a"/>',
+        mid:    '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="5" y="4" width="2" height="8" fill="#3f8f2e"/><rect x="2" y="6" width="3" height="2" fill="#6fd44a"/><rect x="7" y="5" width="3" height="2" fill="#6fd44a"/><rect x="3" y="9" width="2" height="2" fill="#4fa83a"/><rect x="7" y="8" width="2" height="2" fill="#4fa83a"/>',
+        tall:   '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="5" y="1" width="2" height="11" fill="#3f8f2e"/><rect x="1" y="3" width="4" height="2" fill="#6fd44a"/><rect x="7" y="2" width="4" height="2" fill="#6fd44a"/><rect x="2" y="7" width="3" height="2" fill="#4fa83a"/><rect x="7" y="6" width="3" height="2" fill="#4fa83a"/><rect x="3" y="10" width="2" height="2" fill="#4fa83a"/><rect x="7" y="9" width="2" height="2" fill="#4fa83a"/>',
+        ripe:   '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="5" y="1" width="2" height="11" fill="#3f8f2e"/><rect x="1" y="3" width="4" height="2" fill="#6fd44a"/><rect x="7" y="2" width="4" height="2" fill="#6fd44a"/><rect x="2" y="6" width="4" height="4" fill="#e0862a"/><rect x="6" y="7" width="4" height="4" fill="#e0862a"/><rect x="3" y="7" width="1" height="1" fill="#ffd45c"/><rect x="7" y="8" width="1" height="1" fill="#ffd45c"/>',
+        wilted: '<rect x="2" y="12" width="8" height="3" fill="#5a341a"/><rect x="5" y="6" width="2" height="6" fill="#8a6540"/><rect x="3" y="9" width="2" height="2" fill="#a08b70"/><rect x="7" y="8" width="3" height="2" fill="#a08b70"/><rect x="2" y="5" width="3" height="2" fill="#a08b70"/><rect x="6" y="4" width="2" height="2" fill="#8a6540"/>',
+      },
+      SCARECROW: '<svg viewBox="0 0 12 24" shape-rendering="crispEdges"><rect x="5" y="8" width="2" height="16" fill="#5a341a"/><rect x="1" y="11" width="10" height="2" fill="#5a341a"/><rect x="3" y="3" width="6" height="6" fill="#e6c07a"/><rect x="2" y="2" width="8" height="2" fill="#8a5a2c"/><rect x="4" y="0" width="4" height="2" fill="#8a5a2c"/><rect x="4" y="5" width="1" height="1" fill="#4a2e12"/><rect x="7" y="5" width="1" height="1" fill="#4a2e12"/><rect x="3" y="9" width="6" height="6" fill="#c93c2b"/><rect x="2" y="15" width="8" height="3" fill="#3a6fb0"/></svg>',
+      weather(){ return rootNum('--n-blocked') > 0 ? ['⚡', 'stormy'] : rootNum('--n-waiting') > 0 ? ['🌧', 'rain'] : ['☀️', 'sunny']; },
+      hud(){
+        return el('i', 'ghud day', '<span class="box"><span class="d">—</span><span class="w">—</span><span class="t">—</span><span class="g"><u>turns</u><b>—</b>g</span></span>'
+          + '<span class="bar" title="energy: the cpu idle"><em>E</em><b></b><u>cpu idle <span>—</span></u></span>');
+      },
+      paintHud(h){
+        const d = latest, now = new Date();
+        const put = (sel, v) => { const e = h.querySelector(sel); if(e.textContent !== v) e.textContent = v; };
+        put('.box .d', this.DAY[now.getDay()] + ' ' + now.getDate() + ' · ' + this.SEASON[now.getMonth()]);
+        put('.box .w', this.weather()[0]);
+        let hh = now.getHours(), mm = String(now.getMinutes()).padStart(2, '0'), am = hh < 12 ? 'am' : 'pm'; hh = hh % 12 || 12;
+        put('.box .t', hh + ':' + mm + ' ' + am);
+        let turns = 0; if(d) (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(s => { turns += s.turns | 0; })));
+        put('.box .g b', turns.toLocaleString());
+        const v = pct(100 - rootNum('--g-cpu')), bar = h.querySelector('.bar'), b = bar.querySelector('b'), m = v > 50 ? 'ok' : v > 25 ? 'meh' : 'bad';
+        if(b.style.height !== v + '%') b.style.height = v + '%';
+        if(bar.dataset.m !== m) bar.dataset.m = m;
+        put('.bar u span', v + '%');
+      },
+      stage(s){
+        if(s.state === 'blocked') return 'wilted';
+        if(s.state === 'done') return 'ripe';
+        if(s.state === 'idle' || s.state === 'unknown') return 'seed';
+        const t = s.turns | 0; return t < 20 ? 'sprout' : t < 100 ? 'mid' : 'tall';
+      },
+      make(){
+        const n = el('div', 'band field');
+        n.innerHTML = '<span class="sky"></span><span class="say" aria-live="polite"></span><div class="rows"></div><span class="none" hidden>nothing planted yet</span><i class="scarecrow">' + this.SCARECROW + '</i>';
+        return n;
+      },
+      paint(n, diff){
+        const d = latest; if(!d) return;
+        const rows = n.querySelector('.rows'), seen = new Set(), all = [];
+        (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(s => all.push(s))));
+        all.forEach(s => {
+          seen.add(s.id);
+          let c = rows.querySelector('.crop[data-id="' + CSS.escape(s.id) + '"]');
+          if(!c){ c = el('i', 'crop', '<u>!</u><svg viewBox="0 0 12 15"></svg><em></em>'); c.dataset.id = s.id; rows.appendChild(c); }
+          const st = this.stage(s);
+          if(c.dataset.st !== st){ c.dataset.st = st; c.querySelector('svg').innerHTML = this.CROP[st]; }
+          if(c.dataset.s !== s.state) c.dataset.s = s.state;
+          const nm = s.name || s.handle || ''; if(c.lastChild.textContent !== nm) c.lastChild.textContent = nm;
+          c.title = nm + ' — ' + voice(s.state) + (s.turns ? ' · ' + s.turns + ' turns' : '');
+        });
+        Array.from(rows.children).forEach(c => { if(!seen.has(c.dataset.id)) c.remove(); });
+        n.querySelector('.none').hidden = all.length > 0;
+        const [icon, w] = this.weather(), sky = 'Fleet Farm · ' + w + ' ' + icon + ' · ' + all.length + (all.length === 1 ? ' crop' : ' crops');
+        if(n.querySelector('.sky').textContent !== sky) n.querySelector('.sky').textContent = sky;
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 5000);
+      },
+    },
     /* The bridge. Always on: the status line -- stardate, the condition
        (green; yellow alert while a session waits on you; red alert while one
        is stuck), warp (cpu), shields (memory free), life support (pressure
@@ -9011,6 +9231,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  stardew:   'stardew valley soundtrack spring the valley comes alive',
   lcars:     'star trek next generation bridge ambient engine hum',
   plumbob:   'the sims 1 build mode piano soundtrack',
   e1m1:      'doom 1993 e1m1 at dooms gate soundtrack',

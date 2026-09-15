@@ -381,6 +381,18 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* The farm (Stardew Valley): a wooden marimba for the taps, a villager's
+     * "hey!" -- two plucked notes -- for alert, and the harvest chime, a
+     * bell over a rising pluck, for done. Warm, a little room. */
+    stardew: {
+      drive: { type: 'soft', k: 1.3 }, verb: { time: 0.3, mix: 0.2 },
+      tap:    [click({ hp: 2600, d: 0.008, g: 0.35 }), PK(880, { a: 0.001, d: 0.12, g: 0.34 }), thump({ f: 140, g: 0.45 })],
+      tile:   [click({ hp: 2200, d: 0.008, g: 0.35 }), PK(659, { a: 0.001, d: 0.14, g: 0.36 }), at(0.07, PK(880, { a: 0.001, d: 0.1, g: 0.18 })), thump({ f: 130, g: 0.5 })],
+      switch: seq([659, 784, 988], 0.07, function (f) { return PK(f, { a: 0.001, d: 0.12, g: 0.3 }); }).concat([thump({ g: 0.4 })]),
+      alert:  [PK(988, { a: 0.001, d: 0.22, g: 0.36 }), at(0.16, PK(784, { a: 0.001, d: 0.3, g: 0.34 })), at(0.16, S('sine', 392, { a: 0.004, d: 0.3, g: 0.1 })), thump({ f: 110, g: 0.45 })],
+      done:   [S('sine', 1568, { a: 0.001, d: 0.5, g: 0.22 }), S('sine', 3136, { a: 0.001, d: 0.25, g: 0.06 })]
+              .concat(seq([523.3, 659.3, 784, 1046.5], 0.07, function (f) { return PK(f, { a: 0.001, d: 0.24, g: 0.26 }); }))
+    },
     /* The bridge (Star Trek): the library computer's chirps -- two quick
      * sines rising -- for the taps, the red alert klaxon (a sawtooth sweep,
      * twice) for alert, and the computer's acknowledgement, three rising
