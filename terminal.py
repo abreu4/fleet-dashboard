@@ -211,6 +211,22 @@ class Pty:
                 "alive": self.exited is None}
 
 
+
+def tab_title(path, agent):
+    """The tab is named after the folder the way a prompt would show it: the
+    home directory is "~", a folder in it is "~/name", and only deeper ones
+    go by their last component. Naming home by its basename put the login
+    name on every tab opened from the + button."""
+    real = os.path.realpath(path).rstrip(os.sep) or os.sep
+    home = os.path.realpath(os.path.expanduser("~")).rstrip(os.sep)
+    if real == home:
+        name = "~"
+    elif real.startswith(home + os.sep) and real.count(os.sep) == home.count(os.sep) + 1:
+        name = "~/" + os.path.basename(real)
+    else:
+        name = os.path.basename(real) or "/"
+    return name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
+
 class Terminals:
     """Every open pty, and the fan-out to the pages watching them."""
 
@@ -255,8 +271,7 @@ class Terminals:
                 return None, "already running %d terminals" % MAX_TERMINALS
             self._seq += 1
             tid = "t%d" % self._seq
-        name = os.path.basename(real.rstrip(os.sep)) or "~"
-        title = name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
+        title = tab_title(real, agent)
         try:
             term = Pty(tid, None, title, real, max(4, int(rows)), max(20, int(cols)), script)
         except OSError as exc:
