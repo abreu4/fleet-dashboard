@@ -3112,6 +3112,46 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="vellum"] .bubble .nm,
 :root[data-theme="vellum"] .panel h2{ font-weight: 600; }
 :root[data-theme="vellum"] .bubble .gist.none{ font-style: italic; }
+/* Rubrication: what the scribe wrote in the margin -- the session's own
+   note -- is in red ink, the way a manuscript marks the hand that is not
+   the text. Cinnabar on the tile's umber measures 5.1:1. */
+:root[data-theme="vellum"] .bubble .gist.said, :root[data-theme="vellum"] .peek .gist.said{color:#ea7a58; font-style:italic}
+:root[data-theme="vellum"] .bubble .gist.said::before, :root[data-theme="vellum"] .peek .gist.said::before{color:#c9922f}
+/* An illuminated initial on every title: gold leaf over red bole, like the
+   opening capital on the wordmark. */
+:root[data-theme="vellum"] .bubble .nm::first-letter{
+  font-family:"IM Fell English SC", "Hoefler Text", serif; font-size:1.3em; color:#f2d489; padding:0 3px; margin-right:2px;
+  border:1px solid rgba(201,146,47,.45);
+  background:linear-gradient(155deg, rgba(226,180,79,.34), rgba(112,72,18,.20) 58%, rgba(226,180,79,.26));
+  text-shadow:0 1px 0 rgba(0,0,0,.6);
+}
+/* The One Ring, at the foot of the desk, always on: the band is gold, and
+   the inscription only shows when the Ring is in the fire -- it is the
+   cpu, and the caption says so. Cold below forty, warm, hot, in the fire. */
+:root[data-theme="vellum"]{--hud-inset:70px}
+/* The script sets the heat on the SVG itself -- the two opacities and the
+   glow -- so the three ease as plain values. */
+:root[data-theme="vellum"] .ghud.ring{
+  left:22px; bottom:calc(10px + var(--taken,0px)); display:flex; align-items:center; gap:12px; font-style:normal;
+}
+:root[data-theme="vellum"] .ghud.ring svg{width:58px; height:58px; overflow:visible; transition:filter .8s ease}
+:root[data-theme="vellum"] .ghud.ring .gold{fill:none; stroke:url(#ring-gold); stroke-width:12}
+/* the band itself goes from gold to red-hot with the figure, and the letters
+   come up pale and bright on it, the way they only show in the fire */
+:root[data-theme="vellum"] .ghud.ring .heat{fill:none; stroke:#ff4812; stroke-width:12; transition:stroke-opacity .8s ease}
+:root[data-theme="vellum"] .ghud.ring .rim{fill:none; stroke:rgba(0,0,0,.45); stroke-width:1}
+:root[data-theme="vellum"] .ghud.ring .script{
+  font:italic 600 10px/1 "EB Garamond", "Iowan Old Style", "Hoefler Text", serif; letter-spacing:.04em;
+  fill:#ffecaa; transition:fill-opacity .8s ease;
+}
+:root[data-theme="vellum"] .ghud.ring u, :root[data-theme="vellum"] .ghud.ring em{
+  display:block; text-decoration:none; font-style:normal; white-space:nowrap;
+  font:400 11px/1.25 "IM Fell English SC", "Hoefler Text", serif; letter-spacing:.12em; color:#c9b189;
+}
+:root[data-theme="vellum"] .ghud.ring em{color:#f2d489; letter-spacing:.16em}
+:root[data-theme="vellum"] .ghud.ring u span{color:#f3e7cb}
+:root[data-theme="vellum"] .ghud.ring u b{font-weight:400; color:#ea7a58}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="vellum"] .ghud.ring svg, :root[data-theme="vellum"] .ghud.ring .heat, :root[data-theme="vellum"] .ghud.ring .script{transition:none} }
 
 
 /* ---- hoarstone — Skyrim, cold stone and iron ------------------------------
@@ -5280,13 +5320,20 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="vellum"] .beacons{left:0; right:0; bottom:var(--taken,0px); height:150px}
 :root[data-theme="vellum"] .beacons .peak{
   position:absolute; bottom:0; left:calc(var(--i) * 13.5% + var(--o, 0%)); width:230px; height:var(--h, 90px);
-  margin-left:-115px; clip-path:polygon(50% 0, 100% 100%, 0 100%);
+  margin-left:-115px;
+}
+/* The hill is a clipped layer of its own, so the pyre above the summit is
+   not cut off with it. Lit, the summit catches the firelight. */
+:root[data-theme="vellum"] .beacons .peak::before{
+  content:""; position:absolute; inset:0; clip-path:polygon(50% 0, 100% 100%, 0 100%);
   background:linear-gradient(180deg, #2a2114, #120c05);
 }
+:root[data-theme="vellum"] .beacons .peak.lit::before{background:linear-gradient(180deg, #6a4418, #2a1a0a 34%, #120c05)}
 :root[data-theme="vellum"] .beacons .peak::after{
   content:""; position:absolute; inset:0; clip-path:polygon(50% 0, 62% 100%, 38% 100%);
   background:linear-gradient(180deg, rgba(243,231,203,.14), transparent 40%);
 }
+:root[data-theme="vellum"] .beacons .peak.lit::after{background:linear-gradient(180deg, rgba(255,190,90,.45), transparent 45%)}
 :root[data-theme="vellum"] .beacons .fire{
   position:absolute; left:50%; top:-10px; width:16px; height:22px; margin-left:-8px;
   border-radius:50% 50% 45% 45% / 62% 62% 38% 38%;
@@ -5481,6 +5528,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="houston"] .ghud.flight em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em}
 :root[data-theme="houston"] .ghud.flight .lamp{min-width:52px}
 :root:has(.board.compact):not(:has(.sheet.on)) .ghud.flight{display:none}
+:root:has(.board.compact):not(:has(.sheet.on)) .ghud.ring{bottom:calc(150px + var(--taken,0px))}
 @media (prefers-reduced-motion:reduce){
   :root[data-theme="houston"] .mocr[data-alarm="1"] .alarm, :root[data-theme="houston"] [data-s="nogo"] > .lamp,
   :root[data-theme="houston"] .mocr .craft[data-s="blocked"] b{animation:none}
@@ -7050,6 +7098,31 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
           later(() => cry.classList.add('on'), still() ? 0 : 1800);
           later(() => cry.classList.remove('on'), 9000);
         }
+      },
+      /* The Ring. Gold band, and the inscription comes up as the cpu does:
+         cold, it is plain gold; in the fire, the letters burn. */
+      HEAT: [[40, 'cold'], [70, 'warm'], [90, 'hot'], [101, 'in the fire']],
+      hud(){
+        const h = el('i', 'ghud ring');
+        h.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>'
+          + '<linearGradient id="ring-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6dc8e"/><stop offset=".45" stop-color="#b8862c"/><stop offset=".7" stop-color="#f1cf6d"/><stop offset="1" stop-color="#8a5f18"/></linearGradient>'
+          + '<path id="ring-path" d="M50 50m-38 0a38 38 0 1 1 76 0a38 38 0 1 1-76 0"/></defs>'
+          + '<circle class="gold" cx="50" cy="50" r="38"/><circle class="heat" cx="50" cy="50" r="38" stroke-opacity="0"/><circle class="rim" cx="50" cy="50" r="43.5"/><circle class="rim" cx="50" cy="50" r="32.5"/>'
+          + '<text class="script" fill-opacity="0"><textPath href="#ring-path" startOffset="1%">ash nazg durbatul\u00fbk \u00b7 ash nazg gimbatul \u00b7 ash nazg thrakatul\u00fbk</textPath></text></svg>'
+          + '<span><em>the one ring</em><u>cpu <span>\u2014</span> \u00b7 <b>\u2014</b></u></span>';
+        return h;
+      },
+      paintHud(h){
+        const cpu = pct(rootNum('--g-cpu')), heat = this.HEAT.find(([top]) => cpu < top)[1];
+        if(h._cpu !== cpu){
+          h._cpu = cpu;
+          h.querySelector('.heat').setAttribute('stroke-opacity', (cpu * .0062).toFixed(3));
+          h.querySelector('.script').setAttribute('fill-opacity', (cpu / 100).toFixed(2));
+          h.querySelector('svg').style.filter = 'drop-shadow(0 0 ' + (cpu * .16).toFixed(1) + 'px rgba(255,110,30,' + (cpu * .009).toFixed(2) + '))';
+        }
+        const v = h.querySelector('u span'), w = h.querySelector('u b');
+        if(v.textContent !== cpu + '%') v.textContent = cpu + '%';
+        if(w.textContent !== heat) w.textContent = heat;
       },
     },
     /* The turret. It only ever says the state's line. */

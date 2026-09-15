@@ -145,7 +145,7 @@ count of how often each theme has been picked from the menu.
 | **Hotline Miami** | tropical VHS neon and misregistered colour plates |
 | **Cyberpunk 2077** | black-and-yellow warning graphics |
 | **Portal** | clean test-chamber white; a blue and an orange portal in the side walls, and a companion cube floating about the room that goes in one and out the other with its speed kept — pick it up and throw it; a session changing state also crosses, as a dot in its new colour |
-| **Lord of the Rings** | candlelit vellum and illuminated-page details |
+| **Lord of the Rings** | candlelit vellum: an illuminated initial on every title, the session's own note rubricated in red ink, and the One Ring at the foot of the desk — plain gold while the cpu is cold, red-hot with the inscription burning as it climbs, captioned with the figure; collapse the board for the beacons of Gondor, one lit per session stuck or asking |
 | **Skyrim** | black glass, hairlines and diamonds, an aurora; magicka/health/stamina bars that are the memory left, the pressure headroom and the CPU idle, each captioned with its reading |
 | **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |

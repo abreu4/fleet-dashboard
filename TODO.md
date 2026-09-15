@@ -20,6 +20,7 @@
 - [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7). Still open: a clickable wheel or a loopable deck of cards.
 - [ ] Bare bands left: earth, cyber, neutral, paper (base themes — keep calm), cyberpunk (`signal`), hollow knight (`chitin`), skyrim (`hoarstone`), pokémon (`cardstock`), team fortress (`ochre`).
 - [ ] Minecraft (`cobble`): make the inventory slots clickable and tie them to real dashboard actions.
+- [x] Lord of the Rings (`vellum`): the beacons' pyres were clipped inside the hill's clip-path (never visible); illuminated initials, rubricated notes, and the One Ring reading the cpu.
 - [x] Portal (`aperture`): the companion cube — floats, bounces, goes through the portals with momentum kept, can be picked up and thrown.
 - [ ] Give each game theme one purpose-built interaction; avoid generic ornaments shared between worlds.
 - [ ] Add reduced-motion, keyboard, focus, and narrow-window acceptance checks for every interactive gimmick.
