@@ -3391,6 +3391,8 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   --hud-a:#0a2e1e; --hud-b:#061d13; --rail-a:#0c3422; --rail-b:#061e14;
   /* A dark golden yellow instead of the fake metallic gold. */
   --leaf:#cca000;
+  /* the baize: a fine wool weave, the default cloth (see the bets) */
+  --weave:repeating-linear-gradient(45deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px), repeating-linear-gradient(-45deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
 }
 
 /* A lamp off the top-left corner and the table falling away into the corners.
@@ -3407,8 +3409,9 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .lane{
   background-image:
     conic-gradient(from 90deg at 50% 50%, rgba(244,241,228,.038) 0 25%, transparent 0 50%, rgba(244,241,228,.038) 0 75%, transparent 0),
+    var(--weave),
     var(--grain);
-  background-size:76px 76px, auto, auto;
+  background-size:76px 76px, auto, auto, auto, auto;
   box-shadow:inset 0 0 0 1px rgba(234,179,8,.20), inset 0 1px 0 rgba(244,241,228,.05);
 }
 /* Removed chess engraved file letters for casino royale theme */
@@ -4909,14 +4912,47 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 2. The betting layout, printed on a closed table: the outside bets, in the
    table's yellow, boxed the way the felt has them. */
 :root[data-theme="staunton"] .hrail{position:relative}
-:root[data-theme="staunton"] .hrail::after{
-  content:"1 TO 18 \2502 EVEN \2502 RED \2502 BLACK \2502 ODD \2502 19 TO 36";
-  position:absolute; right:14px; top:50%; transform:translateY(-50%);
-  font:600 9px/1 var(--mono); letter-spacing:.2em; color:rgba(234,179,8,.6);
-  padding:4px 10px 3px; border:1px solid rgba(234,179,8,.3); border-radius:2px;
-  pointer-events:none; white-space:nowrap;
+/* The six outside bets each lay a different cloth on the table (the script
+   builds them on every closed rail and remembers the pick): 1 TO 18 is the
+   green baize, EVEN a blue speed cloth, RED a red velvet, BLACK a black
+   leather, ODD a burgundy felt, 19 TO 36 a royal purple pinstripe. */
+:root[data-theme="staunton"] .hrail .bets{
+  position:absolute; right:14px; top:50%; transform:translateY(-50%); display:flex; align-items:stretch;
+  font:600 9px/1 var(--mono); letter-spacing:.2em; color:rgba(234,179,8,.6); text-transform:uppercase;
+  border:1px solid rgba(234,179,8,.3); border-radius:2px; white-space:nowrap; overflow:hidden;
 }
-@media (max-width:1100px){ :root[data-theme="staunton"] .hrail::after{display:none} }
+:root[data-theme="staunton"] .hrail .bets b{font-weight:600; padding:4px 10px 3px; cursor:pointer; transition:background .15s, color .15s}
+:root[data-theme="staunton"] .hrail .bets b:hover{color:var(--accent); background:rgba(234,179,8,.10)}
+:root[data-theme="staunton"] .hrail .bets b.on{color:#1a1400; background:var(--accent)}
+:root[data-theme="staunton"] .hrail .bets i{color:rgba(234,179,8,.35); font-style:normal; padding:4px 0 3px}
+@media (max-width:1100px){ :root[data-theme="staunton"] .hrail .bets{display:none} }
+/* The cloths. Each is the table's colours and one weave, drawn under the
+   marble on the lanes. */
+:root[data-theme="staunton"][data-felt="speed"]{
+  --void:#061225; --panel:#0a1c36; --cell:#0d2545; --tile:#123056; --tile-hi:#17396a; --edge:#24507f; --edge-hot:#3f7ab8;
+  --hud-a:#0d2545; --hud-b:#081a30; --rail-a:#0f2a4d; --rail-b:#08182c;
+  --weave:repeating-linear-gradient(60deg, rgba(255,255,255,.028) 0 1px, transparent 1px 6px), repeating-linear-gradient(-60deg, rgba(255,255,255,.028) 0 1px, transparent 1px 6px);
+}
+:root[data-theme="staunton"][data-felt="velvet"]{
+  --void:#1a0508; --panel:#2a0a0f; --cell:#360d13; --tile:#46121a; --tile-hi:#561822; --edge:#6e2430; --edge-hot:#a63a4a;
+  --hud-a:#3a0d14; --hud-b:#22070c; --rail-a:#3d0e16; --rail-b:#23070c;
+  --weave:radial-gradient(120% 60% at 30% 0%, rgba(255,255,255,.07), transparent 60%), repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+}
+:root[data-theme="staunton"][data-felt="leather"]{
+  --void:#0a0a0a; --panel:#151515; --cell:#1c1c1c; --tile:#242424; --tile-hi:#2e2e2e; --edge:#3a3a3a; --edge-hot:#5c5c5c;
+  --hud-a:#1e1e1e; --hud-b:#111; --rail-a:#202020; --rail-b:#121212;
+  --weave:radial-gradient(circle at 3px 3px, rgba(255,255,255,.035) 0 1px, transparent 1.6px) 0 0/9px 9px, radial-gradient(circle at 7px 5px, rgba(0,0,0,.35) 0 1px, transparent 1.6px) 0 0/11px 13px;
+}
+:root[data-theme="staunton"][data-felt="burgundy"]{
+  --void:#160309; --panel:#24060f; --cell:#2d0813; --tile:#3a0b19; --tile-hi:#4a1022; --edge:#62182f; --edge-hot:#8f2848;
+  --hud-a:#310912; --hud-b:#1c050b; --rail-a:#340a14; --rail-b:#1d050b;
+  --weave:repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+}
+:root[data-theme="staunton"][data-felt="royal"]{
+  --void:#0d0618; --panel:#170b2a; --cell:#1e1036; --tile:#271546; --tile-hi:#311c57; --edge:#43286f; --edge-hot:#6a44a8;
+  --hud-a:#20113a; --hud-b:#130923; --rail-a:#22123d; --rail-b:#130924;
+  --weave:repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 14px);
+}
 /* 3. The drop. The wheel picks up for the length of the spin, the ball runs
    the outer track and rattles down into a pocket, and the plaque shows the
    number in its pocket colour with the session's name under it. */
@@ -7101,6 +7137,37 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   // the sheet takes its share of the room; re-measure when it moves, not every frame
   setInterval(() => { if(cube) measure(); }, 1000);
   sync();
+})();
+
+/* ---- the cloth (casino) ------------------------------------------------- */
+/* The outside bets printed on a closed rail are buttons: each lays a
+   different cloth on the table. Built onto every closed rail after each
+   paint (the board is rebuilt from markup), remembered per browser. */
+(function(){
+  const FELTS = [['baize', '1 to 18', 'green baize'], ['speed', 'even', 'blue speed cloth'], ['velvet', 'red', 'red velvet'],
+                 ['leather', 'black', 'black leather'], ['burgundy', 'odd', 'burgundy felt'], ['royal', '19 to 36', 'royal pinstripe']];
+  const KEY = 'fleet.felt', root = document.documentElement;
+  let felt = 'baize';
+  try{ const v = localStorage.getItem(KEY); if(FELTS.some(f => f[0] === v)) felt = v; }catch(e){}
+  root.dataset.felt = felt;
+  const mark = () => board.querySelectorAll('.hrail .bets b').forEach(b => b.classList.toggle('on', b.dataset.felt === felt));
+  const dress = () => {
+    if(root.dataset.theme !== 'staunton') return;
+    board.querySelectorAll('.lane.flat .hrail').forEach(h => {
+      if(h.querySelector('.bets')) return;
+      const s = document.createElement('span'); s.className = 'bets';
+      s.innerHTML = FELTS.map(([k, name, cloth]) => '<b data-felt="' + k + '" title="lay the ' + cloth + '">' + name + '</b>').join('<i>\u2502</i>');
+      h.appendChild(s);
+    });
+    mark();
+  };
+  document.addEventListener('fleet:paint', dress);
+  document.addEventListener('fleet:theme', dress);
+  board.addEventListener('click', e => {
+    const b = e.target.closest('.bets b'); if(!b) return;
+    felt = b.dataset.felt; root.dataset.felt = felt; mark();
+    try{ localStorage.setItem(KEY, felt); }catch(e){}
+  });
 })();
 
 /* ---- rings, scattered (sonic) ------------------------------------------- */

@@ -150,7 +150,7 @@ count of how often each theme has been picked from the menu.
 | **Pokémon** | yellow-bordered cards, type-coloured headers, a four-green handheld screen, Poké Ball status dots, a battle box with a live HP bar |
 | **Sonic** | cobalt CRT, ring gold and chequered motion |
 | **Team Fortress** | TF2 for real: dark HUD plaques over cream, RED/BLU plates, class-emblem rails, a capture stripe on running tiles, a kill feed; a quiet lane's RED/BLU bar is a control point — the ceasefire stripe sits at the cpu (then memory, then pressure), prints the figure, and the legend says which side is which |
-| **Casino Royale** | racing green and marble, yellow inlay, a roulette wheel turning in the corner |
+| **Casino Royale** | racing green and marble, yellow inlay, a roulette wheel turning in the corner; the outside bets printed on a closed rail lay a different cloth each — green baize, blue speed cloth, red velvet, black leather, burgundy felt, royal pinstripe — remembered per browser |
 | **Fallout** | a Pip-Boy tube: P1 phosphor behind curved glass, scanlines, amber for what needs you |
 | **Matrix** | black terminal with the rain behind the glass, P31 mint, a blinking cursor for a sigil |
 | **Persona 5** | a two-colour print job: vermilion on newsprint black, every tile snipped with scissors, zero glow |

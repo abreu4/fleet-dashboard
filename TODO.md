@@ -17,7 +17,7 @@
 - [x] Theme menu sorted alphabetically.
 
 ### Next — specialized interactive gimmicks
-- [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7). Still open: a clickable wheel or a loopable deck of cards.
+- [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7); the outside-bet boxes lay six cloths (2026-09-15). Still open: a clickable wheel or a loopable deck of cards.
 - [ ] Bare bands left: earth, cyber, neutral, paper (base themes — keep calm), cyberpunk (`signal`), hollow knight (`chitin`), skyrim (`hoarstone`), pokémon (`cardstock`), team fortress (`ochre`).
 - [ ] Minecraft (`cobble`): make the inventory slots clickable and tie them to real dashboard actions.
 - [x] Lord of the Rings (`vellum`): the beacons' pyres were clipped inside the hill's clip-path (never visible); illuminated initials, rubricated notes, and the One Ring reading the cpu.
