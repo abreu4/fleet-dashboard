@@ -37,6 +37,12 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        // Safari's Develop menu can then attach to this view (Web Inspector ->
+        // Timelines), which is how a "the board lags" report gets a recording
+        // instead of a guess. Local page in a local shell: nothing to protect.
+        if #available(macOS 13.3, *) {
+            webView.isInspectable = true
+        }
         window.contentView = webView
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

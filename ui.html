@@ -152,7 +152,11 @@
               color:var(--faint); text-transform:uppercase; white-space:nowrap;
               overflow:hidden; text-overflow:ellipsis; max-width:100%}
   .track{stroke:var(--edge); fill:none; stroke-width:5.5; stroke-linecap:round}
-  .arc{fill:none; stroke-width:5.5; stroke-linecap:round; transition:stroke-dasharray .5s ease}
+  /* No transition on the dash: the arcs used to be rebuilt as fresh nodes on
+     every reading, so the .5s ease declared here never once played -- and
+     now that they persist it would, repainting six filtered SVGs on every
+     frame for half of every two seconds. They snap, as they always have. */
+  .arc{fill:none; stroke-width:5.5; stroke-linecap:round}
 
   .trace{
     flex:1 1 340px; max-width:clamp(330px, 33vw, 470px); min-width:250px;
@@ -2513,9 +2517,15 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   pointer-events:none; z-index:2; opacity:.72;
   font:700 15px/1 "Silkscreen", Krungthep, ui-monospace, monospace; letter-spacing:.1em;
   color:#fff; text-shadow:0 0 6px rgba(255,255,255,.55), 2px 0 0 rgba(255,79,184,.6), -2px 0 0 rgba(49,223,235,.6);
-  animation:vcr-blink 1.6s steps(1,end) infinite;
 }
-@keyframes vcr-blink{0%,55%{opacity:.72} 56%,100%{opacity:.72; text-shadow:0 0 6px rgba(255,255,255,.55), 2.6px 0 0 rgba(255,79,184,.6), -2.6px 0 0 rgba(49,223,235,.6)}}
+/* The chroma shift of the display: two phases of a 1.6s cycle, 56/44. This
+   was a text-shadow keyframe animation, and text-shadow runs on the main
+   thread -- a style pass every frame, sixty a second, for a shadow that moves
+   twice a cycle. The weather IIFE in the script now flips this attribute on
+   the same schedule: two style passes a cycle, the same two phases. */
+:root[data-theme="miami86"] .board[data-vcr="wide"]::after{
+  text-shadow:0 0 6px rgba(255,255,255,.55), 2.6px 0 0 rgba(255,79,184,.6), -2.6px 0 0 rgba(49,223,235,.6);
+}
 
 /* ---------- SIGNAL -- acid yellow on soot ------------------------------------
    The missing brutalist move: stencil numerals, hard-edged and slashed, and
@@ -3540,13 +3550,20 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    blend so it only ever lightens what it crosses and never dims a line of
    text. Near sheet falls a third faster than the far one, which is what makes
    it depth rather than wallpaper. */
-:root[data-theme="matrix"] body::after{
-  content:""; position:fixed; inset:0; pointer-events:none; z-index:2;
-  mix-blend-mode:screen; opacity:.22;
-  background:var(--rain-near) 0 0/528px 720px repeat, var(--rain-far) 37px 0/408px 560px repeat;
-  animation:mtx-rain 30s linear infinite;
+/* The rain used to be body::after with the two sheets animated by
+   background-position: a full-viewport repaint every frame, which held this
+   world to 37fps with the main thread a third busy. The weather IIFE in the
+   script builds the same two sheets as elements that fall by transform, one
+   period taller than the viewport so they never run out. Same z, blend,
+   opacity and 30-second cycle; near still falls a third faster than far. */
+:root[data-theme="matrix"] .mtx-rain{
+  position:fixed; inset:0; pointer-events:none; z-index:2;
+  mix-blend-mode:screen; opacity:.22; overflow:hidden;
 }
-@keyframes mtx-rain{from{background-position:0 0, 37px 0} to{background-position:0 720px, 37px 560px}}
+:root[data-theme="matrix"] .mtx-rain i{position:absolute; left:0; right:0; bottom:0; animation:mtx-rain 30s linear infinite}
+:root[data-theme="matrix"] .mtx-rain .near{top:-720px; --dy:720px; background:var(--rain-near) 0 0/528px 720px repeat}
+:root[data-theme="matrix"] .mtx-rain .far{top:-560px; --dy:560px; background:var(--rain-far) 37px 0/408px 560px repeat}
+@keyframes mtx-rain{to{transform:translateY(var(--dy))}}
 /* Terminal furniture: hard corners, a phosphor rule under the HUD, column
    ruling behind the trace to echo the rain, bracket ticks at the lane corners
    left to the base bevel because they already read as terminal brackets. */
@@ -4147,12 +4164,19 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 6. Capping. A running session is a point being taken: the hazard stripe
    at the foot of the tile crawls the way the capture bar fills. */
 :root[data-theme="ochre"] .bubble[data-state="running"]::after{
-  content:""; position:absolute; left:6px; right:0; bottom:0; height:5px; pointer-events:none;
+  /* Crawls by transform, not background-position, so the compositor moves it
+     and the tile is not repainted sixty times a second per running session.
+     The strip starts one stripe period (16.97px) further left, under the
+     6px rib (which is z 2, above this), and slides right by exactly that
+     period; the tile's overflow clips the far end. A -45deg repeating
+     gradient is anchored on the box's bottom-right corner, which does not
+     move, so the stripes land on the same pixels they always did. */
+  content:""; position:absolute; left:-11px; right:0; bottom:0; height:5px; pointer-events:none;
   background:repeating-linear-gradient(-45deg, var(--running) 0 6px, #2a231b 6px 12px);
   border-top:1px solid #2a231b; opacity:.85;
   animation:cap-stripes 1.1s linear infinite;
 }
-@keyframes cap-stripes{to{background-position:16.97px 0}}
+@keyframes cap-stripes{to{transform:translateX(16.97px)}}
 /* 7. The control point in the corner grows the hazard ring the real one has,
    and the capture stripes turn on it. */
 :root[data-theme="ochre"] .board::after{
@@ -4558,15 +4582,29 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     radial-gradient(34% 13% at 58% 8%, rgba(132,96,224,.18), transparent 70%),
     radial-gradient(30% 12% at 86% 5%, rgba(70,214,150,.14), transparent 70%),
     linear-gradient(180deg, rgba(70,214,150,.10), rgba(132,96,224,.07) 9%, transparent 22%),
-    radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,.55), transparent 70%) 0 0/190px 260px,
-    radial-gradient(1.2px 1.2px at 120px 150px, rgba(255,255,255,.45), transparent 70%) 40px 0/230px 310px,
-    radial-gradient(1px 1px at 70px 210px, rgba(255,255,255,.4), transparent 70%) 90px 0/170px 240px,
     radial-gradient(128% 102% at 50% 46%, transparent 42%, rgba(2,5,8,.5) 100%);
-  animation:hs-snow 48s linear infinite;
 }
-@keyframes hs-snow{
-  to{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0, 0 0,0 0,0 0,0 0, 30px 260px, 10px 310px, 120px 240px, 0 0}
+/* The snow. It used to be three more layers on that list, moved by animating
+   background-position -- which no browser can hand to the compositor, so the
+   whole viewport was repainted every frame (measured: ~700 raster tasks a
+   second, the main thread three-quarters busy on a board where nothing
+   happened). The same three sheets now sit on real elements (the weather
+   IIFE in the script builds them) and move by transform, which is a
+   compositor translate. Each sheet is one period taller and wider than the
+   viewport so nothing runs out, and its pattern is offset back by that
+   margin so it starts on exactly the pixels it did before. Same z, same
+   screen blend, same 48 seconds. */
+:root[data-theme="hoarstone"] .hs-snow{
+  position:fixed; inset:0; pointer-events:none; z-index:3; mix-blend-mode:screen; overflow:hidden;
 }
+:root[data-theme="hoarstone"] .hs-snow i{position:absolute; right:0; bottom:0; animation:hs-snow 48s linear infinite}
+:root[data-theme="hoarstone"] .hs-snow .a{top:-260px; left:-30px; --dx:30px; --dy:260px;
+  background:radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,.55), transparent 70%) 30px 0/190px 260px}
+:root[data-theme="hoarstone"] .hs-snow .b{top:-310px; left:-10px; --dx:10px; --dy:310px;
+  background:radial-gradient(1.2px 1.2px at 120px 150px, rgba(255,255,255,.45), transparent 70%) 50px 0/230px 310px}
+:root[data-theme="hoarstone"] .hs-snow .c{top:-240px; left:-120px; --dx:120px; --dy:240px;
+  background:radial-gradient(1px 1px at 70px 210px, rgba(255,255,255,.4), transparent 70%) 210px 0/170px 240px}
+@keyframes hs-snow{to{transform:translate(var(--dx), var(--dy))}}
 /* 6. Claw marks down the agent rails: the dragon alphabet is three scratches
    and a dot, so the rail carries that, low and cold. */
 :root[data-theme="hoarstone"] .rail{
@@ -4577,7 +4615,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="hoarstone"] .brand b{color:#e9eff4; text-shadow:0 0 16px rgba(233,239,244,.35)}
 @media (prefers-reduced-motion:reduce){
-  :root[data-theme="hoarstone"] .wrap::after{animation:none}
+  :root[data-theme="hoarstone"] .hs-snow i{animation:none}
 }
 /* ==== PASS3 END ==== */
 /* ==== PASS4 BEGIN (lighter pass on the weaker others) ==== */
@@ -5983,6 +6021,13 @@ function gauge(label, pct, value, colour){
     + '<span class="lab">'+label+'</span></div></div>';
 }
 
+/* The HUD is built once and then updated in place. It used to be rebuilt as
+   HTML on every snapshot: six filtered SVGs, the readout and the tally thrown
+   away and re-created every two seconds, and a forced style pass right after
+   (the trace reads computed colours) -- for readings that mostly had not
+   moved. Same markup, same numbers, and the arcs still snap to a reading
+   (see .arc in the stylesheet for why they must). */
+const HUD = {arcs:null, vals:null, dds:null, cells:null, tally:'', vars:{}};
 function drawHud(d){
   const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = h.power||{};
   const active = (d.tally.running||0)+(d.tally.blocked||0);
@@ -5990,34 +6035,51 @@ function drawHud(d){
   const ramPct = mem.total ? 100*(h.agentRssMb*1048576)/mem.total : 0;
   const ram = h.agentRssMb>=1024 ? (h.agentRssMb/1024).toFixed(1)+'G'
                                  : Math.round(h.agentRssMb||0)+'M';   // 4 chars max
-  document.getElementById('gauges').innerHTML =
-      gauge('cpu', cpu.pct, Math.round(cpu.pct??0)+'%', 'var(--accent)')
-    + gauge('mem', mem.pct, Math.round(mem.pct??0)+'%', (mem.pct>85?'var(--blocked)':'var(--idle)'))
-    + gauge('ram', ramPct, ram, 'var(--warn)')
-    + gauge('live', fleetPct, active+'/'+d.total, 'var(--good)')
-    + gauge('pres', h.pressurePct, (h.pressurePct==null ? '\u2014' : h.pressurePct+'%'),
+  const specs = [
+    ['cpu', cpu.pct, Math.round(cpu.pct??0)+'%', 'var(--accent)'],
+    ['mem', mem.pct, Math.round(mem.pct??0)+'%', (mem.pct>85?'var(--blocked)':'var(--idle)')],
+    ['ram', ramPct, ram, 'var(--warn)'],
+    ['live', fleetPct, active+'/'+d.total, 'var(--good)'],
+    ['pres', h.pressurePct, (h.pressurePct==null ? '\u2014' : h.pressurePct+'%'),
             ((h.pressurePct??0) > 85 ? 'var(--blocked)'
-             : (h.pressurePct??0) > 70 ? 'var(--warn)' : 'var(--good)'))
-    + gauge('disk', h.disk?.pct, Math.round(h.disk?.freeGb??0)+'G',
-            ((h.disk?.pct??0) > 90 ? 'var(--blocked)' : 'var(--idle)'));
+             : (h.pressurePct??0) > 70 ? 'var(--warn)' : 'var(--good)')],
+    ['disk', h.disk?.pct, Math.round(h.disk?.freeGb??0)+'G',
+            ((h.disk?.pct??0) > 90 ? 'var(--blocked)' : 'var(--idle)')],
+  ];
+  const g = document.getElementById('gauges');
+  if(!HUD.arcs || g.children.length !== specs.length){
+    g.innerHTML = specs.map(sp => gauge(...sp)).join('');
+    HUD.arcs = [...g.querySelectorAll('.arc')]; HUD.vals = [...g.querySelectorAll('.val')];
+  }else specs.forEach(([, pct, value, colour], i) => {
+    const arc = HUD.arcs[i], val = HUD.vals[i];
+    const dash = Math.max(0, Math.min(100, pct||0)).toFixed(1)+' 100';
+    if(arc.getAttribute('stroke-dasharray') !== dash) arc.setAttribute('stroke-dasharray', dash);
+    if(arc.getAttribute('stroke') !== colour){
+      arc.setAttribute('stroke', colour);
+      arc.style.filter = 'drop-shadow(0 0 calc(var(--glow)*5px) '+colour+')';
+    }
+    if(val.textContent !== value) val.textContent = value;
+  });
 
   // The same six readings, as custom properties on the root, so a world can
   // draw its own instruments off them in pure CSS -- Skyrim's three bars,
   // Minecraft's hearts and XP, a Game Boy HP bar -- without a theme ever
   // touching the script. Whole numbers, 0..100; counts are integers so a
-  // CSS counter can print them.
+  // CSS counter can print them. Written only when they change: an inline
+  // property on the root invalidates everything that reads it.
   const rs = document.documentElement.style, whole = v => String(Math.round(Math.max(0, Math.min(100, v||0))));
-  rs.setProperty('--g-cpu',  whole(cpu.pct));
-  rs.setProperty('--g-mem',  whole(mem.pct));
-  rs.setProperty('--g-ram',  whole(ramPct));
-  rs.setProperty('--g-live', whole(fleetPct));
-  rs.setProperty('--g-pres', whole(h.pressurePct));
-  rs.setProperty('--g-disk', whole(h.disk?.pct));
-  rs.setProperty('--g-batt', whole(pw.pct != null ? pw.pct : 100));
-  rs.setProperty('--n-active', String(active|0));
-  rs.setProperty('--n-total',  String(d.total|0));
+  const put = (k, v) => { if(HUD.vars[k] !== v){ HUD.vars[k] = v; rs.setProperty(k, v); } };
+  put('--g-cpu',  whole(cpu.pct));
+  put('--g-mem',  whole(mem.pct));
+  put('--g-ram',  whole(ramPct));
+  put('--g-live', whole(fleetPct));
+  put('--g-pres', whole(h.pressurePct));
+  put('--g-disk', whole(h.disk?.pct));
+  put('--g-batt', whole(pw.pct != null ? pw.pct : 100));
+  put('--n-active', String(active|0));
+  put('--n-total',  String(d.total|0));
   // ...and the tally itself, one integer per state, for the same reason.
-  STATES.forEach(k => rs.setProperty('--n-' + k, String(d.tally[k]|0)));
+  STATES.forEach(k => put('--n-' + k, String(d.tally[k]|0)));
   // The tiles repaint only when they change; an instrument drawn off these
   // numbers wants to follow them every second, like the gauges do.
   document.dispatchEvent(new CustomEvent('fleet:hud'));
@@ -6030,22 +6092,53 @@ function drawHud(d){
     : '<b'+(onBat && pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '
       + (pw.charging ? 'chg' : onBat ? 'batt' : 'AC');
   const cell = (k, v) => '<div><dt>'+k+'</dt><dd>'+v+'</dd></div>';
-  document.getElementById('readout').innerHTML =
-      cell('load',   '<b>'+(cpu.load1??'—')+'</b>')
-    + cell('procs',  '<b>'+(h.agentProcs??'—')+'</b> '+(h.agentCpu??0)+'%')
-    + cell('swap',   '<b>'+Math.round(sw.usedMb||0)+'</b>M')
-    + cell('power',  power)
-    + cell('tokens', '<b>'+tk+'</b>')
-    + cell('uptime', '<b>'+dur(h.uptime)+'</b>');
+  const cells = [
+    ['load',   '<b>'+(cpu.load1??'—')+'</b>'],
+    ['procs',  '<b>'+(h.agentProcs??'—')+'</b> '+(h.agentCpu??0)+'%'],
+    ['swap',   '<b>'+Math.round(sw.usedMb||0)+'</b>M'],
+    ['power',  power],
+    ['tokens', '<b>'+tk+'</b>'],
+    ['uptime', '<b>'+dur(h.uptime)+'</b>'],
+  ];
+  const ro = document.getElementById('readout');
+  if(!HUD.dds || ro.children.length !== cells.length){
+    ro.innerHTML = cells.map(([k, v]) => cell(k, v)).join('');
+    HUD.dds = [...ro.querySelectorAll('dd')]; HUD.cells = cells.map(c => c[1]);
+  }else cells.forEach(([, v], i) => {
+    if(HUD.cells[i] !== v){ HUD.cells[i] = v; HUD.dds[i].innerHTML = v; }
+  });
 
-  document.getElementById('tally').innerHTML = STATES.filter(s=>d.tally[s])
+  const tally = STATES.filter(s=>d.tally[s])
     .map(s=>'<span class="chip" data-s="'+s+'" title="'+s+'"><i class="dot s-'+s+'"></i><span class="lb">'+esc(voice(s))+'</span><span class="n">'+d.tally[s]+'</span></span>').join('');
+  if(tally !== HUD.tally){ HUD.tally = tally; document.getElementById('tally').innerHTML = tally; }
   drawTrace(d.history||[]);
 }
 
+/* The trace's four colours come from computed style, and asking for computed
+   style right after the HUD has been touched forces a synchronous style pass
+   over the document. They only change with the theme or a tint, so they are
+   read once per (theme, tint) and kept; and the chart itself is only redrawn
+   when the history has a new sample in it or the colours moved. */
+const TRACE = {key:'', colours:null, stamp:''};
+function traceColours(){
+  const theme = document.documentElement.dataset.theme;
+  const key = theme + '|' + JSON.stringify(tints()[theme] || {});
+  if(TRACE.key !== key){
+    const cs = getComputedStyle(document.documentElement);
+    const pick = n2 => cs.getPropertyValue(n2).trim() || '#888';
+    TRACE.key = key;
+    TRACE.colours = {cpu:pick('--accent'), mem:pick('--idle'), ram:pick('--warn'), grid:pick('--edge')};
+  }
+  return TRACE.colours;
+}
 function drawTrace(hist){
   const svg = document.getElementById('trace');
-  if(hist.length < 2){ svg.innerHTML=''; return; }
+  if(hist.length < 2){ svg.innerHTML=''; TRACE.stamp = ''; return; }
+  const {cpu:cCpu, mem:cMem, ram:cRam, grid} = traceColours();
+  const tail = hist[hist.length-1];
+  const stamp = TRACE.key + '|' + hist.length + '|' + (tail.t || 0) + '|' + (tail.cpu|0) + '|' + (tail.mem|0) + '|' + (tail.rss|0);
+  if(stamp === TRACE.stamp) return;
+  TRACE.stamp = stamp;
   // A 250–470px chart cannot display hundreds of distinct x positions. Bound
   // the SVG work so a long-running dashboard remains as cheap as a fresh one.
   const limit = 140;
@@ -6054,10 +6147,6 @@ function drawTrace(hist){
     hist = Array.from({length:limit}, (_, i) => hist[Math.round(i * step)]);
   }
   const W = 1000, H = 100, n = hist.length, x = i => i*W/(n-1);
-  const cs = getComputedStyle(document.documentElement);
-  const pick = n2 => cs.getPropertyValue(n2).trim() || '#888';
-  const cCpu = pick('--accent'), cMem = pick('--idle'), cRam = pick('--warn');
-  const grid = pick('--edge');
 
   const y = (v, top) => H - Math.min(1, v/Math.max(top,1)) * H * 0.92;
   const series = (get, top, colour, fill) => {
@@ -6168,8 +6257,47 @@ function afterPaint(diff){
     }
   });
 }
+/* The clock bucket in render() asks for a repaint every five seconds so the
+   ages on the tiles stay fresh; but an age reads "3m" for a whole minute, so
+   most of those repaints would replace every tile with an identical one --
+   and pay for the layout pass in fit() -- for no news. The HTML is built
+   (cheap) and the DOM is only replaced when it differs, or when the theme,
+   the collapse or the tile scale changed under it (fit() reads those). */
+let boardHTML = '', boardBones = '', boardKey = '';
+const AGES = new Map();                      // session id -> the age its tile shows
 function paintBoard(d){
-  board.innerHTML = d.lanes.map(lane => {
+  AGES.clear();
+  const html = boardMarkup(d);
+  const key = document.documentElement.dataset.theme + '|' + compact + '|' + TILE_SCALE;
+  if(html === boardHTML && key === boardKey) return;
+  // A session that wrote something in the last minute and a half shows its
+  // age in seconds, so on a busy board the markup differs every five seconds
+  // by nothing but those digits. When that is all that moved, write the
+  // digits into the tiles that are already there.
+  const bones = html.replace(/<span class="age">[^<]*<\/span>/g, '<span class="age"></span>');
+  if(key === boardKey && bones === boardBones){
+    boardHTML = html;
+    board.querySelectorAll('.bubble').forEach(el => {
+      const a = el.querySelector('.age'), v = AGES.get(el.dataset.id) || '';
+      if(a && a.textContent !== v) a.textContent = v;
+    });
+    return;
+  }
+  boardHTML = html; boardBones = bones; boardKey = key;
+  board.innerHTML = html;
+
+  board.querySelectorAll('.project > header').forEach(h =>
+    h.onclick = () => toggle(h.parentElement.dataset.key));
+  board.querySelectorAll('.bubble').forEach(el => {
+    el.onclick = () => select(el.dataset.id);
+    if(el.dataset.id === selected) el.classList.add('sel');
+    const x = el.querySelector('.x');
+    if(x) x.onclick = ev => { ev.stopPropagation(); const s = find(el.dataset.id); if(s) closeSession(s, x); };
+  });
+  fit();
+}
+function boardMarkup(d){
+  return d.lanes.map(lane => {
     // a lane's height follows the sessions still on show in it
     const weight = lane.projects
       .filter(p => !minimised.has(lane.key+'/'+p.name))
@@ -6195,16 +6323,6 @@ function paintBoard(d){
       + '<span class="vlabel">'+esc(SHORT[lane.key]||lane.label)+'</span></div>'
       + '<div class="projects">'+cells+'</div></div>';
   }).join('');
-
-  board.querySelectorAll('.project > header').forEach(h =>
-    h.onclick = () => toggle(h.parentElement.dataset.key));
-  board.querySelectorAll('.bubble').forEach(el => {
-    el.onclick = () => select(el.dataset.id);
-    if(el.dataset.id === selected) el.classList.add('sel');
-    const x = el.querySelector('.x');
-    if(x) x.onclick = ev => { ev.stopPropagation(); const s = find(el.dataset.id); if(s) closeSession(s, x); };
-  });
-  fit();
 }
 
 function tile(s){
@@ -6220,8 +6338,13 @@ function tile(s){
   // the room, so it gets its own non-shrinking span; the rest of the line
   // ellipsizes cleanly instead of being chopped mid-path. A long path is
   // folded to its last segment -- the tile's width is better spent on age.
-  const rest = [s.updated ? age(s.updated) : '', s.turns ? s.turns+'t' : '',
-                shortPlace(where)].filter(Boolean).map(x => '<span>'+esc(x)+'</span>').join('');
+  // The age is the one thing on a tile that moves while nothing happens, so
+  // it is marked and noted: paintBoard can then refresh it in place instead
+  // of replacing the board (see there).
+  const when = s.updated ? age(s.updated) : '';
+  if(when) AGES.set(s.id, when);
+  const rest = [when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
+                where ? '<span>'+esc(shortPlace(where))+'</span>' : ''].filter(Boolean).join('');
   // A block that has sat unanswered escalates: a little louder after eight
   // minutes, an outline after thirty. Amplitude and area, never rate.
   const since = s.updated ? Date.now() - s.updated : 0;
@@ -7443,6 +7566,58 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   document.addEventListener('fleet:hud', () => { if(hud && WORLDS[cur]) WORLDS[cur].paintHud(hud, null); });
 })();
 
+/* ---- the weather (pass 9) ---------------------------------------------- */
+/* Three worlds moved their sky by animating background-position on a fixed
+   full-screen layer, which no browser can hand to the compositor: the whole
+   viewport was repainted every frame. Skyrim's snow alone kept the main
+   thread three-quarters busy on a board where nothing happened; the rain
+   held the matrix to 37fps. The same sheets are now real elements that move
+   by transform (see .hs-snow and .mtx-rain in the stylesheet), built when the
+   world comes on and torn down when it goes. The VCR display's chroma shift
+   (miami86) was a text-shadow keyframe animation, another main-thread
+   property: it is now an attribute flipped on the same 1.6s cycle. */
+(function(){
+  const root = document.documentElement;
+  const still = () => reducedMotion() || root.dataset.motion === 'off';
+  const el = (tag, cls, parent) => {
+    const e = document.createElement(tag); e.className = cls; e.setAttribute('aria-hidden', 'true');
+    parent.appendChild(e); return e;
+  };
+  let cur = null, nodes = [], timers = [];
+  const WEATHER = {
+    hoarstone(){
+      // inside .wrap, at the same z the old ::after had, so it stacks where it did
+      const n = el('div', 'hs-snow', document.querySelector('.wrap') || document.body);
+      ['a', 'b', 'c'].forEach(c => el('i', c, n));
+      nodes.push(n);
+    },
+    matrix(){
+      const n = el('div', 'mtx-rain', document.body);
+      el('i', 'far', n); el('i', 'near', n);          // near on top, as the background list had it
+      nodes.push(n);
+    },
+    miami86(){
+      // 0-56% of 1.6s at the base shadow, 56-100% at the wider one
+      const phase = wide => {
+        if(wide && !still()) board.dataset.vcr = 'wide'; else delete board.dataset.vcr;
+        timers.push(setTimeout(() => phase(!wide), wide ? 704 : 896));
+      };
+      phase(false);
+    },
+  };
+  const sync = () => {
+    const theme = root.dataset.theme;
+    if(theme === cur) return;
+    nodes.forEach(n => n.remove()); nodes = [];
+    timers.forEach(clearTimeout); timers = [];
+    delete board.dataset.vcr;
+    cur = theme;
+    if(WEATHER[theme]) WEATHER[theme]();
+  };
+  document.addEventListener('fleet:theme', sync);
+  sync();
+})();
+
 /* ---------------- settings ---------------- */
 /* The sound panel. fleet-sounds.js loads after this script, so it is built
    the first time the card opens, from whatever the engine exposes. */
@@ -7772,6 +7947,8 @@ function paint(cur, dur){
 // While a drag is in progress the poll must not fight the pointer for the knob.
 setInterval(() => {
   if(!ytUp || !yt || dragging) return;
+  // Minimised, the seek bar and both clocks are display:none: nothing to draw.
+  if(playerEl.classList.contains('min')) return;
   try{ paint(yt.getCurrentTime(), yt.getDuration()); }catch(e){}
 }, 400);
 
@@ -7803,14 +7980,19 @@ document.getElementById('mback').onclick = () => {
    the position come back, so a reload costs a second rather than the evening.
    (Playing into a real YT Music tab instead would survive it outright.) */
 const PLAY_KEY = 'fleet.play';
+let remembered = '';
 function remember(){
   if(!queue.length || qi < 0) return;
   let pos = 0; try{ pos = (yt && ytUp) ? yt.getCurrentTime() : 0; }catch(e){}
-  try{ localStorage.setItem(PLAY_KEY, JSON.stringify({
+  let s = '';
+  try{ s = JSON.stringify({
     q: queue.slice(0, 80), i: qi, at: pos,
     open: playerEl.classList.contains('on'), min:playerEl.classList.contains('min'),
     label: headEl.textContent.replace(/\s+\u00b7\s+\d+\s+tracks$/, '')
-  })); }catch(e){}
+  }); }catch(e){ return; }
+  if(s === remembered) return;                // paused, or nothing playing: no write
+  remembered = s;
+  try{ localStorage.setItem(PLAY_KEY, s); }catch(e){}
 }
 setInterval(remember, 2000);
 addEventListener('beforeunload', remember);
