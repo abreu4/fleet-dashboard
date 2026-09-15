@@ -12,6 +12,7 @@
 
 - [x] The band (pass 8): collapsing the board uncovers one state-driven object per world — Sonic's rings on Green Hill, Fallout's S.P.E.C.I.A.L., the beacons of Gondor, Portal's turret, Persona's date card — beside the casino wheel that started it.
 - [x] Collapsed tiles: the foot drops its path/turns whole instead of truncating to `…/FLE…`; resting on a collapsed tile peeks its line of context.
+- [x] Apollo (`houston`): personality pass — the poll is a ritual (FLIGHT calls, lamps answer in turn, verdict), loop lines in call-sign form, PAO narration after two quiet minutes, a flight plan (Apollo 11 ÷ 20) the poll is always *for*, and a Quindar-tone sound pack (the theme had none).
 - [x] Apollo (`houston`): rebuilt — the first cut mirrored the tiles (a plaque per session, stations by index, GET from page load). Now the plotboard places every working session by its silence (LOS at 2:30), the poll is a *systems* poll (one station per real host/fleet figure, each with its own threshold), GET runs from the oldest live session, FLIGHT + GET stay on with the full board. NO GO / STBY / LOS verified through a state-bending proxy.
 - [x] Always-on instruments (Skyrim bars, Minecraft HUD, Apollo FLIGHT) get their own strip via `--hud-inset` instead of sitting on the Codex row; Skyrim's aurora moved into the sky.
 - [x] Theme menu sorted alphabetically.

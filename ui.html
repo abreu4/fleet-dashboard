@@ -5215,6 +5215,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    read one thing off telemetry and answered the Flight Director's poll with
    a lit word -- GO or NO GO -- and that is exactly what a session tile is.
 
+   The personality is procedural calm. The stakes are enormous and nobody
+   raises their voice: everything is one lit word, every line on the loop
+   opens with who is called and who is calling, amber is the only colour
+   that asks for a human, and when the alarm lights the room does not shout,
+   it polls. Nothing here is decorative motion; every animation is a lamp.
+
    Colour roles are the lamp legend colours of the real consoles: green for
    GO, red for NO GO, amber for STANDBY (the one that wants you), the blue
    lamp for HOLD, and a plain white lamp for a station that is finished.
@@ -6475,6 +6481,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5);
 }
 :root[data-theme="houston"] .mocr .stn.flight{box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 0 0 1px rgba(169,214,245,.55)}
+/* Mid-poll: the station answering is framed for the beat it speaks, and the
+   loop line is in ink, because the whole room is listening to it. */
+:root[data-theme="houston"] .mocr .stn.called{box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 0 0 1px var(--accent), 0 0 10px rgba(169,214,245,.35)}
+:root[data-theme="houston"] .mocr[data-poll="1"] .say{color:var(--ink)}
 :root[data-theme="houston"] .mocr .stn em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em; white-space:nowrap}
 :root[data-theme="houston"] .mocr .stn u{font-size:8.5px; color:var(--faint); text-decoration:none; letter-spacing:.1em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 :root[data-theme="houston"] .mocr .stn u span{font:11px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--ink); letter-spacing:.02em; text-transform:none}
@@ -8702,8 +8712,14 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         clearTimeout(n._t); n._t = setTimeout(() => { say.classList.remove('on'); n.classList.remove('talking'); }, 3800);
       },
     },
-    /* Mission Control. Two instruments, both drawn off numbers the board
-       already has, and the room's own vocabulary for each.
+    /* Mission Control. The room's personality is procedural calm: the stakes
+       are enormous and nobody raises their voice. Everything is reduced to
+       one lit word, every sentence on the loop opens with who is called and
+       who is calling ("FLIGHT, EECOM"), amber is the only colour that asks
+       for a human, and when the alarm lights the room does not shout -- it
+       polls. You are FLIGHT: you sit at the back, the room reads its numbers
+       to you, and the poll is how it answers.
+       Two instruments, both drawn off numbers the board already has.
        The wall is the plotboard: every session at work is a spacecraft on
        the ground track, placed by how long since Houston last heard from
        it -- a transcript write, a note or a prompt is contact. Two and a
@@ -8711,19 +8727,42 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
        writes again and comes round (AOS). That is the long-tool-call
        problem the fleet notes exist for, drawn the way the room drew it.
        Under the wall, the Flight Director's poll: each station reads one
-       real figure and answers GO, STBY or NO GO on its own threshold;
-       FLIGHT is the worst answer in the room; MASTER ALARM lights while
-       FLIGHT is NO GO. GET counts from the oldest session still alive.
+       real figure and answers GO, STBY or NO GO on its own threshold. The
+       poll is a ritual, not a readout: when the band comes up and whenever
+       FLIGHT's answer would change, FLIGHT calls the room, the lamps go
+       dark and each station answers in turn, then FLIGHT gives the verdict.
+       Between polls a station whose answer moves calls FLIGHT on its own,
+       and when the loop has been quiet for two minutes the PAO reads the
+       room to the public. GET counts from the oldest session still alive,
+       and the flight plan is Apollo 11's at a twentieth of the pace, so a
+       working day is a mission and the poll is always for the next event.
        With the full board up, the clock and FLIGHT stay on (.ghud.flight). */
     houston: {
       LOS_S: 150, SPAN_S: 360, AMP: 22,
+      QUIET_MS: 120000,                       // the PAO speaks when the loop has been quiet this long
       // the ground track: a sine and a half across the wall, in per cent of it
       y(u){ return 50 + this.AMP * Math.sin(u * Math.PI * 3); },
       WORD: {go:'GO', stby:'STBY', nogo:'NO GO', los:'—'},
+      SAID: {go:'GO', stby:'STBY', nogo:'NO GO', los:'no data'},
       RANK: {los:0, go:0, stby:1, nogo:2},
+      // Apollo 11's flight plan, GET in seconds over twenty: TLI eight minutes
+      // in, lunar orbit by the fourth hour, on the surface after five, home
+      // before the tenth.
+      PLAN: [['TLI', 493], ['LOI', 13650], ['PDI', 18459], ['landing', 18497], ['EVA', 19643],
+             ['liftoff', 22386], ['TEI', 24371], ['entry', 35109], ['splashdown', 35156]],
+      /* What the loop says. The crew (the agents) report in their own words;
+         the stations report to FLIGHT; CAPCOM is the only one who talks to
+         the crew. `who` is the session's name. */
       LINES: {
-        arrived: 'AOS — acquisition of signal', blocked: '1202 PROGRAM ALARM', waiting: 'STANDBY — station requests FLIGHT',
-        running: 'GO', done: 'SPLASHDOWN — recovery has the crew', idle: 'HOLD', unknown: 'LOS',
+        arrived: who => 'INCO — AOS, ' + who + ' on the loop',
+        blocked: who => who + ' — PROGRAM ALARM, it\'s a 1202',
+        waiting: who => 'CAPCOM — ' + who + ' is standing by for FLIGHT',
+        running: who => 'CAPCOM — ' + who + ', Houston, you are GO',
+        done:    who => 'RECOVERY — splashdown, ' + who,
+        idle:    who => who + ' — holding',
+        unknown: who => 'INCO — LOS, ' + who,
+        los:     who => 'INCO — LOS, ' + who,
+        aos:     who => 'INCO — AOS, ' + who,
       },
       /* [key, station, what it reads, read(snapshot, flights) -> {v: the
          figure, s: go|stby|nogo|los, what?: a different label for this
@@ -8772,13 +8811,27 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         return out.sort((a, b) => a.quiet - b.quiet);
       },
       fmt(sec){ const s = Math.round(sec); return s < 60 ? s + 's' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); },
+      // "3h 47m" / "8m 12s": how the PAO says how far off the next event is
+      dur(sec){
+        const s = Math.max(0, Math.round(sec)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
+        return h ? h + 'h ' + String(m).padStart(2, '0') + 'm' : m + 'm ' + String(s % 60).padStart(2, '0') + 's';
+      },
       get(ms){
         const s = Math.floor(ms / 1000), pad = (v, w) => String(v).padStart(w, '0');
         return pad(Math.floor(s / 3600), 3) + ':' + pad(Math.floor(s / 60) % 60, 2) + ':' + pad(s % 60, 2);
       },
-      clock(get, d, now){
+      // seconds of GET, or null with no one alive to count from
+      getSec(d, now){
         let t0 = 0; this.each(d, s => { if(s.started && (!t0 || s.started < t0)) t0 = s.started; });
-        const txt = t0 ? this.get(now - t0) : '---:--:--';
+        return t0 ? (now - t0) / 1000 : null;
+      },
+      // the next event on the flight plan; 'launch' before anyone is alive
+      next(sec){
+        if(sec == null) return ['launch', 0];
+        return this.PLAN.find(([, t]) => t > sec) || ['recovery', sec];
+      },
+      clock(get, d, now){
+        const sec = this.getSec(d, now), txt = sec == null ? '---:--:--' : this.get(sec * 1000);
         if(get.lastChild.nodeValue !== txt) get.lastChild.nodeValue = txt;
       },
       lamp(p, s){
@@ -8786,15 +8839,81 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         const b = p.querySelector('.lamp'), w = this.WORD[s];
         if(b.textContent !== w) b.textContent = w;
       },
-      // the poll: every station answers, FLIGHT takes the worst; returns it
+      // the figure under a station's name
+      reading(p, what, r){
+        const u = p.querySelector('u'), label = (r.what || what) + ' ';
+        if(u.firstChild.nodeValue !== label) u.firstChild.nodeValue = label;
+        if(u.lastChild.textContent !== r.v) u.lastChild.textContent = r.v;
+      },
+      // a cue on the loop, only for a listener who asked for the room's clicks
+      cue(name){ const FS = window.FleetSounds; if(FS && FS.clicks && FS.clicks()) FS.play(name); },
+      /* THE LOOP. One voice at a time, the way a loop works: whoever keys in
+         waits for the line to clear. Every utterance is {text, hold, fn};
+         fn runs as the line is spoken, which is how the poll lights its
+         lamps in step with the words. */
+      say(n, text, hold, fn){
+        const q = n._q || (n._q = []);
+        q.push({text, hold: hold || 5000, fn});
+        if(q.length > 20) q.splice(0, q.length - 20);
+        if(!n._on) this.drain(n);
+      },
+      drain(n){
+        if(!n.isConnected) return;
+        const it = n._q.shift(), s = n.querySelector('.say');
+        if(!it){ n._on = false; s.classList.remove('on'); return; }
+        n._on = true; n._said = Date.now();
+        if(it.fn) it.fn();
+        s.textContent = it.text; s.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => this.drain(n), it.hold);
+      },
+      hush(n){
+        clearTimeout(n._t); n._q = []; n._on = false; n._polling = false; n._worst = null;
+        n.dataset.poll = '0'; n.querySelector('.say').classList.remove('on');
+        n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
+      },
+      /* THE POLL. FLIGHT calls the room for the next event on the flight
+         plan; the lamps go dark and each station answers in turn, worst
+         answer wins, FLIGHT gives the verdict. Runs when the band comes up
+         and whenever FLIGHT's answer would change. */
+      ritual(n, d, fl, now){
+        if(n._polling) return;
+        n._polling = true;
+        const ev = this.next(this.getSec(d, now))[0];
+        const reads = this.STATIONS.map(([k, name, what, read]) => [k, name, what, read(d, fl) || {v: '—', s: 'los'}]);
+        let worst = 'go', ok = 0;
+        reads.forEach(([, , , r]) => { if(this.RANK[r.s] > this.RANK[worst]) worst = r.s; if(r.s === 'go') ok++; });
+        const bad = reads.filter(([, , , r]) => worst !== 'go' && r.s === worst).map(([, name]) => name);
+        const f = n.querySelector('.stn.flight');
+        this.say(n, 'FLIGHT — go/no-go for ' + ev, 1100, () => {
+          n.dataset.poll = '1';
+          this.STATIONS.forEach(([k]) => this.lamp(n.querySelector('.stn.' + k), 'los'));
+          this.lamp(f, 'los');
+        });
+        reads.forEach(([k, name, what, r]) => this.say(n, name + ' — ' + this.SAID[r.s] + (r.s !== 'go' && r.s !== 'los' ? ' · ' + (r.what || what) + ' ' + r.v : ''), 420, () => {
+          const p = n.querySelector('.stn.' + k);
+          n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
+          p.classList.add('called');
+          this.lamp(p, r.s); this.reading(p, what, r); this.cue('poll');
+        }));
+        const verdict = 'FLIGHT — we are ' + this.SAID[worst] + (bad.length ? ' on ' + bad.join(', ') : ' for ' + ev);
+        this.say(n, verdict, 6500, () => {
+          n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
+          this.lamp(f, worst);
+          const t = ok + '/' + this.STATIONS.length + ' go';
+          if(f.querySelector('u span').textContent !== t) f.querySelector('u span').textContent = t;
+          n.dataset.poll = '0'; n.dataset.alarm = worst === 'nogo' ? '1' : '0';
+          n._worst = worst; n._polling = false;
+          this.cue(worst === 'nogo' ? 'nogo' : 'poll');
+        });
+      },
+      // between polls: every station answers in place, and one whose answer
+      // moved calls FLIGHT about it; returns the worst
       poll(n, d, fl){
         let worst = 'go', ok = 0;
-        this.STATIONS.forEach(([k, , what, read]) => {
-          const p = n.querySelector('.stn.' + k), r = read(d, fl) || {v: '—', s: 'los'};
-          this.lamp(p, r.s);
-          const u = p.querySelector('u'), label = (r.what || what) + ' ';
-          if(u.firstChild.nodeValue !== label) u.firstChild.nodeValue = label;
-          if(u.lastChild.textContent !== r.v) u.lastChild.textContent = r.v;
+        this.STATIONS.forEach(([k, name, what, read]) => {
+          const p = n.querySelector('.stn.' + k), r = read(d, fl) || {v: '—', s: 'los'}, was = p.dataset.s;
+          this.lamp(p, r.s); this.reading(p, what, r);
+          if(was !== r.s) this.say(n, 'FLIGHT, ' + name + ' — ' + this.SAID[r.s] + (r.s !== 'go' && r.s !== 'los' ? ' · ' + (r.what || what) + ' ' + r.v : ''), 5000);
           if(this.RANK[r.s] > this.RANK[worst]) worst = r.s;
           if(r.s === 'go') ok++;
         });
@@ -8808,6 +8927,17 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         this.STATIONS.forEach(([, , , read]) => { const r = read(d, fl); if(r && this.RANK[r.s] > this.RANK[w]) w = r.s; });
         return w;
       },
+      /* THE PAO. Public Affairs read the room to the world in the third
+         person, in a voice that never changed whatever the room was doing:
+         "This is Apollo Control, Houston, at 102 hours 45 minutes..." */
+      pao(n, d, fl, now){
+        const sec = this.getSec(d, now), [ev, at] = this.next(sec), heard = fl.filter(f => !f.los).length;
+        const parts = ['Apollo Control, Houston' + (sec == null ? '.' : ' — ' + this.get(sec * 1000).slice(0, 6) + ' GET.')];
+        parts.push(fl.length ? fl.length + ' in flight, ' + (heard === fl.length ? 'all' : heard) + ' heard.' : 'No one in flight.');
+        parts.push('FLIGHT is ' + this.SAID[n._worst || 'go'] + '.');
+        if(sec != null && at > sec) parts.push(ev + ' in ' + this.dur(at - sec) + '.');
+        this.say(n, parts.join(' '), 9000);
+      },
       // the wall: one craft per flight, on the track by its silence
       wall(n, fl){
         const row = n.querySelector('.crafts'), seen = new Set(), xs = [];
@@ -8816,7 +8946,8 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
           seen.add(f.id);
           let c = row.querySelector('.craft[data-id="' + CSS.escape(f.id) + '"]');
           if(!c){ c = el('i', 'craft', '<b></b><em></em><u></u>'); c.dataset.id = f.id; row.appendChild(c); }
-          const u = Math.min(1, f.quiet / this.SPAN_S), x = u * 100;
+          // parked just inside the far edge past the span, so the lamp is not clipped
+          const u = Math.min(1, f.quiet / this.SPAN_S), x = Math.min(u * 100, 99.2);
           // a lane per neighbour within a tenth of the wall, so a pile at AOS still reads
           const lane = xs.filter(v => Math.abs(v - x) < 10).length % 4; xs.push(x);
           c.style.setProperty('--x', x.toFixed(2)); c.style.setProperty('--y', this.y(u).toFixed(2));
@@ -8849,7 +8980,7 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
           + this.STATIONS.map(([k, name, what]) => '<i class="stn ' + k + '" data-s="los"><b class="lamp">—</b><em>' + name + '</em><u>' + what + ' <span>—</span></u></i>').join('')
           + '<i class="stn flight" data-s="los"><b class="lamp">—</b><em>FLIGHT</em><u>all stations <span>—</span></u></i>'
           + '</div></div>';
-        n._los = new Set(); n._at = 0;
+        n._los = new Set(); n._at = 0; n._q = []; n._on = false; n._worst = null; n._said = 0;
         // crafts drift and the clock counts by the second, not by the paint
         timers.push(setInterval(() => {
           this.paint(n, null);
@@ -8857,35 +8988,40 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         }, 1000));
         return n;
       },
+      // the name on a tile, for the loop
+      who(id){ return board.querySelector('.bubble[data-id="' + CSS.escape(id) + '"] .nm')?.textContent || ''; },
       paint(n, diff){
         const d = latest; if(!d) return;
-        if(!(board.classList.contains('compact') && !document.querySelector('.sheet.on'))) return;   // not up
+        if(!(board.classList.contains('compact') && !document.querySelector('.sheet.on'))){   // not up
+          if(n._on || n._worst != null) this.hush(n);
+          return;
+        }
         const now = Date.now(), fl = this.flights(d);
         this.clock(n.querySelector('.get'), d, now);
-        n.dataset.alarm = this.poll(n, d, fl) === 'nogo' ? '1' : '0';
         this.wall(n, fl);
-        // the loop line: what just happened, on a board already being read
-        const lines = [];
+        // the lamps: mid-poll they belong to the ritual; otherwise in place,
+        // and a change in FLIGHT's answer is what calls the room
+        if(!n._polling){
+          const worst = this.worst(d, fl);
+          if(n._worst == null || worst !== n._worst) this.ritual(n, d, fl, now);
+          else n.dataset.alarm = this.poll(n, d, fl) === 'nogo' ? '1' : '0';
+        }
+        // the loop: what just happened, on a board already being read
         if(diff && !diff.first){
-          const c = diff.changed && diff.changed[0];
-          if(diff.arrived && diff.arrived.length) lines.push(this.LINES.arrived);
-          else if(c && this.LINES[c.to]){
-            const who = board.querySelector('.bubble[data-id="' + CSS.escape(c.id) + '"] .nm')?.textContent;
-            lines.push(this.LINES[c.to] + (who ? ' — ' + who : ''));
-          }
+          const c = diff.changed && diff.changed[0], a = diff.arrived && diff.arrived[0];
+          if(a) this.say(n, this.LINES.arrived(this.who(a)));
+          else if(c && this.LINES[c.to]) this.say(n, this.LINES[c.to](this.who(c.id)));
         }
         const was = n._los, los = new Set();
         fl.forEach(f => {
           if(f.los) los.add(f.id);
           if(now - n._at < 5000){          // only transitions this paint saw happen
-            if(f.los && !was.has(f.id)) lines.push('LOS — ' + f.name);
-            if(!f.los && was.has(f.id)) lines.push('AOS — ' + f.name);
+            if(f.los && !was.has(f.id)) this.say(n, this.LINES.los(f.name));
+            if(!f.los && was.has(f.id)) this.say(n, this.LINES.aos(f.name));
           }
         });
         n._los = los; n._at = now;
-        if(!lines.length) return;
-        const say = n.querySelector('.say'); say.textContent = lines[0]; say.classList.add('on');
-        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6500);
+        if(!n._on && now - n._said > this.QUIET_MS) this.pao(n, d, fl, now);
       },
       hud(){ const h = el('i', 'ghud flight', '<b class="get"><i>GET</i>---:--:--</b><em>flight</em><b class="lamp">—</b>'); h.dataset.s = 'los'; return h; },
       paintHud(h){
