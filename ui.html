@@ -5795,6 +5795,137 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="e1m1"] .empty, :root[data-theme="e1m1"] .bubble .gist.none{color:var(--faint); font-style:italic}
 
 /* ============================================================================
+   PLUMBOB  --  The Sims
+   The material is the control panel: sky-blue glass with a gloss along the
+   top, white rounded panels, navy text in a rounded sans, and over every
+   Sim the plumbob -- the diamond that turns above their head and says how
+   they are with its colour. A light world, the only one with a garden.
+
+   Why the lot fits this board: a household is a fleet. You do not control
+   them; you glance at the plumbobs and the needs and step in when one
+   goes red. That is exactly the job.
+
+   The tell is the plumbob on every tile, turning in the state's colour.
+   Always on, the needs: Energy the cpu idle, Hunger the memory free,
+   Comfort the pressure headroom, Bladder the disk free, Social the share
+   of sessions at work, Fun the share finished -- each bar green, yellow or
+   red the way the game does it. Collapse the board for the Sim's mood,
+   its wants and fears. Measured on --tile #fff: --faint 4.9:1, --dim 7.9:1.
+   ========================================================================== */
+:root[data-theme="plumbob"]{
+  color-scheme:light;
+  --void:#bcd6ee; --panel:#e4eff9; --cell:#eef5fc; --tile:#ffffff; --tile-hi:#f2f8ff;
+  --edge:#a7c6e3; --edge-hot:#4a90d9;
+  --ink:#1d3557; --dim:#3f5f86; --faint:#5f7a9c;
+  --accent:#2f7fd6;
+  --blocked:#e0433f; --running:#4fbd1f; --idle:#e8b91a; --done:#22b39a; --unknown:#8fa0b3;
+  --good:#4fbd1f; --warn:#f28c28; --waiting:#f28c28;
+  --glow:0; --sigil:"\25C6";                           /* the plumbob */
+  --scan:rgba(255,255,255,0); --halo:rgba(47,127,214,.08);
+  --grain:linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
+  --hud-a:#d2e5f6; --hud-b:#b7d1ec; --rail-a:#d8e8f7; --rail-b:#c4daf0;
+  --shade:rgba(29,53,87,.18); --shade-deep:rgba(29,53,87,.28);
+  --hud-inset:78px;
+}
+:root[data-theme="plumbob"]{
+  --face-data:   ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --face-prose:  ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --face-chrome: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:1.02; --fs-data:1.02; --fs-prose:1.02; --tr-chrome:.9;
+}
+:root[data-theme="plumbob"] .brand b, :root[data-theme="plumbob"] .rail .vlabel,
+:root[data-theme="plumbob"] .hrail .who, :root[data-theme="plumbob"] .project > header,
+:root[data-theme="plumbob"] .gauge .lab, :root[data-theme="plumbob"] .trace .cap,
+:root[data-theme="plumbob"] .panel section h3, :root[data-theme="plumbob"] .stat .k{text-transform:none; letter-spacing:.02em; font-weight:700}
+:root[data-theme="plumbob"] .bubble .foot .st{text-transform:none; letter-spacing:0; font-weight:700}
+/* THE PANEL. The HUD is the control panel: blue glass, a gloss, white
+   rounded instruments with a blue keyline. */
+:root[data-theme="plumbob"] .hud{
+  background-image:var(--grain), linear-gradient(180deg, var(--hud-a), var(--hud-b));
+  border-bottom:2px solid #7fa9d4; box-shadow:inset 0 1px 0 #fff, 0 2px 0 #fff;
+}
+:root[data-theme="plumbob"] .gauge, :root[data-theme="plumbob"] .readout, :root[data-theme="plumbob"] .trace, :root[data-theme="plumbob"] .stat, :root[data-theme="plumbob"] .chip{
+  border-radius:12px; background:#fff; border-color:#a7c6e3; box-shadow:inset 0 -2px 0 #dbe8f5, 0 1px 0 #fff;
+}
+:root[data-theme="plumbob"] .gauge .val, :root[data-theme="plumbob"] .readout dd b, :root[data-theme="plumbob"] .chip .n{color:var(--accent)}
+:root[data-theme="plumbob"] .brand b{color:#1d3557; letter-spacing:.02em; text-shadow:0 1px 0 #fff}
+:root[data-theme="plumbob"] .brand b::after{color:var(--running)}
+/* EGG: the wordmark says hello in Simlish. */
+:root[data-theme="plumbob"] .brand:hover b::after{content:"sul sul!"; font-size:12px; letter-spacing:0; opacity:1; text-transform:none}
+:root[data-theme="plumbob"] .ctl select, :root[data-theme="plumbob"] .ctl > button, :root[data-theme="plumbob"] button.ghost{border-radius:10px; background:#fff; border-color:#a7c6e3; color:#1d3557}
+/* THE LOT. Lanes are lots, projects are rooms with a blue title bar. */
+:root[data-theme="plumbob"] .lane{border-radius:14px; background:#e4eff9; border-color:#a7c6e3; box-shadow:inset 0 1px 0 #fff}
+:root[data-theme="plumbob"] .project{border-radius:10px}
+:root[data-theme="plumbob"] .project > header{
+  color:#fff; background:linear-gradient(180deg, #5aa0e6, #2f7fd6); border-bottom:1px solid #2568b3; text-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+:root[data-theme="plumbob"] .project > header .ct{color:#fff; opacity:.9}
+:root[data-theme="plumbob"] .project > header:hover{color:#fff}
+:root[data-theme="plumbob"] .rail svg, :root[data-theme="plumbob"] .hrail svg{color:var(--accent)}
+/* THE SIMS. A tile is a Sim's card: white, rounded, a blue keyline, and
+   the plumbob turning at the top-right corner in the state's colour. */
+:root[data-theme="plumbob"] .bubble{border-radius:10px; box-shadow:0 1px 0 #fff, 0 2px 6px rgba(29,53,87,.08)}
+:root[data-theme="plumbob"] .bubble:hover{box-shadow:0 0 0 2px #4a90d9, 0 6px 16px rgba(29,53,87,.14)}
+:root[data-theme="plumbob"] .bubble.sel{box-shadow:0 0 0 2px var(--accent), 0 6px 16px rgba(29,53,87,.14)}
+:root[data-theme="plumbob"] .bubble::before{border-radius:10px 0 0 10px; width:5px}
+:root[data-theme="plumbob"] .bubble .nm{padding-right:34px}
+/* 1. THE TELL -- the plumbob. Two facets, the left one lit, turning on its
+   axis: a 3D rotate, so the compositor carries it and nothing repaints. */
+:root[data-theme="plumbob"] .bubble::after{
+  content:""; position:absolute; right:20px; top:6px; width:11px; height:19px; z-index:2; pointer-events:none;
+  clip-path:polygon(50% 0, 100% 42%, 50% 100%, 0 42%);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--rib) 55%, #fff) 50%, color-mix(in srgb, var(--rib) 75%, #000) 50%);
+  animation:plumbob 3.2s linear infinite; transform-style:preserve-3d; will-change:transform;
+}
+@keyframes plumbob{from{transform:perspective(120px) rotateY(0)} to{transform:perspective(120px) rotateY(360deg)}}
+:root[data-theme="plumbob"] .bubble[data-state="blocked"]{background-color:#fff3f2}
+:root[data-theme="plumbob"] .bubble[data-state="waiting"]{background-color:#fff8ee}
+:root[data-theme="plumbob"] .bubble .foot .dot{border-radius:2px; transform:rotate(45deg); width:6px; height:6px}
+/* THE NEEDS, always on. Six bars, each green, yellow or red by its value. */
+:root[data-theme="plumbob"] .ghud.needs{
+  left:50%; bottom:calc(8px + var(--taken,0px)); transform:translateX(-50%); font-style:normal;
+  display:grid; grid-template-columns:repeat(3, auto); gap:5px 22px; padding:7px 14px 8px;
+  background:linear-gradient(180deg, #eaf3fc, #d7e7f6); border:1px solid #a7c6e3; border-radius:12px; box-shadow:inset 0 1px 0 #fff, 0 2px 8px rgba(29,53,87,.12);
+}
+:root[data-theme="plumbob"] .ghud.needs .need{display:grid; grid-template-columns:62px 118px auto; align-items:center; gap:8px; font:700 10px/1 var(--face-chrome); color:#1d3557; white-space:nowrap}
+:root[data-theme="plumbob"] .ghud.needs .need i{position:relative; height:9px; border-radius:5px; background:#fff; box-shadow:inset 0 0 0 1px #a7c6e3}
+:root[data-theme="plumbob"] .ghud.needs .need i b{position:absolute; left:1px; top:1px; bottom:1px; width:0; border-radius:4px; background:var(--k, var(--running)); transition:width .6s ease, background .6s}
+:root[data-theme="plumbob"] .ghud.needs .need[data-m="ok"] i b{--k:linear-gradient(180deg, #8fe25a, #4fbd1f)}
+:root[data-theme="plumbob"] .ghud.needs .need[data-m="meh"] i b{--k:linear-gradient(180deg, #ffd45c, #e8b91a)}
+:root[data-theme="plumbob"] .ghud.needs .need[data-m="bad"] i b{--k:linear-gradient(180deg, #ff7a70, #e0433f)}
+:root[data-theme="plumbob"] .ghud.needs .need u{text-decoration:none; font-weight:500; color:#5f7a9c; font-size:9px}
+:root[data-theme="plumbob"] .ghud.needs .need u strong{color:#1d3557; font-weight:700}
+/* THE MOOD (the band). A big plumbob in the household's colour, the Sim's
+   wants and fears off the board, and a word of Simlish when something
+   happens. */
+:root[data-theme="plumbob"] .mood{
+  left:50%; transform:translateX(-50%); bottom:calc(92px + var(--taken,0px)); width:min(820px, calc(100vw - 40px)); padding:14px 18px 14px 96px; box-sizing:border-box;
+  background:linear-gradient(180deg, #f4f9ff, #e4eff9); border:1px solid #a7c6e3; border-radius:16px; box-shadow:inset 0 1px 0 #fff, 0 4px 16px rgba(29,53,87,.14);
+  color:#1d3557; font:12px/1.5 var(--face-prose);
+}
+:root[data-theme="plumbob"] .mood .bob{
+  position:absolute; left:28px; top:50%; width:40px; height:66px; margin-top:-33px; --rib:var(--running);
+  clip-path:polygon(50% 0, 100% 42%, 50% 100%, 0 42%);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--rib) 55%, #fff) 50%, color-mix(in srgb, var(--rib) 75%, #000) 50%);
+  animation:plumbob 3.2s linear infinite; will-change:transform;
+}
+:root[data-theme="plumbob"] .mood h4{margin:0 0 4px; font:800 15px/1.2 var(--face-chrome); display:flex; gap:14px; align-items:baseline}
+:root[data-theme="plumbob"] .mood h4 .say{font:600 12px/1 var(--face-chrome); color:var(--accent); opacity:0; transition:opacity .3s}
+:root[data-theme="plumbob"] .mood h4 .say.on{opacity:1}
+:root[data-theme="plumbob"] .mood dl{display:grid; grid-template-columns:auto 1fr; gap:2px 12px; margin:0}
+:root[data-theme="plumbob"] .mood dt{font-weight:800; color:#3f5f86}
+:root[data-theme="plumbob"] .mood dd{margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="plumbob"] .mood dd.want{color:#b8730f} :root[data-theme="plumbob"] .mood dd.fear{color:#c0322e}
+/* chrome */
+:root[data-theme="plumbob"] .toast{background:#fff; border-color:#4a90d9; color:#1d3557; border-radius:10px}
+:root[data-theme="plumbob"] .panel{background:#eef5fc; box-shadow:inset 1px 0 0 #fff, -26px 0 60px -30px rgba(29,53,87,.4)}
+:root[data-theme="plumbob"] .scrim{background:rgba(29,53,87,.35)}
+:root[data-theme="plumbob"] .acts button:hover, :root[data-theme="plumbob"] button.ghost:hover{background:#e4eff9; box-shadow:0 0 0 2px #4a90d9}
+:root[data-theme="plumbob"] .empty, :root[data-theme="plumbob"] .bubble .gist.none{font-style:italic; color:var(--faint)}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="plumbob"] .bubble::after, :root[data-theme="plumbob"] .mood .bob{animation:none} }
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -6131,6 +6262,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="hoarstone">skyrim</option>
           <option value="chequer">sonic</option>
           <option value="ochre">team fortress</option>
+          <option value="plumbob">the sims</option>
         </optgroup>
       </select>
       <button class="ghost" id="pause" title="pause / resume live polling">⏸<span> pause</span></button>
@@ -6223,6 +6355,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* plumbob -- the diamond, a house on its lot, a book */
+  plumbob:{
+    claude:'<path d="M8 1.2L13.4 6.8L8 14.8L2.6 6.8Z" fill="currentColor"/><path d="M8 1.2L13.4 6.8L8 14.8Z" fill="#000" fill-opacity=".25"/>',
+    antigravity:'<path d="M2 8.2L8 2.6l6 5.6v6.2H2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="6.5" y="9.4" width="3" height="5" fill="currentColor"/>',
+    codex:'<path d="M3 2.5h8.5a2 2 0 0 1 2 2V14H5a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 12a2 2 0 0 1 2-2h8.5M6 5.5h4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  },
   /* e1m1 -- a skull, a rocket, a key card, all on the pixel grid */
   e1m1:{
     claude:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="4" y="2" width="8" height="2"/><rect x="3" y="4" width="10" height="6"/><rect x="4" y="10" width="8" height="2"/><rect x="5" y="12" width="2" height="2"/><rect x="9" y="12" width="2" height="2"/></g><g shape-rendering="crispEdges" fill="var(--tile,#000)"><rect x="5" y="5" width="2" height="2"/><rect x="9" y="5" width="2" height="2"/><rect x="7" y="8" width="2" height="1"/></g>',
@@ -6379,6 +6517,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* the sims */
+  plumbob:   {blocked:'bad mood', waiting:'wants attention', running:'working', idle:'napping', done:'aspiration met', unknown:'lost sim',
+              blank:'no memories yet', quiet:'no sims on this lot', offline:'MOVED OUT'},
   /* doom */
   e1m1:      {blocked:'hurt', waiting:'need a medkit', running:'rip and tear', idle:'idle', done:'level clear', unknown:'lost',
               blank:'no demons here yet', quiet:'no marines deployed', offline:'YOU DIED'},
@@ -7743,6 +7884,56 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* The lot. Always on: the needs -- Energy the cpu idle, Hunger the
+       memory free, Comfort the pressure headroom, Bladder the disk free,
+       Social the share of sessions at work, Fun the share finished -- each
+       bar green, yellow or red by its value. Collapsed: the household's
+       mood, its wants (the sessions waiting on you) and fears (the stuck). */
+    plumbob: {
+      NEEDS: [['energy', 'Energy', 'cpu idle', () => 100 - rootNum('--g-cpu')], ['hunger', 'Hunger', 'memory free', () => 100 - rootNum('--g-mem')],
+              ['comfort', 'Comfort', 'pressure headroom', () => 100 - rootNum('--g-pres')], ['bladder', 'Bladder', 'disk free', () => 100 - rootNum('--g-disk')],
+              ['social', 'Social', 'at work', () => rootNum('--n-total') ? 100 * rootNum('--n-active') / rootNum('--n-total') : 0],
+              ['fun', 'Fun', 'finished', () => rootNum('--n-total') ? 100 * rootNum('--n-done') / rootNum('--n-total') : 0]],
+      LINES: {arrived: 'Sul sul!', left: 'Dag dag.', blocked: 'Bloo bagoo!', waiting: 'Firby nurbs?', done: 'Whippna choba dog!', idle: 'Zzz…', running: 'Litzergam.'},
+      MOOD: {blocked: ['blocked', 'in a bad mood'], waiting: ['waiting', 'wants attention'], running: ['running', 'busy and happy'], idle: ['idle', 'napping'], done: ['done', 'fulfilled'], unknown: ['unknown', 'nobody home']},
+      hud(){
+        const h = el('i', 'ghud needs');
+        h.innerHTML = this.NEEDS.map(([k, name, what]) => '<span class="need ' + k + '">' + name + '<i><b></b></i><u>' + what + ' <strong>—</strong></u></span>').join('');
+        return h;
+      },
+      paintHud(h){
+        this.NEEDS.forEach(([k, , , read]) => {
+          const v = pct(read()), n = h.querySelector('.need.' + k), b = n.querySelector('b'), s = n.querySelector('strong');
+          const m = v > 50 ? 'ok' : v > 25 ? 'meh' : 'bad';
+          if(b.style.width !== v + '%') b.style.width = v + '%';
+          if(n.dataset.m !== m) n.dataset.m = m;
+          if(s.textContent !== v + '%') s.textContent = v + '%';
+        });
+      },
+      make(){
+        const n = el('div', 'band mood');
+        n.innerHTML = '<i class="bob"></i><h4><span class="w">—</span><span class="say" aria-live="polite"></span></h4>'
+          + '<dl><dt>Wants</dt><dd class="want">—</dd><dt>Fears</dt><dd class="fear">—</dd></dl>';
+        return n;
+      },
+      paint(n, diff){
+        const tiles = Array.from(board.querySelectorAll('.bubble')), name = t => t.querySelector('.nm')?.textContent || '';
+        const by = s => tiles.filter(t => t.dataset.state === s).map(name);
+        const worst = ['blocked', 'waiting', 'running', 'idle', 'done'].find(s => tiles.some(t => t.dataset.state === s)) || 'unknown';
+        n.querySelector('.bob').style.setProperty('--rib', 'var(--' + worst + ')');
+        const w = n.querySelector('.w'), title = 'The household is ' + this.MOOD[worst][1] + ' · ' + tiles.length + (tiles.length === 1 ? ' Sim' : ' Sims');
+        if(w.textContent !== title) w.textContent = title;
+        const wants = by('waiting'), fears = by('blocked');
+        const wt = wants.length ? 'your attention on ' + wants.join(', ') : 'nothing — everyone is fine';
+        const ft = fears.length ? fears.join(', ') + (fears.length === 1 ? ' is stuck' : ' are stuck') : 'nothing';
+        if(n.querySelector('.want').textContent !== wt) n.querySelector('.want').textContent = wt;
+        if(n.querySelector('.fear').textContent !== ft) n.querySelector('.fear').textContent = ft;
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.left && diff.left.length) ? 'left' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 4500);
+      },
+    },
     /* The base. Always on: the status bar, and the marine's face reading the
        room -- it bleeds while anything is stuck or the pressure is high,
        grins when a session finishes, and looks about otherwise. Collapsed:
@@ -8599,6 +8790,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  plumbob:   'the sims 1 build mode piano soundtrack',
   e1m1:      'doom 1993 e1m1 at dooms gate soundtrack',
   nerv:      'evangelion soundtrack shiro sagisu decisive battle',
   lumon:     'severance apple tv soundtrack theodore shapiro',

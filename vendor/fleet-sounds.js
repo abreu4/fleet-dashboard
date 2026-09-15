@@ -381,6 +381,20 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* The lot (The Sims): build mode's xylophone for the taps, a Sim
+     * mumbling for alert -- two short FM wobbles -- and the aspiration
+     * chime, a rising major arpeggio, for done. Bright and bouncy. */
+    plumbob: {
+      drive: { type: 'soft', k: 1.2 }, verb: { time: 0.26, mix: 0.16 },
+      tap:    [click({ hp: 5000, d: 0.005, g: 0.25 }), S('sine', 1046, { a: 0.001, d: 0.09, g: 0.32 }), S('triangle', 2093, { a: 0.001, d: 0.05, g: 0.1 }), thump({ f: 160, g: 0.35 })],
+      tile:   [click({ hp: 4200, d: 0.005, g: 0.25 }), S('sine', 784, { a: 0.001, d: 0.11, g: 0.34 }), at(0.06, S('sine', 1046, { a: 0.001, d: 0.09, g: 0.2 })), thump({ f: 150, g: 0.4 })],
+      switch: seq([784, 988, 1175], 0.06, function (f) { return S('sine', f, { a: 0.001, d: 0.1, g: 0.28 }); }).concat([thump({ g: 0.35 })]),
+      alert:  [FM(320, 1.5, 24, { f2: 260, slide: 0.16, lp: 2600, a: 0.006, d: 0.18, g: 0.32 }), at(0.2, FM(290, 1.5, 22, { f2: 380, slide: 0.14, lp: 2600, a: 0.006, d: 0.2, g: 0.3 })),
+               at(0.42, S('sine', 1318, { a: 0.002, d: 0.16, g: 0.2 })), thump({ f: 120, g: 0.4 })],
+      done:   seq([523.3, 659.3, 784, 1046.5], 0.08, function (f) { return S('sine', f, { a: 0.001, d: 0.28, g: 0.26 }); })
+              .concat(seq([1046.5, 1318.5, 1568, 2093], 0.08, function (f) { return S('triangle', f, { a: 0.001, d: 0.14, g: 0.08 }); }))
+              .concat([at(0.32, S('sine', 2093, { a: 0.002, d: 0.5, g: 0.12 }))])
+    },
     /* The base (Doom): everything through a hard clipper. Doors for the taps
      * -- a noise slam and a low square -- the marine's grunt for alert, and
      * the item pickup, two rising bloops, for done. */
