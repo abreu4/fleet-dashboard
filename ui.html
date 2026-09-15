@@ -110,8 +110,11 @@
   }
   @keyframes drift{from{transform:translateY(0)}to{transform:translateY(5px)}}
   @media (prefers-reduced-motion:reduce){:root[data-theme="cyber"] body::after{animation:none}}
-  .wrap{position:relative; z-index:1; height:calc(100% - var(--taken,0px));
+  .wrap{position:relative; z-index:1; height:calc(100% - var(--taken,0px) - var(--hud-inset,0px));
        display:flex; flex-direction:column; transition:height .12s ease}
+  /* A world with an instrument that stays on (Skyrim's bars, Minecraft's
+     hearts, Apollo's FLIGHT lamp) sets --hud-inset to its height, and the
+     board ends above it instead of running on under it. */
 
   /* ===================== HUD ===================== */
   /* Sized in vh, so the readings keep their share of the screen rather than
@@ -4319,6 +4322,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    are working, and the hotbar under it all with the torch selected. The
    script builds it (the worlds at the end of the band script) and captions
    each reading in the same pixel face, so the hearts say what they count. */
+:root[data-theme="cobble"]{--hud-inset:60px}
 :root[data-theme="cobble"] .ghud.survival{
   left:50%; bottom:calc(6px + var(--taken,0px)); transform:translateX(-50%);
   width:216px; height:50px; font:700 10px/1 "Silkscreen", Krungthep, monospace;
@@ -4440,6 +4444,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    The script builds the three (the worlds at the end of the band script)
    and sets --v, 0..100, on each; the fill and the caption's number are the
    same figure. */
+:root[data-theme="hoarstone"]{--hud-inset:66px}
 :root[data-theme="hoarstone"] .ghud.stats{
   left:50%; bottom:calc(24px + var(--taken,0px)); transform:translateX(-50%);
   display:flex; gap:30px; opacity:.92; filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));
@@ -4482,7 +4487,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     radial-gradient(1.5px 1.5px at 73% 14%, rgba(255,255,255,.7), transparent 70%),
     radial-gradient(1.2px 1.2px at 88% 5%, rgba(255,255,255,.6), transparent 70%),
     radial-gradient(1.4px 1.4px at 95% 17%, rgba(255,255,255,.65), transparent 70%),
-    linear-gradient(104deg, transparent 18%, rgba(70,214,150,.13) 34%, rgba(132,96,224,.12) 48%, rgba(70,214,150,.07) 60%, transparent 76%) 0 0/100% 46% no-repeat,
+    radial-gradient(38% 15% at 22% 5%, rgba(70,214,150,.20), transparent 70%),
+    radial-gradient(34% 13% at 58% 8%, rgba(132,96,224,.18), transparent 70%),
+    radial-gradient(30% 12% at 86% 5%, rgba(70,214,150,.14), transparent 70%),
+    linear-gradient(180deg, rgba(70,214,150,.10), rgba(132,96,224,.07) 9%, transparent 22%),
     radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,.55), transparent 70%) 0 0/190px 260px,
     radial-gradient(1.2px 1.2px at 120px 150px, rgba(255,255,255,.45), transparent 70%) 40px 0/230px 310px,
     radial-gradient(1px 1px at 70px 210px, rgba(255,255,255,.4), transparent 70%) 90px 0/170px 240px,
@@ -4490,7 +4498,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   animation:hs-snow 48s linear infinite;
 }
 @keyframes hs-snow{
-  to{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0, 0 0, 30px 260px, 10px 310px, 120px 240px, 0 0}
+  to{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0, 0 0,0 0,0 0,0 0, 30px 260px, 10px 310px, 120px 240px, 0 0}
 }
 /* 6. Claw marks down the agent rails: the dragon alphabet is three scratches
    and a dot, so the rail carries that, low and cold. */
@@ -5079,7 +5087,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    under an aluminium rail. */
 :root[data-theme="houston"] .hud{
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='120' viewBox='0 0 720 120'%3E%3Cg stroke='%23a9d6f5' stroke-opacity='.10' stroke-width='1' fill='none'%3E%3Cpath d='M0 20h720M0 60h720M0 100h720M60 0v120M180 0v120M300 0v120M420 0v120M540 0v120M660 0v120'/%3E%3C/g%3E%3Cpath d='M0 60 C60 12 120 12 180 60 S300 108 360 60 S480 12 540 60 S660 108 720 60' fill='none' stroke='%23a9d6f5' stroke-opacity='.38' stroke-width='1.5'/%3E%3Ccircle cx='360' cy='60' r='3.5' fill='%23f1efe6' fill-opacity='.9'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='120' viewBox='0 0 720 120'%3E%3Cg stroke='%23a9d6f5' stroke-opacity='.10' stroke-width='1' fill='none'%3E%3Cpath d='M0 20h720M0 60h720M0 100h720M60 0v120M180 0v120M300 0v120M420 0v120M540 0v120M660 0v120'/%3E%3C/g%3E%3C/svg%3E"),
     linear-gradient(180deg, var(--hud-a), var(--hud-b));
   background-size:720px 100%, auto; background-position:center, 0 0;
   border-bottom:3px solid #b9beb7;
@@ -5326,60 +5334,129 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   clip-path:polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); transform:rotate(3deg);
 }
 
-/* ---- HOUSTON: the GO/NO GO poll ----------------------------------------------
-   The Flight Director's poll, standing along the bottom of the room: one
-   plaque per session, in the order the stations sat, each lit with the word
-   it would have answered -- GO, NO GO, STBY, HOLD -- off the tile's live
-   state. Above the plaques, the ground-elapsed-time clock counts from the
-   moment the board acquired signal, and the loop line prints what just
-   happened: AOS when a session arrives, 1202 when one blocks. MASTER ALARM
-   lights while anything on the board is NO GO. */
-:root[data-theme="houston"] .gonogo{
-  left:18px; right:18px; bottom:calc(16px + var(--taken,0px)); padding:8px 12px 10px;
+/* ---- HOUSTON: the front wall and the poll ------------------------------------
+   The room seen from the back. The plotboard on the front wall tracks every
+   session at work by how long since Houston last heard from it; the Flight
+   Director's poll runs along the consoles under it, one station per number
+   the host or the fleet already reports. What each thing reads is in the
+   world at the end of the band script. */
+:root[data-theme="houston"] .mocr{
+  left:18px; right:18px; bottom:calc(16px + var(--taken,0px));
   color:var(--ink); font:12px/1.4 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase;
+}
+/* THE WALL. Blue-black glass under an aluminium rail. The script draws the
+   grid and the ground track; the far side of the Moon is the shaded end. */
+:root[data-theme="houston"] .mocr .wall{
+  position:relative; height:clamp(150px, 26vh, 240px); margin-bottom:10px; overflow:hidden;
   background:linear-gradient(180deg, #0f1a2c, #091223); border:1px solid #3d4a5c; border-radius:3px;
   box-shadow:inset 0 1px 0 rgba(169,214,245,.16), 0 2px 0 #6f766f, 0 10px 24px -14px rgba(0,0,0,.9);
 }
-:root[data-theme="houston"] .gonogo .loop{
-  display:flex; align-items:baseline; gap:18px; padding:0 2px 7px; border-bottom:1px solid rgba(169,214,245,.16); margin-bottom:8px;
+:root[data-theme="houston"] .mocr .wall svg{position:absolute; inset:0; width:100%; height:100%}
+:root[data-theme="houston"] .mocr .wall .mark{position:absolute; top:6px; font-size:9px; letter-spacing:.18em; color:var(--faint); white-space:nowrap}
+:root[data-theme="houston"] .mocr .wall .mark.aos{left:8px; color:var(--accent)}
+:root[data-theme="houston"] .mocr .wall .mark.los{margin-left:6px; color:var(--waiting)}
+:root[data-theme="houston"] .mocr .wall .mark.end{right:8px}
+:root[data-theme="houston"] .mocr .wall .none{
+  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); text-align:center; font-size:10px; color:#8f978f;
 }
-:root[data-theme="houston"] .gonogo .get{font:13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.08em; color:var(--accent)}
-:root[data-theme="houston"] .gonogo .get i{font-style:normal; color:var(--faint); margin-right:8px; font:inherit}
-:root[data-theme="houston"] .gonogo .say{flex:1; color:var(--dim); opacity:0; transition:opacity .35s}
-:root[data-theme="houston"] .gonogo .say.on{opacity:1}
-:root[data-theme="houston"] .gonogo .alarm{
-  padding:2px 8px; border-radius:2px; color:#5a635c; background:#1a2332;
+:root[data-theme="houston"] .mocr .wall .none[hidden]{display:none}
+/* A spacecraft: a lit square on the track in its lamp colour, the session's
+   name beside it and how long since Houston heard it. Behind the Moon the
+   lamp goes hollow and the name dims; the silence reads in amber. */
+:root[data-theme="houston"] .mocr .craft{
+  position:absolute; left:calc(var(--x) * 1%); top:calc(var(--y) * 1%); width:0; height:0;
+  font-style:normal; --lamp:var(--running); transition:left 1s linear, top 1s linear;
+}
+:root[data-theme="houston"] .mocr .craft[data-s="blocked"]{--lamp:var(--blocked)}
+:root[data-theme="houston"] .mocr .craft b{
+  position:absolute; left:-5px; top:-5px; width:10px; height:10px; border-radius:2px;
+  background:linear-gradient(180deg, rgba(255,255,255,.4), transparent 50%), var(--lamp);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), 0 0 10px var(--lamp);
+}
+:root[data-theme="houston"] .mocr .craft[data-s="blocked"] b{animation:mocr-alarm 1s steps(1,end) infinite}
+:root[data-theme="houston"] .mocr .craft em, :root[data-theme="houston"] .mocr .craft u{
+  position:absolute; left:10px; white-space:nowrap; text-decoration:none; font-style:normal; line-height:1;
+}
+:root[data-theme="houston"] .mocr .craft em{font-size:10px; color:#e8e6da; letter-spacing:.1em; max-width:170px; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="houston"] .mocr .craft u{font:11px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--accent); letter-spacing:.06em}
+/* Names above or below the track by lane, so a pile at AOS still reads; on
+   the far right they sit to the left of the lamp instead of off the glass. */
+:root[data-theme="houston"] .mocr .craft[data-lane="0"] em{top:-17px}  :root[data-theme="houston"] .mocr .craft[data-lane="0"] u{top:-5px}
+:root[data-theme="houston"] .mocr .craft[data-lane="1"] em{top:9px}    :root[data-theme="houston"] .mocr .craft[data-lane="1"] u{top:21px}
+:root[data-theme="houston"] .mocr .craft[data-lane="2"] em{top:-41px}  :root[data-theme="houston"] .mocr .craft[data-lane="2"] u{top:-29px}
+:root[data-theme="houston"] .mocr .craft[data-lane="3"] em{top:31px}   :root[data-theme="houston"] .mocr .craft[data-lane="3"] u{top:43px}
+:root[data-theme="houston"] .mocr .craft[data-side="l"] em, :root[data-theme="houston"] .mocr .craft[data-side="l"] u{left:auto; right:10px; text-align:right}
+:root[data-theme="houston"] .mocr .craft[data-los="1"] b{background:transparent; box-shadow:inset 0 0 0 1.5px var(--lamp); animation:none}
+:root[data-theme="houston"] .mocr .craft[data-los="1"] em{color:#8f978f}
+:root[data-theme="houston"] .mocr .craft[data-los="1"] u{color:var(--waiting)}
+
+/* THE CONSOLES. Painted steel, like the bays above; the only light is the
+   lamps. */
+:root[data-theme="houston"] .mocr .consoles{
+  padding:8px 12px 10px; background-image:var(--grain), linear-gradient(180deg, #2b3230, #232927);
+  border:1px solid #171c1a; border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 0 #6f766f, 0 10px 24px -14px rgba(0,0,0,.9);
+}
+:root[data-theme="houston"] .mocr .loop{
+  display:flex; align-items:baseline; gap:18px; padding:0 2px 7px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:8px;
+}
+:root[data-theme="houston"] .get{font:13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.08em; color:var(--accent); white-space:nowrap}
+:root[data-theme="houston"] .get i{font-style:normal; color:var(--faint); margin-right:8px; font:inherit}
+:root[data-theme="houston"] .mocr .say{flex:1; color:var(--dim); opacity:0; transition:opacity .35s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="houston"] .mocr .say.on{opacity:1}
+:root[data-theme="houston"] .mocr .alarm{
+  padding:2px 8px; border-radius:2px; color:#5a635c; background:#1a2332; font-style:normal; white-space:nowrap;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
 }
-:root[data-theme="houston"] .gonogo[data-alarm="1"] .alarm{
+:root[data-theme="houston"] .mocr[data-alarm="1"] .alarm{
   color:#1a0b08; background:var(--blocked); box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), 0 0 12px rgba(255,90,74,.7);
   animation:mocr-alarm 1s steps(1,end) infinite;
 }
-:root[data-theme="houston"] .gonogo .stns{display:flex; flex-wrap:wrap; gap:8px}
-:root[data-theme="houston"] .gonogo .stn{
-  display:grid; grid-template-rows:auto auto; gap:4px; min-width:74px; max-width:196px; padding:5px 8px 6px;
+:root[data-theme="houston"] .mocr .stns{display:flex; flex-wrap:wrap; gap:8px}
+/* A station plaque: the lamp, the station, and under it what it reads and
+   the figure it answered on. FLIGHT is framed, because FLIGHT is the room. */
+:root[data-theme="houston"] .mocr .stn{
+  display:grid; grid-template-rows:auto auto auto; gap:3px; flex:1 1 0; min-width:96px; padding:5px 8px 6px; font-style:normal;
   background:linear-gradient(180deg, #343b37, #2a302d); border-radius:2px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5);
 }
-:root[data-theme="houston"] .gonogo .stn em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-/* The lamp: dark frosted plastic until the state lights it. */
-:root[data-theme="houston"] .gonogo .stn b{
-  font-size:11.5px; font-weight:700; text-align:center; padding:3px 6px; border-radius:2px; color:#6f786f;
+:root[data-theme="houston"] .mocr .stn.flight{box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 0 0 1px rgba(169,214,245,.55)}
+:root[data-theme="houston"] .mocr .stn em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em; white-space:nowrap}
+:root[data-theme="houston"] .mocr .stn u{font-size:8.5px; color:var(--faint); text-decoration:none; letter-spacing:.1em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="houston"] .mocr .stn u span{font:11px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--ink); letter-spacing:.02em; text-transform:none}
+/* The lamp itself, shared with the FLIGHT plaque that stays on with the full
+   board: dark frosted plastic until its answer lights it. */
+:root[data-theme="houston"] .lamp{
+  display:block; font-size:11.5px; font-weight:700; text-align:center; padding:3px 6px; border-radius:2px; color:#6f786f; white-space:nowrap;
   background:linear-gradient(180deg, rgba(255,255,255,.14), transparent 50%), #232926;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.5);
 }
-:root[data-theme="houston"] .gonogo .stn[data-s="running"] b{color:#0b2412; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--running); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(111,224,138,.6)}
-:root[data-theme="houston"] .gonogo .stn[data-s="blocked"] b{color:#2a0a07; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--blocked); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(255,90,74,.65); animation:mocr-alarm 1s steps(1,end) infinite}
-:root[data-theme="houston"] .gonogo .stn[data-s="waiting"] b{color:#2a1a00; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--waiting); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(255,182,56,.6)}
-:root[data-theme="houston"] .gonogo .stn[data-s="idle"] b{color:#071a2c; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--idle); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px rgba(125,182,232,.5)}
-:root[data-theme="houston"] .gonogo .stn[data-s="done"] b{color:#2a2410; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--done); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px rgba(243,231,181,.45)}
-:root[data-theme="houston"] .gonogo .stn.empty{opacity:.55}
-:root[data-theme="houston"] .gonogo .stn.empty em{color:#8f978f}
-@media (prefers-reduced-motion:reduce){
-  :root[data-theme="houston"] .gonogo[data-alarm="1"] .alarm,
-  :root[data-theme="houston"] .gonogo .stn[data-s="blocked"] b{animation:none}
+:root[data-theme="houston"] [data-s="go"] > .lamp, :root[data-theme="houston"] [data-s="stby"] > .lamp, :root[data-theme="houston"] [data-s="nogo"] > .lamp{
+  background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--lamp);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px color-mix(in srgb, var(--lamp) 60%, transparent);
 }
-@media (max-width:1100px){ :root[data-theme="houston"] .gonogo .stn{min-width:62px} }
+:root[data-theme="houston"] [data-s="go"] > .lamp{--lamp:var(--running); color:#0b2412}
+:root[data-theme="houston"] [data-s="stby"] > .lamp{--lamp:var(--waiting); color:#2a1a00}
+:root[data-theme="houston"] [data-s="nogo"] > .lamp{--lamp:var(--blocked); color:#2a0a07; animation:mocr-alarm 1s steps(1,end) infinite}
+
+/* With the full board up, the clock and FLIGHT's answer stay on, small, at
+   the foot of the room; the band carries both, so it steps aside for it. */
+:root[data-theme="houston"]{--hud-inset:44px}
+:root[data-theme="houston"] .ghud.flight{
+  left:50%; bottom:calc(14px + var(--taken,0px)); transform:translateX(-50%);
+  display:flex; align-items:center; gap:12px; padding:5px 8px 5px 12px; font-style:normal;
+  font:12px/1 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase; color:var(--ink);
+  background-image:var(--grain), linear-gradient(180deg, #343b37, #2a302d); border-radius:2px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 0 #6f766f, 0 8px 18px -12px rgba(0,0,0,.9);
+}
+:root[data-theme="houston"] .ghud.flight em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em}
+:root[data-theme="houston"] .ghud.flight .lamp{min-width:52px}
+:root:has(.board.compact):not(:has(.sheet.on)) .ghud.flight{display:none}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="houston"] .mocr[data-alarm="1"] .alarm, :root[data-theme="houston"] [data-s="nogo"] > .lamp,
+  :root[data-theme="houston"] .mocr .craft[data-s="blocked"] b{animation:none}
+  :root[data-theme="houston"] .mocr .craft{transition:none}
+}
 
 </style>
 </head>
@@ -5401,27 +5478,27 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
       <select id="theme" class="wide" title="colour scheme">
         <optgroup label="base">
           <option value="console">console</option>
-          <option value="cyber">neon film</option>
           <option value="earth">earth</option>
+          <option value="cyber">neon film</option>
           <option value="neutral">neutral</option>
           <option value="paper">paper</option>
         </optgroup>
         <optgroup label="worlds">
-          <option value="miami86">hotline miami</option>
+          <option value="houston">apollo</option>
+          <option value="staunton">casino royale</option>
           <option value="signal">cyberpunk 2077</option>
-          <option value="aperture">portal</option>
+          <option value="pipboy">fallout</option>
+          <option value="chitin">hollow knight</option>
+          <option value="miami86">hotline miami</option>
           <option value="vellum">lord of the rings</option>
-          <option value="hoarstone">skyrim</option>
+          <option value="matrix">matrix</option>
+          <option value="cobble">minecraft</option>
+          <option value="offcut">persona 5</option>
           <option value="cardstock">pokémon</option>
+          <option value="aperture">portal</option>
+          <option value="hoarstone">skyrim</option>
           <option value="chequer">sonic</option>
           <option value="ochre">team fortress</option>
-          <option value="staunton">casino royale</option>
-          <option value="pipboy">fallout</option>
-          <option value="houston">apollo</option>
-          <option value="matrix">matrix</option>
-          <option value="offcut">persona 5</option>
-          <option value="cobble">minecraft</option>
-          <option value="chitin">hollow knight</option>
         </optgroup>
       </select>
       <button class="ghost" id="pause" title="pause / resume live polling">⏸<span> pause</span></button>
@@ -6874,53 +6951,196 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         clearTimeout(n._t); n._t = setTimeout(() => { say.classList.remove('on'); n.classList.remove('talking'); }, 3800);
       },
     },
-    /* The GO/NO GO poll: a plaque per session in station order, lit off the
-       tile's own state; the GET clock; the loop line for what just happened. */
+    /* Mission Control. Two instruments, both drawn off numbers the board
+       already has, and the room's own vocabulary for each.
+       The wall is the plotboard: every session at work is a spacecraft on
+       the ground track, placed by how long since Houston last heard from
+       it -- a transcript write, a note or a prompt is contact. Two and a
+       half minutes of silence and it is behind the Moon: LOS, until it
+       writes again and comes round (AOS). That is the long-tool-call
+       problem the fleet notes exist for, drawn the way the room drew it.
+       Under the wall, the Flight Director's poll: each station reads one
+       real figure and answers GO, STBY or NO GO on its own threshold;
+       FLIGHT is the worst answer in the room; MASTER ALARM lights while
+       FLIGHT is NO GO. GET counts from the oldest session still alive.
+       With the full board up, the clock and FLIGHT stay on (.ghud.flight). */
     houston: {
-      STATIONS: ['BOOSTER','RETRO','FIDO','GUIDO','SURGEON','CAPCOM','EECOM','GNC','TELMU','CONTROL','INCO','PROCEDURES','FAO','NETWORK','FLIGHT'],
-      LAMP: {running:'GO', blocked:'NO GO', waiting:'STBY', idle:'HOLD', done:'GO', unknown:'\u2014'},
+      LOS_S: 150, SPAN_S: 360, AMP: 22,
+      // the ground track: a sine and a half across the wall, in per cent of it
+      y(u){ return 50 + this.AMP * Math.sin(u * Math.PI * 3); },
+      WORD: {go:'GO', stby:'STBY', nogo:'NO GO', los:'—'},
+      RANK: {los:0, go:0, stby:1, nogo:2},
       LINES: {
-        arrived: 'AOS \u2014 acquisition of signal', blocked: '1202 PROGRAM ALARM', waiting: 'STANDBY \u2014 station requests FLIGHT',
-        running: 'GO', done: 'SPLASHDOWN \u2014 recovery has the crew', idle: 'HOLD', unknown: 'LOS',
+        arrived: 'AOS — acquisition of signal', blocked: '1202 PROGRAM ALARM', waiting: 'STANDBY — station requests FLIGHT',
+        running: 'GO', done: 'SPLASHDOWN — recovery has the crew', idle: 'HOLD', unknown: 'LOS',
+      },
+      /* [key, station, what it reads, read(snapshot, flights) -> {v: the
+         figure, s: go|stby|nogo|los, what?: a different label for this
+         reading}]. The thresholds are the gauges' own where the gauge has
+         one (pressure turns amber at 70 and red at 85 up in the HUD too). */
+      STATIONS: [
+        ['booster', 'BOOSTER', 'cpu', d => {
+          const v = d.host?.cpu?.pct; if(v == null) return null;
+          return {v: Math.round(v) + '%', s: v >= 90 ? 'nogo' : v >= 75 ? 'stby' : 'go'}; }],
+        ['eecom', 'EECOM', 'memory pressure', d => {
+          const h = d.host || {}, pw = h.power || {};
+          // off the cable, the battery is the consumable that matters
+          if(pw.source && pw.source !== 'AC' && pw.pct != null)
+            return {what: 'battery', v: pw.pct + '%', s: pw.pct <= 15 ? 'nogo' : pw.pct <= 30 ? 'stby' : 'go'};
+          const v = h.pressurePct; if(v == null) return null;
+          return {v: v + '%', s: v > 85 ? 'nogo' : v > 70 ? 'stby' : 'go'}; }],
+        // 1202 was the computer asked to hold more than it had room for
+        ['guido', 'GUIDO', 'agent memory', d => {
+          const h = d.host || {}, total = h.memory?.total, rss = h.agentRssMb;
+          if(!total || rss == null) return null;
+          const p = 100 * rss * 1048576 / total, g = rss >= 1024 ? (rss / 1024).toFixed(1) + 'G' : Math.round(rss) + 'M';
+          return {v: g + ' · ' + Math.round(p) + '%', s: p >= 60 ? 'nogo' : p >= 35 ? 'stby' : 'go'}; }],
+        ['surgeon', 'SURGEON', 'the crew', d => {
+          const b = d.tally?.blocked | 0; return {v: b ? b + ' blocked' : 'nominal', s: b ? 'nogo' : 'go'}; }],
+        ['capcom', 'CAPCOM', 'waiting on you', d => {
+          const w = d.tally?.waiting | 0; return {v: w ? String(w) : 'none', s: w ? 'stby' : 'go'}; }],
+        ['inco', 'INCO', 'signal', (d, fl) => {
+          if(!fl.length) return {v: 'no one in flight', s: 'go'};
+          const lost = fl.filter(f => f.los).length;
+          return {v: (fl.length - lost) + ' of ' + fl.length + ' heard', s: lost ? 'stby' : 'go'}; }],
+        // the board's own signal: how old the snapshot on screen is
+        ['network', 'NETWORK', 'this board', d => {
+          const a = Math.max(0, (Date.now() - (d.generatedAt || 0)) / 1000);
+          return {v: Math.round(a) + 's · ' + (d.buildMs | 0) + 'ms', s: a > 15 ? 'nogo' : a > 6 ? 'stby' : 'go'}; }],
+      ],
+      each(d, fn){ (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(fn))); },
+      // the sessions in flight: working or stuck, placed by their silence
+      flights(d){
+        const now = Date.now(), out = [];
+        this.each(d, s => {
+          if(s.state !== 'running' && s.state !== 'blocked') return;
+          const heard = Math.max(s.updated || 0, s.noteAt || 0, s.promptAt || 0);
+          const quiet = heard ? Math.max(0, (now - heard) / 1000) : this.SPAN_S;
+          out.push({id: s.id, name: s.name || s.handle || '', state: s.state, quiet, los: quiet >= this.LOS_S});
+        });
+        return out.sort((a, b) => a.quiet - b.quiet);
+      },
+      fmt(sec){ const s = Math.round(sec); return s < 60 ? s + 's' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); },
+      get(ms){
+        const s = Math.floor(ms / 1000), pad = (v, w) => String(v).padStart(w, '0');
+        return pad(Math.floor(s / 3600), 3) + ':' + pad(Math.floor(s / 60) % 60, 2) + ':' + pad(s % 60, 2);
+      },
+      clock(get, d, now){
+        let t0 = 0; this.each(d, s => { if(s.started && (!t0 || s.started < t0)) t0 = s.started; });
+        const txt = t0 ? this.get(now - t0) : '---:--:--';
+        if(get.lastChild.nodeValue !== txt) get.lastChild.nodeValue = txt;
+      },
+      lamp(p, s){
+        if(p.dataset.s !== s) p.dataset.s = s;
+        const b = p.querySelector('.lamp'), w = this.WORD[s];
+        if(b.textContent !== w) b.textContent = w;
+      },
+      // the poll: every station answers, FLIGHT takes the worst; returns it
+      poll(n, d, fl){
+        let worst = 'go', ok = 0;
+        this.STATIONS.forEach(([k, , what, read]) => {
+          const p = n.querySelector('.stn.' + k), r = read(d, fl) || {v: '—', s: 'los'};
+          this.lamp(p, r.s);
+          const u = p.querySelector('u'), label = (r.what || what) + ' ';
+          if(u.firstChild.nodeValue !== label) u.firstChild.nodeValue = label;
+          if(u.lastChild.textContent !== r.v) u.lastChild.textContent = r.v;
+          if(this.RANK[r.s] > this.RANK[worst]) worst = r.s;
+          if(r.s === 'go') ok++;
+        });
+        const f = n.querySelector('.stn.flight'), t = ok + '/' + this.STATIONS.length + ' go';
+        this.lamp(f, worst);
+        if(f.querySelector('u span').textContent !== t) f.querySelector('u span').textContent = t;
+        return worst;
+      },
+      worst(d, fl){
+        let w = 'go';
+        this.STATIONS.forEach(([, , , read]) => { const r = read(d, fl); if(r && this.RANK[r.s] > this.RANK[w]) w = r.s; });
+        return w;
+      },
+      // the wall: one craft per flight, on the track by its silence
+      wall(n, fl){
+        const row = n.querySelector('.crafts'), seen = new Set(), xs = [];
+        n.querySelector('.none').hidden = fl.length > 0;
+        fl.forEach(f => {
+          seen.add(f.id);
+          let c = row.querySelector('.craft[data-id="' + CSS.escape(f.id) + '"]');
+          if(!c){ c = el('i', 'craft', '<b></b><em></em><u></u>'); c.dataset.id = f.id; row.appendChild(c); }
+          const u = Math.min(1, f.quiet / this.SPAN_S), x = u * 100;
+          // a lane per neighbour within a tenth of the wall, so a pile at AOS still reads
+          const lane = xs.filter(v => Math.abs(v - x) < 10).length % 4; xs.push(x);
+          c.style.setProperty('--x', x.toFixed(2)); c.style.setProperty('--y', this.y(u).toFixed(2));
+          c.dataset.lane = lane; c.dataset.side = x > 72 ? 'l' : 'r';
+          c.dataset.s = f.state; c.dataset.los = f.los ? '1' : '0';
+          const t = this.fmt(f.quiet);
+          if(c.children[1].textContent !== f.name) c.children[1].textContent = f.name;
+          if(c.children[2].textContent !== t) c.children[2].textContent = t;
+        });
+        Array.from(row.children).forEach(c => { if(!seen.has(c.dataset.id)) c.remove(); });
       },
       make(){
-        const n = el('div', 'band gonogo');
-        n.innerHTML = '<div class="loop"><b class="get"><i>GET</i>000:00:00</b><span class="say" aria-live="polite"></span><i class="alarm">master alarm</i></div><div class="stns"></div>';
-        n.dataset.t0 = String(Date.now());
-        const get = n.querySelector('.get');
-        const tick = () => {
-          const s = Math.floor((Date.now() - +n.dataset.t0) / 1000);
-          const pad = (v, w) => String(v).padStart(w, '0');
-          const txt = pad(Math.floor(s / 3600), 3) + ':' + pad(Math.floor(s / 60) % 60, 2) + ':' + pad(s % 60, 2);
-          if(get.lastChild.nodeValue !== txt) get.lastChild.nodeValue = txt;
-        };
-        timers.push(setInterval(tick, 1000));
+        const n = el('div', 'band mocr'), u0 = this.LOS_S / this.SPAN_S, X = (u0 * 1000).toFixed(0);
+        let track = '', grid = '';
+        for(let i = 0; i <= 100; i++) track += (i ? ' L' : 'M') + (i * 10) + ' ' + (this.y(i / 100) * 1.6).toFixed(1);
+        for(let x = 100; x < 1000; x += 100) grid += '<path d="M' + x + ' 0v160" vector-effect="non-scaling-stroke"/>';
+        for(let y = 40; y < 160; y += 40) grid += '<path d="M0 ' + y + 'h1000" vector-effect="non-scaling-stroke"/>';
+        n.innerHTML =
+            '<div class="wall"><svg viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">'
+          +   '<rect x="' + X + '" y="0" width="' + (1000 - X) + '" height="160" fill="rgba(0,0,0,.38)"/>'
+          +   '<g stroke="#a9d6f5" stroke-opacity=".10" stroke-width="1" fill="none">' + grid + '</g>'
+          +   '<path d="M' + X + ' 0v160" stroke="#ffb638" stroke-opacity=".55" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>'
+          +   '<path d="' + track + '" fill="none" stroke="#a9d6f5" stroke-opacity=".5" stroke-width="1.5" vector-effect="non-scaling-stroke"/>'
+          + '</svg>'
+          + '<span class="mark aos">AOS — heard just now</span>'
+          + '<span class="mark los" style="left:' + (u0 * 100).toFixed(1) + '%">LOS — silent ' + this.fmt(this.LOS_S) + '</span>'
+          + '<span class="mark end">' + this.fmt(this.SPAN_S) + '+</span>'
+          + '<span class="none" hidden>no one in flight</span><i class="crafts"></i></div>'
+          + '<div class="consoles"><div class="loop"><b class="get"><i>GET</i>---:--:--</b><span class="say" aria-live="polite"></span><i class="alarm">master alarm</i></div><div class="stns">'
+          + this.STATIONS.map(([k, name, what]) => '<i class="stn ' + k + '" data-s="los"><b class="lamp">—</b><em>' + name + '</em><u>' + what + ' <span>—</span></u></i>').join('')
+          + '<i class="stn flight" data-s="los"><b class="lamp">—</b><em>FLIGHT</em><u>all stations <span>—</span></u></i>'
+          + '</div></div>';
+        n._los = new Set(); n._at = 0;
+        // crafts drift and the clock counts by the second, not by the paint
+        timers.push(setInterval(() => {
+          this.paint(n, null);
+          const h = document.querySelector('.ghud.flight'); if(h) this.paintHud(h, null);
+        }, 1000));
         return n;
       },
       paint(n, diff){
-        const tiles = Array.from(document.querySelectorAll('.bubble')).slice(0, this.STATIONS.length);
-        const row = n.querySelector('.stns');
-        // one plaque per station that has a session; the rest sit dark
-        const want = Math.max(tiles.length, Math.min(this.STATIONS.length, 6));
-        while(row.children.length > want) row.lastChild.remove();
-        while(row.children.length < want){ const p = el('i', 'stn'); p.innerHTML = '<b></b><em></em>'; row.appendChild(p); }
-        Array.from(row.children).forEach((p, i) => {
-          const t = tiles[i], st = t ? t.dataset.state : '';
-          const name = t ? (t.querySelector('.nm')?.textContent || '') : '';
-          p.dataset.s = st; p.classList.toggle('empty', !t);
-          const b = p.firstChild, em = p.lastChild;
-          const lamp = t ? (this.LAMP[st] || '\u2014') : '\u2014';
-          if(b.textContent !== lamp) b.textContent = lamp;
-          const label = this.STATIONS[i] + (name ? ' \u00b7 ' + name : '');
-          if(em.textContent !== label) em.textContent = label;
-          if(t) p.title = name + ' \u2014 ' + st; else p.removeAttribute('title');
+        const d = latest; if(!d) return;
+        if(!(board.classList.contains('compact') && !document.querySelector('.sheet.on'))) return;   // not up
+        const now = Date.now(), fl = this.flights(d);
+        this.clock(n.querySelector('.get'), d, now);
+        n.dataset.alarm = this.poll(n, d, fl) === 'nogo' ? '1' : '0';
+        this.wall(n, fl);
+        // the loop line: what just happened, on a board already being read
+        const lines = [];
+        if(diff && !diff.first){
+          const c = diff.changed && diff.changed[0];
+          if(diff.arrived && diff.arrived.length) lines.push(this.LINES.arrived);
+          else if(c && this.LINES[c.to]){
+            const who = board.querySelector('.bubble[data-id="' + CSS.escape(c.id) + '"] .nm')?.textContent;
+            lines.push(this.LINES[c.to] + (who ? ' — ' + who : ''));
+          }
+        }
+        const was = n._los, los = new Set();
+        fl.forEach(f => {
+          if(f.los) los.add(f.id);
+          if(now - n._at < 5000){          // only transitions this paint saw happen
+            if(f.los && !was.has(f.id)) lines.push('LOS — ' + f.name);
+            if(!f.los && was.has(f.id)) lines.push('AOS — ' + f.name);
+          }
         });
-        n.dataset.alarm = rootNum('--n-blocked') > 0 ? '1' : '0';
-        // the loop line, only for a change on a board that was already being read
-        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
-        if(!k || !this.LINES[k] || (diff && diff.first)) return;
-        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        n._los = los; n._at = now;
+        if(!lines.length) return;
+        const say = n.querySelector('.say'); say.textContent = lines[0]; say.classList.add('on');
         clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6500);
+      },
+      hud(){ const h = el('i', 'ghud flight', '<b class="get"><i>GET</i>---:--:--</b><em>flight</em><b class="lamp">—</b>'); h.dataset.s = 'los'; return h; },
+      paintHud(h){
+        const d = latest; if(!d) return;
+        this.clock(h.querySelector('.get'), d, Date.now());
+        this.lamp(h, this.worst(d, this.flights(d)));
       },
     },
     /* Skyrim's three bars: magicka is the memory left, health the pressure

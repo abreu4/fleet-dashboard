@@ -8,3 +8,4 @@ __pycache__/
 
 # timestamped safety copies taken before hand-edits; git is the history now
 ui.html.bak.*
+.claude/worktrees/

@@ -130,7 +130,8 @@ plain health paint and stay put if the status colours are ever reassigned.
 
 ## Themes
 
-Twenty colour schemes, picked from the HUD and remembered per browser.
+Twenty colour schemes, listed alphabetically, picked from the HUD and
+remembered per browser.
 `?theme=` in the URL overrides one load, and the settings card (`⌘,`) keeps a
 count of how often each theme has been picked from the menu.
 
@@ -155,7 +156,7 @@ count of how often each theme has been picked from the menu.
 | **Persona 5** | a two-colour print job: vermilion on newsprint black, every tile snipped with scissors, zero glow |
 | **Minecraft** | quarried stone by torchlight, grass-block headers, a splash on the title; the survival HUD is live and captioned -- hearts for the memory left, the XP bar for the CPU, the level for the sessions at work |
 | **Hollow Knight** | layered indigo void, bone hairlines on the top edge only, souls drifting up, a bench to rest on |
-| **Apollo** | Mission Control, 1969: grey-green console bays under the plotboard wall, every status dot a square indicator lamp; collapsing the board uncovers the GO/NO GO poll — a station plaque per session, the GET clock, MASTER ALARM while anything is NO GO |
+| **Apollo** | Mission Control, 1969: grey-green console bays, every status dot a square indicator lamp, GET and FLIGHT's answer at the foot of the room. Collapse the board for the front wall and the poll: the plotboard tracks every working session by how long since it last wrote (a note or a prompt counts) — 2:30 of silence and it is behind the Moon, LOS, until it writes again; under it the Flight Director's poll, one station per real figure (BOOSTER cpu, EECOM pressure or battery, GUIDO the agents' memory, SURGEON blocked, CAPCOM waiting on you, INCO who can be heard, NETWORK this board's own snapshot age), each answering GO / STBY / NO GO on its own threshold, FLIGHT the worst of them, MASTER ALARM while FLIGHT is NO GO |
 
 Each theme sets a `--glow` factor that every shadow multiplies, so neutral is
 genuinely flat rather than dimmed.

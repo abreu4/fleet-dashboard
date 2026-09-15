@@ -12,7 +12,9 @@
 
 - [x] The band (pass 8): collapsing the board uncovers one state-driven object per world — Sonic's rings on Green Hill, Fallout's S.P.E.C.I.A.L., the beacons of Gondor, Portal's turret, Persona's date card — beside the casino wheel that started it.
 - [x] Collapsed tiles: the foot drops its path/turns whole instead of truncating to `…/FLE…`; resting on a collapsed tile peeks its line of context.
-- [x] Apollo (`houston`): a twentieth world built to the band rule from the start — the indicator lamp is the tell, the GO/NO GO poll is the band (per-session plaques read off `.bubble[data-state]`, GET clock, MASTER ALARM, a loop line for AOS / 1202 / SPLASHDOWN). Untested live: a NO GO lamp, since no session was blocked at build time.
+- [x] Apollo (`houston`): rebuilt — the first cut mirrored the tiles (a plaque per session, stations by index, GET from page load). Now the plotboard places every working session by its silence (LOS at 2:30), the poll is a *systems* poll (one station per real host/fleet figure, each with its own threshold), GET runs from the oldest live session, FLIGHT + GET stay on with the full board. NO GO / STBY / LOS verified through a state-bending proxy.
+- [x] Always-on instruments (Skyrim bars, Minecraft HUD, Apollo FLIGHT) get their own strip via `--hud-inset` instead of sitting on the Codex row; Skyrim's aurora moved into the sky.
+- [x] Theme menu sorted alphabetically.
 
 ### Next — specialized interactive gimmicks
 - [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7). Still open: a clickable wheel or a loopable deck of cards.
