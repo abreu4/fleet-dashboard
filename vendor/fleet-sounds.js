@@ -703,10 +703,21 @@
     return PACKS.hasOwnProperty(key) ? key : FALLBACK_PACK;
   }
 
+  // What became of the last cue, so the sound panel can say "queued: the
+  // context is suspended" instead of the board just being silent.
+  var last = null;
+  function note(name, outcome) {
+    last = { name: name, at: Date.now(), outcome: outcome, ctx: ctx ? ctx.state : 'none', pack: packKey };
+    try { if (window.console && console.debug) console.debug('[fleet-sounds] ' + name + ': ' + outcome + ' (context ' + last.ctx + ', pack ' + packKey + ')'); } catch (e) { /* no console */ }
+    label();
+  }
   function play(name) {
     var p = PACKS[packKey], layers = p && p[name];
-    if (!layers || muted || !ctx) return false;
+    if (!layers) { note(name, 'no such cue in pack ' + packKey); return false; }
+    if (muted) { note(name, 'muted'); return false; }
+    if (!ctx) { note(name, 'no audio context'); return false; }
     if (ctx.state !== 'running') {
+      note(name, 'queued: context ' + ctx.state + ', asked it to resume');
       // Suspended/interrupted until playback is permitted: ask, and play this
       // same cue once resume completes rather than losing the notification.
       // Keep only the latest cue. A sleeping display may accumulate many
@@ -720,8 +731,8 @@
             fired = true;
             var queued = pendingCue;
             pendingCue = null;
-            if (queued && !muted) trigger(queued);
-          }
+            if (queued && !muted) { trigger(queued); note(name, 'played after resume'); }
+          } else if (!fired) note(name, 'still waiting: context ' + ctx.state + ' (a click on the page unlocks it)');
         };
         if (resumed && resumed.then) resumed.then(afterResume);
         // Older WebKit builds did not reliably return the resume promise even
@@ -731,6 +742,7 @@
       return false;
     }
     trigger(layers);
+    note(name, 'played');
     return true;
   }
 
@@ -779,7 +791,8 @@
     + '<path d="M10.6 6.2l3.4 3.6M14 6.2l-3.4 3.6"/></svg>';
   function label() {
     if (!btn) return;
-    btn.innerHTML = (muted ? ICON_OFF : ICON_ON) + '<span> ' + (muted ? 'off' : 'on') + '</span>';
+    var stuck = !muted && ctx && ctx.state !== 'running' && ctx.state !== 'closed';
+    btn.innerHTML = (muted ? ICON_OFF : ICON_ON) + '<span> ' + (muted ? 'off' : stuck ? 'unlock' : 'on') + '</span>';
     btn.title = 'sound ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
               + (!muted && !audible ? '\nclick: activate and test sound' : '\nclick: mute / unmute')
               + ' · shift+click: cycle volume · volume, pack and cues under \u22ef';
@@ -909,6 +922,8 @@
     muted: function () { return muted; },
     /** Current browser audio state, used by the settings/debug surface. */
     state: function () { return ctx ? ctx.state : 'uninitialized'; },
+    /** What became of the last cue: {name, at, outcome, ctx, pack}, or null. */
+    last: function () { return last; },
     /** UI click cues on/off (default off), persisted. */
     clicks: function (on) { if (on !== undefined) { clicks = !!on; writeLS(LS_CLICKS, clicks); } return clicks; },
     /** Pin one pack for every theme, or 'theme' to follow the theme. Persisted. */
