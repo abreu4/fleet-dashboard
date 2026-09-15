@@ -108,7 +108,7 @@ plain health paint and stay put if the status colours are ever reassigned.
 
 ## Themes
 
-Nineteen colour schemes, picked from the HUD and remembered per browser.
+Twenty colour schemes, picked from the HUD and remembered per browser.
 `?theme=` in the URL overrides one load, and the settings card (`⌘,`) keeps a
 count of how often each theme has been picked from the menu.
 
@@ -133,6 +133,7 @@ count of how often each theme has been picked from the menu.
 | **Persona 5** | a two-colour print job: vermilion on newsprint black, every tile snipped with scissors, zero glow |
 | **Minecraft** | quarried stone by torchlight, grass-block headers, the survival HUD, a splash on the title |
 | **Hollow Knight** | layered indigo void, bone hairlines on the top edge only, souls drifting up, a bench to rest on |
+| **Apollo** | Mission Control, 1969: grey-green console bays under the plotboard wall, every status dot a square indicator lamp; collapsing the board uncovers the GO/NO GO poll — a station plaque per session, the GET clock, MASTER ALARM while anything is NO GO |
 
 Each theme sets a `--glow` factor that every shadow multiplies, so neutral is
 genuinely flat rather than dimmed.

@@ -12,6 +12,7 @@
 
 - [x] The band (pass 8): collapsing the board uncovers one state-driven object per world — Sonic's rings on Green Hill, Fallout's S.P.E.C.I.A.L., the beacons of Gondor, Portal's turret, Persona's date card — beside the casino wheel that started it.
 - [x] Collapsed tiles: the foot drops its path/turns whole instead of truncating to `…/FLE…`; resting on a collapsed tile peeks its line of context.
+- [x] Apollo (`houston`): a twentieth world built to the band rule from the start — the indicator lamp is the tell, the GO/NO GO poll is the band (per-session plaques read off `.bubble[data-state]`, GET clock, MASTER ALARM, a loop line for AOS / 1202 / SPLASHDOWN). Untested live: a NO GO lamp, since no session was blocked at build time.
 
 ### Next — specialized interactive gimmicks
 - [x] Casino Royale (`staunton`): a session finishing drops the ball (pass 7). Still open: a clickable wheel or a loopable deck of cards.

@@ -4990,6 +4990,151 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="chitin"] .lantern.lit{opacity:.5}
 
+
+/* ============================================================================
+   HOUSTON  --  Mission Operations Control Room, Building 30, 1969
+   The material is the Philco-Ford console: painted grey-green steel bays with
+   a bevel on the top edge, legend plates in a condensed gothic, and rows of
+   square push-button indicator lamps -- white legends on grey when dark, and
+   a coloured glow through frosted plastic when lit. Behind the HUD is the
+   front wall: rear-projected plotboards in blue-black with the ground track
+   drawn in phosphor. Nothing on the consoles emits except the lamps, so the
+   glow multiplier is low and the lamps carry all of it.
+
+   Why the room fits this board: MOCR *was* a fleet console. Every station
+   read one thing off telemetry and answered the Flight Director's poll with
+   a lit word -- GO or NO GO -- and that is exactly what a session tile is.
+
+   Colour roles are the lamp legend colours of the real consoles: green for
+   GO, red for NO GO, amber for STANDBY (the one that wants you), the blue
+   lamp for HOLD, and a plain white lamp for a station that is finished.
+   Measured on --tile #3d453f: --faint 4.6:1, --dim 8.3:1, --ink 11.9:1;
+   the amber STANDBY word 7.9:1, the red NO GO word 4.9:1.
+   ========================================================================== */
+:root[data-theme="houston"]{
+  color-scheme:dark;
+  --void:#1f2422; --panel:#2b312d; --cell:#333a35; --tile:#3d453f; --tile-hi:#4a534c;
+  --edge:#566159; --edge-hot:#a9d6f5;
+  --ink:#f1efe6; --dim:#c9c7bb; --faint:#a0a69f;
+  --accent:#a9d6f5;                                    /* plotboard phosphor */
+  --blocked:#ff5a4a; --running:#6fe08a; --idle:#7db6e8; --done:#f3e7b5; --unknown:#8f978f;
+  --good:#6fe08a; --warn:#ffb638; --waiting:#ffb638;
+  --glow:.55; --sigil:"\25A3";                         /* one lit indicator */
+  --scan:rgba(169,214,245,.018); --halo:rgba(169,214,245,.10);
+  /* Painted steel: a faint horizontal brush and a little tooth, no colour. */
+  --grain:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
+  --hud-a:#0d1829; --hud-b:#071020; --rail-a:#2f3733; --rail-b:#252b28;
+}
+:root[data-theme="houston"]{
+  --face-data:   ui-monospace, "SF Mono", Menlo, monospace;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: "Futura", "Avenir Next Condensed", "Avenir Next", "Helvetica Neue", sans-serif;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:.98; --fs-data:1; --fs-prose:1; --tr-chrome:1.3;
+}
+/* Legend plates are set in capitals, everywhere a legend would be. */
+:root[data-theme="houston"] .brand b, :root[data-theme="houston"] .rail .vlabel,
+:root[data-theme="houston"] .hrail .who, :root[data-theme="houston"] .project > header,
+:root[data-theme="houston"] .gauge .lab, :root[data-theme="houston"] .trace .cap,
+:root[data-theme="houston"] .panel section h3, :root[data-theme="houston"] .stat .k,
+:root[data-theme="houston"] .bubble .nm, :root[data-theme="houston"] .bubble .foot .st,
+:root[data-theme="houston"] .acts button, :root[data-theme="houston"] button.ghost{text-transform:uppercase}
+:root[data-theme="houston"] .bubble .nm{font-family:var(--face-chrome); letter-spacing:.07em; font-weight:600}
+:root[data-theme="houston"] .bubble .foot .st{letter-spacing:.12em; font-weight:700}
+
+/* THE FRONT WALL. The HUD is the plotboard: blue-black glass, a faint
+   latitude/longitude grid and the ground track drawn as one phosphor sine,
+   under an aluminium rail. */
+:root[data-theme="houston"] .hud{
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='120' viewBox='0 0 720 120'%3E%3Cg stroke='%23a9d6f5' stroke-opacity='.10' stroke-width='1' fill='none'%3E%3Cpath d='M0 20h720M0 60h720M0 100h720M60 0v120M180 0v120M300 0v120M420 0v120M540 0v120M660 0v120'/%3E%3C/g%3E%3Cpath d='M0 60 C60 12 120 12 180 60 S300 108 360 60 S480 12 540 60 S660 108 720 60' fill='none' stroke='%23a9d6f5' stroke-opacity='.38' stroke-width='1.5'/%3E%3Ccircle cx='360' cy='60' r='3.5' fill='%23f1efe6' fill-opacity='.9'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--hud-a), var(--hud-b));
+  background-size:720px 100%, auto; background-position:center, 0 0;
+  border-bottom:3px solid #b9beb7;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.18), 0 2px 0 #6f766f, 0 6px 18px -12px rgba(0,0,0,.9);
+}
+:root[data-theme="houston"] .brand b{color:#f1efe6; letter-spacing:.22em; text-shadow:0 1px 0 rgba(0,0,0,.6)}
+:root[data-theme="houston"] .brand b::after{color:var(--accent); opacity:.9}
+/* EGG: point at the wordmark and the plate reads the room's call sign. */
+:root[data-theme="houston"] .brand:hover b::after{
+  content:"HOUSTON"; font-family:var(--face-chrome); font-size:11px; letter-spacing:.24em; opacity:1;
+}
+:root[data-theme="houston"] .rail .vlabel, :root[data-theme="houston"] .hrail .who{color:#d8d6ca; letter-spacing:.14em}
+:root[data-theme="houston"] .rail .rcount{color:var(--accent)}
+
+/* THE BAYS. A lane is one console bay: bevelled top edge, a shadow line
+   under it, squared corners because steel does not round. */
+:root[data-theme="houston"] .lane{
+  border-radius:3px; border-left-color:#6a746c;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), inset 1px 0 0 rgba(255,255,255,.04);
+}
+/* Row plates: the black legend plate screwed to the top of each bay. */
+:root[data-theme="houston"] .project > header{
+  color:#e8e6da; letter-spacing:.14em;
+  background-image:var(--grain), linear-gradient(180deg, #2b3230, #1e2422);
+  border-bottom:1px solid #0f1412;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
+}
+:root[data-theme="houston"] .project > header .ct{color:var(--accent); opacity:.9}
+
+/* THE MODULES. A tile is one console module: painted face, top bevel, and
+   the name on its legend plate. */
+:root[data-theme="houston"] .bubble{
+  border-radius:3px;
+  background-image:var(--grain), linear-gradient(180deg, rgba(255,255,255,.035), transparent 40%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.35);
+}
+:root[data-theme="houston"] .bubble:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(169,214,245,.55), 0 8px 18px -12px rgba(0,0,0,.9)}
+:root[data-theme="houston"] .bubble.sel{box-shadow:0 0 0 2px var(--accent)}
+
+/* 1. THE TELL -- the indicator lamp. Every status dot is a square push-button
+   lamp: frosted plastic over a bulb, a dark bezel, a highlight on the top
+   edge. Lit, it glows in its legend colour and throws light onto the plate.
+   The colour comes off --rib, which the tile already sets to its state token,
+   so a state this rule never heard of still lights the lamp correctly. */
+:root[data-theme="houston"] .bubble .foot .dot{
+  width:13px; height:13px; border-radius:2px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%),
+    color-mix(in srgb, var(--rib) 82%, #fff);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08), 0 0 9px color-mix(in srgb, var(--rib) 70%, transparent);
+}
+/* A station with nothing to report has its lamp dark: grey plastic, no glow. */
+:root[data-theme="houston"] .bubble[data-state="unknown"] .foot .dot{
+  background:linear-gradient(180deg, rgba(255,255,255,.18), transparent 45%), #5a635c; box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);
+}
+/* NO GO flashes the way MASTER ALARM did: hard on/off at 1 Hz, on the lamp
+   alone -- the word beside it stays lit and readable. */
+:root[data-theme="houston"] .bubble[data-state="blocked"] .foot .dot{animation:mocr-alarm 1s steps(1,end) infinite}
+@keyframes mocr-alarm{0%,100%{filter:none} 50%{filter:brightness(.45) saturate(.6)}}
+/* Waiting is the amber STANDBY lamp, and amber is the room's colour for a
+   thing that wants a human. */
+:root[data-theme="houston"] .bubble[data-state="waiting"] .foot{color:var(--waiting)}
+
+/* THE RECORDERS. Gauges and traces are strip-chart channels: plotboard
+   grids, phosphor pen. */
+:root[data-theme="houston"] .trace{
+  background-color:#0b1524;
+  background-image:linear-gradient(rgba(169,214,245,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(169,214,245,.06) 1px, transparent 1px);
+  background-size:100% 8px, 20px 100%;
+  border-color:#3d4a5c;
+}
+:root[data-theme="houston"] .gauge, :root[data-theme="houston"] .readout, :root[data-theme="houston"] .stat{
+  background-image:var(--grain); box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+}
+:root[data-theme="houston"] .gauge .val, :root[data-theme="houston"] .readout dd b, :root[data-theme="houston"] .chip .n{color:var(--accent)}
+
+/* Chrome. */
+:root[data-theme="houston"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 rgba(255,255,255,.08), -26px 0 60px -30px rgba(0,0,0,.95)}
+:root[data-theme="houston"] .toast{background:#2b312d; border-color:#b9beb7; color:var(--ink)}
+:root[data-theme="houston"] .scrim{background:rgba(14,18,16,.72)}
+:root[data-theme="houston"] .acts button:hover, :root[data-theme="houston"] button.ghost:hover{background:#4a534c; box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(169,214,245,.45)}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="houston"] .bubble[data-state="blocked"] .foot .dot{animation:none}
+}
+
 /* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
@@ -5146,6 +5291,62 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   background:var(--accent); color:#0e0b0b; font-size:12px; letter-spacing:.14em;
   clip-path:polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); transform:rotate(3deg);
 }
+
+/* ---- HOUSTON: the GO/NO GO poll ----------------------------------------------
+   The Flight Director's poll, standing along the bottom of the room: one
+   plaque per session, in the order the stations sat, each lit with the word
+   it would have answered -- GO, NO GO, STBY, HOLD -- off the tile's live
+   state. Above the plaques, the ground-elapsed-time clock counts from the
+   moment the board acquired signal, and the loop line prints what just
+   happened: AOS when a session arrives, 1202 when one blocks. MASTER ALARM
+   lights while anything on the board is NO GO. */
+:root[data-theme="houston"] .gonogo{
+  left:18px; right:18px; bottom:calc(16px + var(--taken,0px)); padding:8px 12px 10px;
+  color:var(--ink); font:12px/1.4 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase;
+  background:linear-gradient(180deg, #0f1a2c, #091223); border:1px solid #3d4a5c; border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(169,214,245,.16), 0 2px 0 #6f766f, 0 10px 24px -14px rgba(0,0,0,.9);
+}
+:root[data-theme="houston"] .gonogo .loop{
+  display:flex; align-items:baseline; gap:18px; padding:0 2px 7px; border-bottom:1px solid rgba(169,214,245,.16); margin-bottom:8px;
+}
+:root[data-theme="houston"] .gonogo .get{font:13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.08em; color:var(--accent)}
+:root[data-theme="houston"] .gonogo .get i{font-style:normal; color:var(--faint); margin-right:8px; font:inherit}
+:root[data-theme="houston"] .gonogo .say{flex:1; color:var(--dim); opacity:0; transition:opacity .35s}
+:root[data-theme="houston"] .gonogo .say.on{opacity:1}
+:root[data-theme="houston"] .gonogo .alarm{
+  padding:2px 8px; border-radius:2px; color:#5a635c; background:#1a2332;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+}
+:root[data-theme="houston"] .gonogo[data-alarm="1"] .alarm{
+  color:#1a0b08; background:var(--blocked); box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), 0 0 12px rgba(255,90,74,.7);
+  animation:mocr-alarm 1s steps(1,end) infinite;
+}
+:root[data-theme="houston"] .gonogo .stns{display:flex; flex-wrap:wrap; gap:8px}
+:root[data-theme="houston"] .gonogo .stn{
+  display:grid; grid-template-rows:auto auto; gap:4px; min-width:74px; max-width:196px; padding:5px 8px 6px;
+  background:linear-gradient(180deg, #343b37, #2a302d); border-radius:2px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5);
+}
+:root[data-theme="houston"] .gonogo .stn em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* The lamp: dark frosted plastic until the state lights it. */
+:root[data-theme="houston"] .gonogo .stn b{
+  font-size:11.5px; font-weight:700; text-align:center; padding:3px 6px; border-radius:2px; color:#6f786f;
+  background:linear-gradient(180deg, rgba(255,255,255,.14), transparent 50%), #232926;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5);
+}
+:root[data-theme="houston"] .gonogo .stn[data-s="running"] b{color:#0b2412; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--running); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(111,224,138,.6)}
+:root[data-theme="houston"] .gonogo .stn[data-s="blocked"] b{color:#2a0a07; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--blocked); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(255,90,74,.65); animation:mocr-alarm 1s steps(1,end) infinite}
+:root[data-theme="houston"] .gonogo .stn[data-s="waiting"] b{color:#2a1a00; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--waiting); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px rgba(255,182,56,.6)}
+:root[data-theme="houston"] .gonogo .stn[data-s="idle"] b{color:#071a2c; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--idle); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px rgba(125,182,232,.5)}
+:root[data-theme="houston"] .gonogo .stn[data-s="done"] b{color:#2a2410; background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--done); box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px rgba(243,231,181,.45)}
+:root[data-theme="houston"] .gonogo .stn.empty{opacity:.55}
+:root[data-theme="houston"] .gonogo .stn.empty em{color:#8f978f}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="houston"] .gonogo[data-alarm="1"] .alarm,
+  :root[data-theme="houston"] .gonogo .stn[data-s="blocked"] b{animation:none}
+}
+@media (max-width:1100px){ :root[data-theme="houston"] .gonogo .stn{min-width:62px} }
+
 </style>
 </head>
 <body>
@@ -5182,6 +5383,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="ochre">team fortress</option>
           <option value="staunton">casino royale</option>
           <option value="pipboy">fallout</option>
+          <option value="houston">apollo</option>
           <option value="matrix">matrix</option>
           <option value="offcut">persona 5</option>
           <option value="cobble">minecraft</option>
@@ -5343,6 +5545,13 @@ const THEME_MARKS = {
     antigravity:'<circle cx="8" cy="8" r="6.9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 3.2 L9.9 6.1 V9.9 L8 10.8 L6.1 9.9 V6.1Z M6.1 8.5 L4.5 10.9 L6.1 10.4Z M9.9 8.5 L11.5 10.9 L9.9 10.4Z M6.8 11.3h2.4L8 13.1Z" fill="currentColor"/>',
     codex:'<circle cx="8" cy="8" r="6.9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11.56 4.55A2.6 2.6 0 1 1 9.45 2.44" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M7.2 6.8L3.7 10.3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   },
+  /* houston -- mission-patch geometry: the command module (a cone on its
+     heat shield), a Saturn V, and one orbit with the spacecraft on it. */
+  houston:{
+    claude:'<path d="M8 1.6 L12.4 10.6 H3.6Z" fill="currentColor"/><path d="M3 11.8 Q8 15.4 13 11.8 L12.4 13.6 Q8 15.8 3.6 13.6Z" fill="currentColor" fill-opacity=".75"/>',
+    antigravity:'<path d="M8 1 L9.8 4.2 V11.6 H6.2 V4.2Z" fill="currentColor"/><path d="M6.2 9.4 L4 12.6 V14 L6.2 12.4ZM9.8 9.4 L12 12.6 V14 L9.8 12.4Z" fill="currentColor"/><path d="M6.6 12.4 H9.4 L8.7 15 H7.3Z" fill="currentColor" fill-opacity=".7"/>',
+    codex:'<ellipse cx="8" cy="8" rx="6.6" ry="3.1" transform="rotate(-28 8 8)" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/><circle cx="12.9" cy="4.6" r="1.4" fill="currentColor"/>',
+  },
   /* casino royale -- the three suits:
      a spade, a club, and a diamond. Pure casino elegance. */
   staunton:{
@@ -5459,6 +5668,9 @@ const VOICE = {
   /* hollow knight */
   chitin:    {blocked:'infected', waiting:'at bench', running:'delving', idle:'resting', done:'charm won', unknown:'in void',
               blank:'no map bought yet', quiet:'the well is silent', offline:'DREAM NO MORE'},
+  /* apollo mission control */
+  houston:   {blocked:'no go', waiting:'standby', running:'go', idle:'hold', done:'splashdown', unknown:'LOS',
+              blank:'no telemetry on this loop', quiet:'loss of signal', offline:'LOS'},
   /* fallout */
   pipboy:    {blocked:'crippled', waiting:'holotape', running:'exploring', idle:'resting', done:'completed', unknown:'unmarked',
               blank:'no entries in this log', quiet:'no signals in range', offline:'NO SIGNAL'},
@@ -6610,6 +6822,55 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
         clearTimeout(n._t); n._t = setTimeout(() => { say.classList.remove('on'); n.classList.remove('talking'); }, 3800);
       },
     },
+    /* The GO/NO GO poll: a plaque per session in station order, lit off the
+       tile's own state; the GET clock; the loop line for what just happened. */
+    houston: {
+      STATIONS: ['BOOSTER','RETRO','FIDO','GUIDO','SURGEON','CAPCOM','EECOM','GNC','TELMU','CONTROL','INCO','PROCEDURES','FAO','NETWORK','FLIGHT'],
+      LAMP: {running:'GO', blocked:'NO GO', waiting:'STBY', idle:'HOLD', done:'GO', unknown:'\u2014'},
+      LINES: {
+        arrived: 'AOS \u2014 acquisition of signal', blocked: '1202 PROGRAM ALARM', waiting: 'STANDBY \u2014 station requests FLIGHT',
+        running: 'GO', done: 'SPLASHDOWN \u2014 recovery has the crew', idle: 'HOLD', unknown: 'LOS',
+      },
+      make(){
+        const n = el('div', 'band gonogo');
+        n.innerHTML = '<div class="loop"><b class="get"><i>GET</i>000:00:00</b><span class="say" aria-live="polite"></span><i class="alarm">master alarm</i></div><div class="stns"></div>';
+        n.dataset.t0 = String(Date.now());
+        const get = n.querySelector('.get');
+        const tick = () => {
+          const s = Math.floor((Date.now() - +n.dataset.t0) / 1000);
+          const pad = (v, w) => String(v).padStart(w, '0');
+          const txt = pad(Math.floor(s / 3600), 3) + ':' + pad(Math.floor(s / 60) % 60, 2) + ':' + pad(s % 60, 2);
+          if(get.lastChild.nodeValue !== txt) get.lastChild.nodeValue = txt;
+        };
+        timers.push(setInterval(tick, 1000));
+        return n;
+      },
+      paint(n, diff){
+        const tiles = Array.from(document.querySelectorAll('.bubble')).slice(0, this.STATIONS.length);
+        const row = n.querySelector('.stns');
+        // one plaque per station that has a session; the rest sit dark
+        const want = Math.max(tiles.length, Math.min(this.STATIONS.length, 6));
+        while(row.children.length > want) row.lastChild.remove();
+        while(row.children.length < want){ const p = el('i', 'stn'); p.innerHTML = '<b></b><em></em>'; row.appendChild(p); }
+        Array.from(row.children).forEach((p, i) => {
+          const t = tiles[i], st = t ? t.dataset.state : '';
+          const name = t ? (t.querySelector('.nm')?.textContent || '') : '';
+          p.dataset.s = st; p.classList.toggle('empty', !t);
+          const b = p.firstChild, em = p.lastChild;
+          const lamp = t ? (this.LAMP[st] || '\u2014') : '\u2014';
+          if(b.textContent !== lamp) b.textContent = lamp;
+          const label = this.STATIONS[i] + (name ? ' \u00b7 ' + name : '');
+          if(em.textContent !== label) em.textContent = label;
+          if(t) p.title = name + ' \u2014 ' + st; else p.removeAttribute('title');
+        });
+        n.dataset.alarm = rootNum('--n-blocked') > 0 ? '1' : '0';
+        // the loop line, only for a change on a board that was already being read
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6500);
+      },
+    },
     /* The calendar card, with the hour the game would print. */
     offcut: {
       make(){ return el('div', 'band p5date', '<b></b><i></i><span></span>'); },
@@ -6853,6 +7114,7 @@ const THEME_MUSIC = {
   ochre:     'playful big band spy jazz brass action instrumental',
   staunton:  'elegant martini jazz and high stakes baccarat tension',
   pipboy:    '1950s swing jazz ink spots big band fallout',
+  houston:   'apollo mission control ambient 1960s space program analog drone',
   matrix:    '90s industrial metal dark techno breakbeat',
   offcut:    'acid jazz funk hammond organ heist groove instrumental',
   cobble:    'calm ambient piano and soft synth pads cave reverb building music',
