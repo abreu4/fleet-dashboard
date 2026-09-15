@@ -121,6 +121,28 @@ def normalise_error(text):
     return re.sub(r"(?:API (?:error|unavailable|connection)[^·]*·\s*)+", "", t).strip(" ·") or t
 
 
+_ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:?\d{2})?$")
+
+
+def _epoch_ms(stamp):
+    """Transcript timestamps are ISO-8601 UTC; epoch ms is what the board
+    compares everywhere else. None when the stamp is missing or odd."""
+    if not stamp or not isinstance(stamp, str):
+        return None
+    match = _ISO.match(stamp.strip())
+    if not match:
+        return None
+    import calendar
+    y, mo, d, h, mi, sec, frac, zone = match.groups()
+    base = calendar.timegm((int(y), int(mo), int(d), int(h), int(mi), int(sec)))
+    if zone and zone != "Z":
+        sign = -1 if zone[0] == "-" else 1
+        digits = zone[1:].replace(":", "")
+        base -= sign * (int(digits[:2]) * 3600 + int(digits[2:]) * 60)
+    millis = int((frac or "0")[:3].ljust(3, "0"))
+    return base * 1000 + millis
+
+
 def looks_like_user(text):
     t = (text or "").lstrip()
     if not t or t.startswith(_NOT_USER):
@@ -291,7 +313,15 @@ class Transcripts:
                      "first_prompt": None, "first_substantial": None, "compact": None,
                      "last_assistant": None, "last_prompt": None,
                      "turns": 0, "mtime": 0, "slug": None, "prev_assistant": None,
-                     "started": None, "updated": None}
+                     "started": None, "updated": None,
+                     # Claude Code's own names for the session: the title the
+                     # model wrote from the first prompt, and the one the user
+                     # set with --name or /rename.
+                     "ai_title": None, "custom_title": None,
+                     # Row counter, so the newer of the last prompt and the last
+                     # reply can be told apart without trusting timestamps.
+                     "seq": 0, "prompt_seq": -1, "reply_seq": -1,
+                     "prompt_at": None}
             self._entries[path] = entry
         elif stat.st_size == entry["offset"]:
             return entry
@@ -322,15 +352,25 @@ class Transcripts:
     def _absorb_row(self, entry, row):
         kind = row.get("type")
         stamp = row.get("timestamp")
+        entry["seq"] += 1
         if stamp:
             entry["updated"] = stamp
             if entry["started"] is None:
                 entry["started"] = stamp
 
+        if kind == "ai-title":
+            entry["ai_title"] = (row.get("aiTitle") or "").strip() or entry["ai_title"]
+            return
+        if kind == "custom-title":
+            entry["custom_title"] = ((row.get("customTitle") or "").strip()
+                                     or entry["custom_title"])
+            return
+
         if kind == "last-prompt":
             prompt = row.get("lastPrompt")
             if looks_like_user(prompt):
                 entry["last_prompt"] = prompt
+                entry["prompt_seq"] = entry["seq"]
             return
 
         if kind == "user":
@@ -342,6 +382,10 @@ class Transcripts:
                 return
             if not looks_like_user(text):
                 return
+            # The user row follows its last-prompt row and is the one with a
+            # timestamp; both mark the same moment.
+            entry["prompt_seq"] = entry["seq"]
+            entry["prompt_at"] = _epoch_ms(stamp) or entry["prompt_at"]
             if entry["first_prompt"] is None:
                 entry["first_prompt"] = text
             # "retry?" or "continue" is a nudge, not a brief; hold out for the
@@ -362,6 +406,7 @@ class Transcripts:
                 if entry["last_assistant"] and len(flatten(entry["last_assistant"])) >= 60:
                     entry["prev_assistant"] = entry["last_assistant"]
                 entry["last_assistant"] = text
+                entry["reply_seq"] = entry["seq"]
 
 
 # --------------------------------------------------------------------------
@@ -518,7 +563,16 @@ def collect_claude(transcripts):
 
         entry = transcripts.read(transcripts.path_for(session_id, cwd))
         nxt = ""
+        handle = agent.get("name") or "unnamed"
+        name = handle
+        prompt_at = None
         if entry:
+            # Claude Code names the session itself: the user's --name or
+            # /rename first, else the title the model wrote from the opening
+            # prompt. The roster's handle ("tiago-01") is what `claude attach`
+            # takes, so it stays on the tile as the handle, not the name.
+            name = entry.get("custom_title") or entry.get("ai_title") or handle
+            prompt_at = entry.get("prompt_at")
             compact = entry.get("compact")
             # Everything below is a summary somebody already wrote — a compact
             # section, a plan document, a worker's own status line. None of it
@@ -539,9 +593,16 @@ def collect_claude(transcripts):
             if len(reply) < 60:
                 reply = flatten(entry.get("prev_assistant") or "") or reply
             if not now:
-                # A one-turn session would otherwise print the same sentence
-                # twice; show the reply instead so the two lines differ.
-                now = prompt if prompt and prompt != brief else reply
+                # Whichever of the two was said last is where the session is:
+                # the reply once the agent has answered, the prompt while it is
+                # still working on one. A one-turn session would otherwise
+                # print the same sentence twice, so a prompt that is the brief
+                # yields to the reply.
+                prompt_is_newer = entry.get("prompt_seq", -1) > entry.get("reply_seq", -1)
+                if prompt_is_newer and prompt and prompt != brief:
+                    now = prompt
+                else:
+                    now = reply or (prompt if prompt != brief else "")
             turns = entry.get("turns") or 0
             last_activity = entry.get("mtime") or None
 
@@ -550,10 +611,11 @@ def collect_claude(transcripts):
             # tile identity; sessionId remains the command used for --resume.
             "id": "claude:%s:%s" % (
                 job_id or session_id or "session",
-                agent.get("name") or "unnamed",
+                handle,
             ),
             "provider": "claude",
-            "name": agent.get("name") or "unnamed",
+            "name": clip(name, 60),
+            "handle": handle,
             "project": project,
             "place": place,
             "kind": agent.get("kind") or "",
@@ -570,6 +632,9 @@ def collect_claude(transcripts):
             "resume": "claude" if session_id else "",
             "started": agent.get("startedAt"),
             "updated": last_activity,
+            # When the user last spoke: a fleet note older than this has been
+            # overtaken by new instructions and stops leading the tile.
+            "promptAt": prompt_at,
             # The roster's own handle on this session: `claude attach <jobId>`
             # joins it while it runs, `claude stop <jobId>` ends it, and the pid
             # is what /api/close signals when the CLI has no such handle.
@@ -583,20 +648,51 @@ def collect_claude(transcripts):
 # antigravity  (agy)
 # --------------------------------------------------------------------------
 
+_agy_titles_cache = (None, {})
+
+
 def _agy_titles():
+    """Antigravity's own name for each conversation, and when the user last
+    spoke to it: {id: (title, last_user_input_ms)}.
+
+    `conversation_summaries.db` is where the model writes a title for every
+    conversation ("Confirm Automatic Data Ingestion"), so a tile can carry a
+    name rather than a clipped prompt. The file is WAL-journaled: a read-only
+    open needs the -shm file that only exists while agy is running, so when
+    that fails the immutable open reads the main file alone. It may then lag
+    the newest rows by a checkpoint, which is fine for a name.
+    """
+    global _agy_titles_cache
     path = os.path.join(AGY_DIR, "conversation_summaries.db")
-    if not os.path.exists(path):
-        return {}
-    out = {}
     try:
-        conn = sqlite3.connect("file:%s?mode=ro" % path, uri=True, timeout=1)
-        for cid, title, preview in conn.execute(
-                "select conversation_id, title, preview from conversation_summaries"):
-            out[cid] = (title or preview or "").strip()
-        conn.close()
-    except sqlite3.Error:
-        pass
+        info = os.stat(path)
+        stamp = (info.st_mtime_ns, info.st_size)
+    except OSError:
+        return {}
+    if _agy_titles_cache[0] == stamp:
+        return _agy_titles_cache[1]
+    out = {}
+    for uri in ("file:%s?mode=ro" % path, "file:%s?mode=ro&immutable=1" % path):
+        try:
+            conn = sqlite3.connect(uri, uri=True, timeout=1)
+            rows = conn.execute(
+                "select conversation_id, title, preview, last_user_input_time"
+                "  from conversation_summaries").fetchall()
+            conn.close()
+        except sqlite3.Error:
+            continue
+        for cid, title, preview, spoke in rows:
+            out[cid] = ((title or preview or "").strip(), _agy_ms(spoke))
+        break
+    _agy_titles_cache = (stamp, out)
     return out
+
+
+def _agy_ms(text):
+    """'2026-09-15 09:28:16.732754+00:00' -> epoch ms, or None."""
+    if not text:
+        return None
+    return _epoch_ms(str(text).strip().replace(" ", "T", 1))
 
 
 # Antigravity writes its prompts to history.jsonl without a conversationId more
@@ -620,6 +716,12 @@ def _agy_text(blob):
     """
     runs = []
     for raw in re.findall(rb"[\x20-\x7e]{4,}", blob or b""):
+        # The string is length-prefixed, and for 32..126 bytes that prefix
+        # is itself a printable byte -- a 93-character prompt arrives as
+        # "]Confirm this deployed repo...". The byte equals the length of
+        # what follows, which is the test.
+        if len(raw) >= 2 and raw[0] == len(raw) - 1:
+            raw = raw[1:]
         text = raw.decode("ascii", "replace").strip().strip('"').strip()
         if not text or "(*)" in text or _AGY_NOISE.search(text):
             continue
@@ -684,8 +786,11 @@ def _agy_conversation(path):
     latest = ""
     for (blob,) in tail:
         latest = _agy_text(blob)
-        if latest and latest != opening:
+        # A tool step scrapes as its tool's name ("run_command"); only a run
+        # with a space in it can be something the model or the user said.
+        if latest and " " in latest and latest != opening:
             break
+        latest = ""
     result = (opening, latest, steps, workspace)
     _agy_cache[path] = (stamp, result)
     return result
@@ -715,6 +820,7 @@ def collect_antigravity():
     if not os.path.isdir(AGY_DIR):
         return []
     by_id, fallback_ws = _agy_workspaces()
+    titles = _agy_titles()
     now_ms = time.time() * 1000
     sessions = []
 
@@ -742,10 +848,12 @@ def collect_antigravity():
         if workspace == HOME.rstrip("/"):
             project = "home"
 
+        title, spoke = titles.get(cid) or ("", None)
         sessions.append({
             "id": cid,
             "provider": "antigravity",
-            "name": clip(flatten(opening), 34) or ("session " + cid[:8]),
+            "name": clip(flatten(title), 60) or clip(flatten(opening), 34)
+                    or ("session " + cid[:8]),
             "project": project,
             "place": "cli",
             "kind": "interactive",
@@ -762,6 +870,7 @@ def collect_antigravity():
             "resume": "antigravity" if cid else "",   # agy --conversation <id>
             "started": None,
             "updated": int(updated),
+            "promptAt": spoke,
             "jobId": "",
             "pid": None,
         })
@@ -832,7 +941,7 @@ class CodexTranscripts:
         if fresh:
             entry = {
                 "ino": stat.st_ino, "offset": 0, "pending": b"",
-                "last_user": None, "last_user_ordinal": -1,
+                "last_user": None, "last_user_ordinal": -1, "last_user_at": None,
                 "last_assistant": None, "last_assistant_ordinal": -1,
                 "prev_assistant": None, "turns": 0,
                 "mtime": 0,
@@ -871,6 +980,7 @@ class CodexTranscripts:
             if role == "user" and _looks_like_codex_user(text):
                 entry["last_user"] = text
                 entry["last_user_ordinal"] = ordinal
+                entry["last_user_at"] = _epoch_ms(row.get("timestamp")) or entry["last_user_at"]
                 entry["turns"] += 1
             elif role == "assistant" and text.strip():
                 if (entry["last_assistant"]
@@ -960,6 +1070,7 @@ def collect_codex(transcripts=None):
             "resume": "codex",
             "started": (created or 0) * 1000 or None,
             "updated": updated_ms or None,
+            "promptAt": entry.get("last_user_at") if entry else None,
         })
     # Codex holds its rollout open for as long as the session runs, which ties
     # a process to its thread exactly. Matching by folder alone could not tell

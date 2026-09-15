@@ -30,6 +30,10 @@ NOTES_DIR = os.environ.get("FLEET_NOTES") or os.path.join(HOME, ".fleet", "notes
 # A note is a checkpoint, not a status file: it says what was true when it was
 # written. Past this age it stops competing with what the transcript says now.
 MAX_AGE_SECONDS = 36 * 3600
+# A note written moments after a prompt is about that prompt: the agent read
+# the new instructions and checkpointed. Only a prompt clearly later than the
+# note overtakes it.
+GRACE_MS = 5 * 1000
 
 _cache = (0.0, {}, {})
 
@@ -107,7 +111,18 @@ def attach(sessions):
                 or by_session.get(session.get("id") or ""))
         if not note and crowd.get(cwd) == 1:
             note = by_cwd.get(cwd)
-        if note:
-            session["note"] = note["text"]
-            session["noteAt"] = note["at"]
+        if not note:
+            continue
+        # A checkpoint describes the work as it stood when it was written.
+        # Once the user has spoken again the session is on new instructions,
+        # and the note -- however recent -- is about the old ones. It stays
+        # readable in the drawer; it just stops leading the tile.
+        spoke = session.get("promptAt") or 0
+        overtaken = spoke > note["at"] + GRACE_MS
+        session["noteStale"] = overtaken
+        if overtaken:
+            session["staleNote"] = note["text"]
+            continue
+        session["note"] = note["text"]
+        session["noteAt"] = note["at"]
     return sessions

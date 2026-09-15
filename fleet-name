@@ -43,13 +43,17 @@ def main(argv):
     if not argv:
         for prov, proj, s in rows:
             flag = "*" if s.get("detectedName") and s["name"] != s["detectedName"] else " "
-            print("%s %-11s %-16s %-34s %s" % (flag, prov, proj[:16], s["name"][:34], s["id"]))
+            handle = s.get("handle") or ""
+            handle = handle if handle and handle != s["name"] else ""
+            print("%s %-11s %-16s %-40s %-10s %s" % (
+                flag, prov, proj[:16], s["name"][:40], handle[:10], s["id"]))
         print("\n* = renamed. `fleet-name <match> <new name>` to change one.")
         return 0
 
     match = argv[0].lower()
     hits = [r for r in rows
             if match in r[2]["name"].lower() or match in r[2]["id"].lower()
+            or match in (r[2].get("handle") or "").lower()
             or match in r[1].lower()]
     if not hits:
         sys.exit("nothing matches %r" % argv[0])

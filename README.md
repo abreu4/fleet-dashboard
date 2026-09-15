@@ -67,10 +67,24 @@ twice in the message — length alone picks injected rules like
 running `agy` with no fresh presence lock hands its live state to the most
 recently touched conversation, so it shows as itself rather than as a pid.
 
-## The two lines on each tile
+## The name and the two lines on each tile
 
 Nothing here is summarised by this tool or by an agent on demand. Every line is
 a summary somebody already wrote, picked off disk in order of quality:
+
+**Name** — what the agent itself calls the session. Claude Code writes two
+kinds of title into the transcript: `custom-title` (the `--name` a worktree
+or `/rename` gave it) and `ai-title` (the title the model wrote from the
+opening prompt, "Agentic workflows presentation"). The custom one wins, then
+the model's, and only a session with neither falls back to the roster handle
+(`tiago-01`). The handle is still what `claude attach` takes, so it stays in
+the drawer beside the name and `fleet-name` matches on it. Antigravity keeps
+a model-written title per conversation in `conversation_summaries.db`, and
+Codex in `threads.name`; both lead their tiles, with a clipped opening prompt
+only when there is none. A model title is written once, at the start, so a
+session that has drifted a long way from its first prompt keeps its first
+name -- the gist beneath it is where the drift shows, and `fleet-name` is
+the fix when it matters.
 
 **Brief** — what the session was asked to do:
 1. the *Primary Request and Intent* section of the session's own compact
@@ -84,8 +98,16 @@ a summary somebody already wrote, picked off disk in order of quality:
    harness-injected turns (monitor events, task notifications)
 
 **Now** — where it has got to: the compact summary's *Current Work* section,
-`output.result` when done, `needs` when blocked, the latest status line, the
-last prompt, or the last real reply (short sign-offs are skipped).
+`output.result` when done, `needs` when blocked, the latest status line, and
+otherwise whichever of the last prompt and the last real reply was said
+later -- the reply once the agent has answered, the prompt while it is still
+working on one (short sign-offs are skipped in favour of the reply before).
+
+**Note** — the one line a session chose to write (`~/.fleet/fleet-note`)
+leads the tile while it is current. Once the user has prompted again the
+session is on new instructions and the note is about the old ones: it stops
+leading, and the drawer files it as "its last note -- before your latest
+prompt".
 
 **Next step it planned** (drawer only) — the compact summary's *Optional Next
 Step* or *Pending Tasks*.

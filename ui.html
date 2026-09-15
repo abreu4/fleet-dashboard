@@ -5418,6 +5418,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   <section><h3>Open it</h3><div class="acts" id="p-acts"></div></section>
   <section><h3>Brief — what it was asked to do</h3><p id="p-brief"></p></section>
   <section><h3>Now — where it has got to</h3><p id="p-now"></p></section>
+  <section id="p-note-wrap"><h3 id="p-note-h">Its own note</h3><p id="p-note"></p></section>
   <section id="p-needs-wrap"><h3>Waiting on</h3><p id="p-needs"></p></section>
   <section id="p-next-wrap"><h3>Next step it planned</h3><p id="p-next"></p></section>
   <section id="p-links-wrap"><h3>Links</h3><p id="p-links"></p></section>
@@ -5996,7 +5997,7 @@ function tile(s){
   // "worktree: radar-mapa" under a tile titled radar-mapa is wasted width;
   // spend it on how long the session has been quiet and how far it has run.
   const wt = (s.place||'').startsWith('worktree: ') ? s.place.slice(10) : '';
-  const where = (wt && wt === s.name) ? '' : s.place;
+  const where = (wt && (wt === s.name || wt === s.handle)) ? '' : s.place;
   // The status word is the one thing on the foot line you read from across
   // the room, so it gets its own non-shrinking span; the rest of the line
   // ellipsizes cleanly instead of being chopped mid-path. A long path is
@@ -6181,8 +6182,11 @@ function select(id){
   nameEl.textContent = s.name;
   nameEl.classList.toggle('aliased', !!s.aliased);
   fillRename(s);
+  // The handle is what the CLI itself calls the session (`claude attach
+  // tiago-01`); it only earns a place here once the tile carries a real name.
+  const handle = (s.handle && s.handle !== s.name && s.handle !== s.detectedName) ? s.handle : '';
   document.getElementById('p-sub').textContent =
-    [s.provider, s.project, s.place, s.kind].filter(Boolean).join(' · ');
+    [s.provider, handle, s.project, s.place, s.kind].filter(Boolean).join(' · ');
 
   document.getElementById('p-stats').innerHTML =
       stat('state', voice(s.state))
@@ -6228,6 +6232,14 @@ function select(id){
 
   document.getElementById('p-brief').textContent = s.brief || '—';
   document.getElementById('p-now').textContent = s.now || '—';
+  // A note the session left leads the tile while it is current; once the user
+  // has spoken again it is history, still worth reading, labelled as such.
+  const note = s.note || s.staleNote || '';
+  document.getElementById('p-note-wrap').hidden = !note;
+  document.getElementById('p-note-h').textContent = s.note
+    ? 'Its own note' + (s.noteAt ? ' · ' + age(s.noteAt) + ' ago' : '')
+    : 'Its last note — before your latest prompt';
+  document.getElementById('p-note').textContent = note;
   document.getElementById('p-needs-wrap').hidden = !s.needs;
   document.getElementById('p-needs').textContent = s.needs || '';
   document.getElementById('p-next-wrap').hidden = !s.next;
