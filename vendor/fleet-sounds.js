@@ -381,6 +381,19 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
+    /* The base (Doom): everything through a hard clipper. Doors for the taps
+     * -- a noise slam and a low square -- the marine's grunt for alert, and
+     * the item pickup, two rising bloops, for done. */
+    e1m1: {
+      drive: { type: 'hard', k: 3 }, verb: { time: 0.18, mix: 0.08 },
+      tap:    [click({ hp: 1400, d: 0.02, g: 0.5 }), S('square', 110, { lp: 900, a: 0.001, d: 0.06, g: 0.3 }), thump({ f: 70, g: 0.9 })],
+      tile:   [N({ lp: 1400, a: 0.001, d: 0.09, g: 0.45 }), S('square', 82, { lp: 600, a: 0.001, d: 0.12, g: 0.3 }), thump({ f: 60, g: 1 })],
+      switch: [N({ bp: 900, q: 2, a: 0.001, d: 0.12, g: 0.5 }), S('sawtooth', 140, { f2: 60, slide: 0.14, lp: 1200, a: 0.001, d: 0.16, g: 0.3 }), thump({ f: 55, g: 0.9 })],
+      alert:  [FM(180, 0.5, 40, { f2: 90, slide: 0.22, lp: 1800, a: 0.004, d: 0.26, g: 0.4 }), N({ bp: 700, q: 1.5, a: 0.004, d: 0.2, g: 0.35 }),
+               at(0.24, FM(150, 0.5, 30, { f2: 70, slide: 0.2, lp: 1500, a: 0.004, d: 0.24, g: 0.34 })), thump({ f: 50, g: 1 })],
+      done:   [S('sine', 620, { f2: 1240, slide: 0.07, a: 0.001, d: 0.09, g: 0.32 }), at(0.1, S('sine', 830, { f2: 1660, slide: 0.07, a: 0.001, d: 0.12, g: 0.3 })),
+               at(0.1, S('square', 415, { lp: 1600, a: 0.001, d: 0.08, g: 0.1 })), thump({ f: 90, g: 0.5 })]
+    },
     /* Central Dogma (Evangelion): the deck's own telemetry. Digital blips
      * for taps, a two-tone klaxon on hard square waves for alert, and the
      * resolution -- a clean major triad -- for done. */

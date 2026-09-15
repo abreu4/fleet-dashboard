@@ -5662,6 +5662,139 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 
 /* ============================================================================
+   E1M1  --  Doom, 1993
+   The material is the status bar: grey riveted steel, red LED digits with a
+   black shadow, and the marine's face in the middle reading the room. The
+   board above it is the base -- brown-grey metal plates, a red strip on
+   every door. Everything in the bar is a figure the host or the fleet
+   already reports; the face is the only thing that interprets them.
+
+   HEALTH is the memory left, ARMOR the pressure headroom, AMMO the sessions
+   working, the ARMS lamps the states present, the KEYS what is finished,
+   waiting and stuck, and the ammo table the sessions by provider. The
+   face grimaces and bleeds while anything is stuck or the pressure is
+   over eighty-five, grins for a moment when a session finishes, and looks
+   about otherwise. Collapse the board for the intermission tally.
+   Measured on --tile #3a3331: --faint 5.0:1, --dim 8.6:1, --ink 11.5:1.
+   ========================================================================== */
+:root[data-theme="e1m1"]{
+  color-scheme:dark;
+  --void:#1a1614; --panel:#252020; --cell:#2e2927; --tile:#3a3331; --tile-hi:#473e3b;
+  --edge:#5c4d46; --edge-hot:#c9a37a;
+  --ink:#f0e6d8; --dim:#cdbfae; --faint:#a3907e;
+  --accent:#ff3d1f;                                     /* the digits */
+  --blocked:#ff2a2a; --running:#5fd35f; --idle:#6fa0d6; --done:#ffd23d; --unknown:#8a8079;
+  --good:#5fd35f; --warn:#ffb000; --waiting:#ffb000;
+  --glow:.35; --sigil:"\2620";
+  --scan:rgba(255,61,31,.02); --halo:rgba(255,61,31,.12);
+  /* riveted plate: a rivet in every corner of a 48px panel, a seam between */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='48' height='48' fill='none' stroke='%23000' stroke-opacity='.28'/%3E%3Cg fill='%23000' fill-opacity='.35'%3E%3Ccircle cx='5' cy='5' r='1.6'/%3E%3Ccircle cx='43' cy='5' r='1.6'/%3E%3Ccircle cx='5' cy='43' r='1.6'/%3E%3Ccircle cx='43' cy='43' r='1.6'/%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.08'%3E%3Ccircle cx='4.4' cy='4.4' r='1'/%3E%3Ccircle cx='42.4' cy='4.4' r='1'/%3E%3Ccircle cx='4.4' cy='42.4' r='1'/%3E%3Ccircle cx='42.4' cy='42.4' r='1'/%3E%3C/g%3E%3C/svg%3E");
+  --hud-a:#332c2a; --hud-b:#221d1b; --rail-a:#2f2927; --rail-b:#211c1a;
+  --hud-inset:56px;
+}
+:root[data-theme="e1m1"]{
+  --face-data:   "Silkscreen", Krungthep, ui-monospace, monospace;
+  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
+  --face-chrome: "Silkscreen", Krungthep, ui-monospace, monospace;
+  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
+  --fs-chrome:.8; --fs-data:.8; --fs-prose:1; --tr-chrome:1;
+}
+:root[data-theme="e1m1"] .brand b, :root[data-theme="e1m1"] .rail .vlabel,
+:root[data-theme="e1m1"] .hrail .who, :root[data-theme="e1m1"] .project > header,
+:root[data-theme="e1m1"] .gauge .lab, :root[data-theme="e1m1"] .trace .cap,
+:root[data-theme="e1m1"] .panel section h3, :root[data-theme="e1m1"] .stat .k,
+:root[data-theme="e1m1"] .bubble .foot .st{text-transform:uppercase}
+:root[data-theme="e1m1"] .bubble .nm{font-family:-apple-system, system-ui, sans-serif; font-weight:700}
+/* THE BASE. Plates everywhere; the digits in the HUD are the bar's red. */
+:root[data-theme="e1m1"] .hud{background-image:var(--grain), linear-gradient(180deg, var(--hud-a), var(--hud-b)); border-bottom:3px solid #0f0c0b; box-shadow:inset 0 -1px 0 #6a5a52}
+:root[data-theme="e1m1"] .gauge, :root[data-theme="e1m1"] .readout, :root[data-theme="e1m1"] .trace, :root[data-theme="e1m1"] .stat{
+  border-radius:2px; background-image:var(--grain); box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 0 rgba(0,0,0,.4);
+}
+:root[data-theme="e1m1"] .gauge .val, :root[data-theme="e1m1"] .readout dd b, :root[data-theme="e1m1"] .chip .n{
+  color:var(--accent); text-shadow:2px 2px 0 #000; font-family:"Silkscreen", monospace;
+}
+:root[data-theme="e1m1"] .brand b{color:#f0e6d8; letter-spacing:.14em; text-shadow:2px 2px 0 #000}
+:root[data-theme="e1m1"] .brand b::after{color:var(--accent); text-shadow:2px 2px 0 #000}
+/* EGG: point at the wordmark and it names the level. */
+:root[data-theme="e1m1"] .brand:hover b::after{content:"KNEE-DEEP IN THE DEAD"; font-family:var(--face-chrome); font-size:9px; letter-spacing:.1em; opacity:1}
+/* THE LEVELS. A lane is an episode; every project is a map with its number. */
+:root[data-theme="e1m1"] .lane{border-radius:2px; background-image:var(--grain); counter-reset:map}
+:root[data-theme="e1m1"] .project{counter-increment:map; border-radius:2px}
+:root[data-theme="e1m1"] .project > header{
+  color:#f0e6d8; background:linear-gradient(180deg, #4a403c, #332c2a); border-bottom:2px solid #0f0c0b;
+  font-family:var(--face-chrome); letter-spacing:.06em; text-shadow:1px 1px 0 #000;
+}
+:root[data-theme="e1m1"] .project > header .nm::before{content:"E1M" counter(map) ":\00a0"; color:var(--accent)}
+/* THE DOORS. A tile is a door panel: plate, a red strip, a black seam. */
+:root[data-theme="e1m1"] .bubble{
+  border-radius:2px; border-color:#0f0c0b; background-image:var(--grain), linear-gradient(180deg, rgba(255,255,255,.04), transparent 40%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1), inset 0 -2px 0 rgba(0,0,0,.45);
+}
+:root[data-theme="e1m1"] .bubble:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 1px var(--edge-hot)}
+:root[data-theme="e1m1"] .bubble::before{width:6px; box-shadow:inset -2px 0 0 rgba(0,0,0,.4)}
+/* 1. THE TELL -- blood. A stuck session's door is spattered. */
+:root[data-theme="e1m1"] .bubble[data-state="blocked"]{
+  background-image:radial-gradient(60% 50% at 70% 20%, rgba(200,20,20,.35), transparent 70%), radial-gradient(30% 30% at 20% 80%, rgba(160,10,10,.3), transparent 70%), var(--grain);
+}
+:root[data-theme="e1m1"] .bubble .foot .dot{border-radius:0; width:8px; height:8px; box-shadow:1px 1px 0 #000}
+:root[data-theme="e1m1"] .bubble .foot .st{font-family:var(--face-chrome); font-size:9px; letter-spacing:.04em; text-shadow:1px 1px 0 #000}
+/* THE STATUS BAR, always on and the full width of the room. */
+:root[data-theme="e1m1"] .ghud.bar{
+  left:0; right:0; bottom:var(--taken,0px); height:56px; display:flex; align-items:stretch; justify-content:center; font-style:normal;
+  background:linear-gradient(180deg, #5a5250, #3f3836 60%, #322c2a); border-top:3px solid #0f0c0b;
+  box-shadow:inset 0 2px 0 #7a6f6a, inset 0 -3px 0 #1a1614; pointer-events:auto;
+}
+:root[data-theme="e1m1"] .ghud.bar > span{
+  display:grid; grid-template-rows:1fr auto; align-items:center; justify-items:center; padding:3px 14px 5px; gap:0;
+  border-right:2px solid #0f0c0b; box-shadow:inset -1px 0 0 #6a5f5a; min-width:84px;
+}
+:root[data-theme="e1m1"] .ghud.bar > span:first-child{border-left:2px solid #0f0c0b}
+:root[data-theme="e1m1"] .ghud.bar b{font:24px/1 "Silkscreen", monospace; color:var(--accent); text-shadow:3px 3px 0 #000; letter-spacing:-.02em; white-space:nowrap}
+:root[data-theme="e1m1"] .ghud.bar b small{font-size:11px; color:#ffb090; margin-left:2px; text-shadow:2px 2px 0 #000}
+:root[data-theme="e1m1"] .ghud.bar em{font:8px/1 "Silkscreen", monospace; letter-spacing:.06em; color:#e8dcc8; text-shadow:1px 1px 0 #000; text-transform:uppercase; font-style:normal; white-space:nowrap}
+:root[data-theme="e1m1"] .ghud.bar em u{text-decoration:none; color:#b8a898}
+/* the arms lamps: six slots, lit while a session is in that state */
+:root[data-theme="e1m1"] .ghud.bar .arms i{display:grid; grid-template-columns:repeat(3, 16px); gap:2px 4px; font:11px/1 "Silkscreen", monospace; color:#6a5f5a; text-shadow:1px 1px 0 #000; font-style:normal}
+:root[data-theme="e1m1"] .ghud.bar .arms i span[data-on="1"]{color:#ffd23d}
+/* the face: a 16 x 18 sprite at 3px */
+:root[data-theme="e1m1"] .ghud.bar .face{padding:2px 10px 1px; min-width:0; background:linear-gradient(180deg, #2a2422, #1e1a18); box-shadow:inset 0 0 0 1px #0f0c0b, inset -1px 0 0 #6a5f5a}
+:root[data-theme="e1m1"] .ghud.bar .face i{position:relative; display:block; width:48px; height:54px; font-style:normal}
+:root[data-theme="e1m1"] .ghud.bar .face i b{position:absolute; left:0; top:0; width:3px; height:3px; font:0/0 a; text-shadow:none}
+/* the keys: three cards, lit when held */
+:root[data-theme="e1m1"] .ghud.bar .keys i{display:grid; gap:3px; font-style:normal}
+:root[data-theme="e1m1"] .ghud.bar .keys i span{width:8px; height:11px; border-radius:1px; background:#2a2422; box-shadow:inset 0 0 0 1px #0f0c0b}
+:root[data-theme="e1m1"] .ghud.bar .keys i span[data-on="1"]{background:var(--k)}
+:root[data-theme="e1m1"] .ghud.bar .keys i span.b{--k:#4a80ff} :root[data-theme="e1m1"] .ghud.bar .keys i span.y{--k:#ffd23d} :root[data-theme="e1m1"] .ghud.bar .keys i span.r{--k:#ff2a2a}
+/* the ammo table: sessions by provider */
+:root[data-theme="e1m1"] .ghud.bar .ammo{border-right:0; padding:4px 14px}
+:root[data-theme="e1m1"] .ghud.bar .ammo i{display:grid; grid-template-columns:auto auto; gap:1px 10px; font:9px/1.15 "Silkscreen", monospace; color:#e8dcc8; text-shadow:1px 1px 0 #000; font-style:normal; text-align:right}
+:root[data-theme="e1m1"] .ghud.bar .ammo i span{color:#ffd23d}
+:root[data-theme="e1m1"] .ghud.bar .ammo i u{text-decoration:none; color:#b8a898; text-align:left}
+/* THE INTERMISSION (the band). Red rock, the tally, the level's name. */
+:root[data-theme="e1m1"] .inter{
+  left:0; right:0; bottom:calc(56px + var(--taken,0px)); height:clamp(150px, 28vh, 240px); padding:14px 30px; box-sizing:border-box;
+  background:radial-gradient(70% 80% at 30% 100%, rgba(120,30,20,.45), transparent 60%), radial-gradient(60% 70% at 80% 0%, rgba(90,20,15,.4), transparent 60%), #2a1512;
+  background-image:radial-gradient(70% 80% at 30% 100%, rgba(120,30,20,.45), transparent 60%), radial-gradient(60% 70% at 80% 0%, rgba(90,20,15,.4), transparent 60%), var(--grain), linear-gradient(#2a1512, #1a0e0c);
+  border-top:3px solid #0f0c0b; color:#f0e6d8; font:12px/1.5 "Silkscreen", monospace; text-transform:uppercase; text-shadow:2px 2px 0 #000;
+}
+:root[data-theme="e1m1"] .inter h4{margin:0 0 8px; font:16px/1.2 "Silkscreen", monospace; color:var(--accent); letter-spacing:.02em}
+:root[data-theme="e1m1"] .inter h4 span{color:#f0e6d8}
+:root[data-theme="e1m1"] .inter .say{color:#ffd23d; font-size:10px; margin-left:20px; opacity:0; transition:opacity .3s}
+:root[data-theme="e1m1"] .inter .say.on{opacity:1}
+:root[data-theme="e1m1"] .inter dl{display:grid; grid-template-columns:auto auto; gap:6px 40px; margin:0; width:max-content}
+:root[data-theme="e1m1"] .inter dt{font-size:14px; color:#f0e6d8}
+:root[data-theme="e1m1"] .inter dd{margin:0; font-size:20px; color:var(--accent)}
+:root[data-theme="e1m1"] .inter dd b{display:inline-block; min-width:5ch; text-align:right; font-weight:400}
+:root[data-theme="e1m1"] .inter dd small{font-size:10px; color:#b8a898; margin-left:10px; text-transform:none}
+/* chrome */
+:root[data-theme="e1m1"] .toast{background:#3a3331; border-color:#0f0c0b; color:var(--ink); border-radius:2px; box-shadow:3px 3px 0 #000}
+:root[data-theme="e1m1"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 #6a5f5a, -26px 0 60px -30px rgba(0,0,0,.95)}
+:root[data-theme="e1m1"] .scrim{background:rgba(10,6,5,.78)}
+:root[data-theme="e1m1"] .acts button, :root[data-theme="e1m1"] button.ghost{border-radius:2px; border-color:#0f0c0b}
+:root[data-theme="e1m1"] .acts button:hover, :root[data-theme="e1m1"] button.ghost:hover{background:#473e3b; box-shadow:0 0 0 1px var(--edge-hot)}
+:root[data-theme="e1m1"] .empty, :root[data-theme="e1m1"] .bubble .gist.none{color:var(--faint); font-style:italic}
+
+/* ============================================================================
    PASS 8: THE BAND -- what collapsing the board uncovers.
    Collapse every tile and the bottom third of the screen opens up. On the
    casino table that is where the wheel was all along, and it is the one thing
@@ -5983,6 +6116,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="houston">apollo</option>
           <option value="staunton">casino royale</option>
           <option value="signal">cyberpunk 2077</option>
+          <option value="e1m1">doom</option>
           <option value="nerv">evangelion</option>
           <option value="pipboy">fallout</option>
           <option value="chitin">hollow knight</option>
@@ -6089,6 +6223,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 
 <script>
 const MARKS = {
+  /* e1m1 -- a skull, a rocket, a key card, all on the pixel grid */
+  e1m1:{
+    claude:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="4" y="2" width="8" height="2"/><rect x="3" y="4" width="10" height="6"/><rect x="4" y="10" width="8" height="2"/><rect x="5" y="12" width="2" height="2"/><rect x="9" y="12" width="2" height="2"/></g><g shape-rendering="crispEdges" fill="var(--tile,#000)"><rect x="5" y="5" width="2" height="2"/><rect x="9" y="5" width="2" height="2"/><rect x="7" y="8" width="2" height="1"/></g>',
+    antigravity:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="7" y="1" width="2" height="2"/><rect x="6" y="3" width="4" height="7"/><rect x="4" y="8" width="2" height="3"/><rect x="10" y="8" width="2" height="3"/><rect x="7" y="10" width="2" height="2"/><rect x="6" y="12" width="4" height="2"/></g>',
+    codex:'<g shape-rendering="crispEdges" fill="currentColor"><rect x="2" y="4" width="12" height="8"/></g><g shape-rendering="crispEdges" fill="var(--tile,#000)"><rect x="4" y="6" width="3" height="4"/><rect x="9" y="7" width="3" height="2"/></g>',
+  },
   /* nerv -- hexagons: plain, launching, and the MAGI's three */
   nerv:{
     claude:'<path d="M8 1.6L13.6 4.8V11.2L8 14.4L2.4 11.2V4.8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
@@ -6239,6 +6379,9 @@ const VOICE_BASE = {
   offline:'OFFLINE',
 };
 const VOICE = {
+  /* doom */
+  e1m1:      {blocked:'hurt', waiting:'need a medkit', running:'rip and tear', idle:'idle', done:'level clear', unknown:'lost',
+              blank:'no demons here yet', quiet:'no marines deployed', offline:'YOU DIED'},
   /* evangelion */
   nerv:      {blocked:'berserk', waiting:'awaiting orders', running:'synchronised', idle:'in the cage', done:'mission complete', unknown:'unidentified',
               blank:'no pilot data yet', quiet:'no units deployed', offline:'A.T. FIELD DOWN'},
@@ -7600,6 +7743,89 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   const WORLDS = {
+    /* The base. Always on: the status bar, and the marine's face reading the
+       room -- it bleeds while anything is stuck or the pressure is high,
+       grins when a session finishes, and looks about otherwise. Collapsed:
+       the intermission tally. */
+    e1m1: {
+      COL: {H:'#5a3a1a', S:'#d9a66f', D:'#b07a48', E:'#f4f4f4', P:'#1c1c1c', M:'#5a2a1a', B:'#d81e1e', T:'#f0f0f0'},
+      FACE: {
+        ok: ['....HHHHHHHH....', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.', '.HHSSSSSSSSSSHH.', '.HSSSSSSSSSSSSH.', '.HSSSSSSSSSSSSH.',
+             '.HSEEESSSSEEESH.', '.HSEPESSSSEPESH.', '.HSSSSSDDSSSSSH.', '..SSSSSDDSSSSS..', '..SSSSDDDDSSSS..', '..SSSSSSSSSSSS..',
+             '..SSDSSSSSSDSS..', '..SSSMMMMMMSSS..', '...SSSSSSSSSS...', '...SDSSSSSSDS...', '....SSSSSSSS....', '.....SSSSSS.....'],
+        hurt: ['....HHHHHHHH....', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.', '.HHSSBSSSSSSHH..', '.HSSBBSSSSSSSSH.', '.HSSSBSSSSSBSSH.',
+               '.HSEEESSSSEEEBH.', '.HSEPESSSSEPEBH.', '.HSSSSSDDSSSSSH.', '..SSSSSDDSSSSS..', '..SSSSDDDDSSSS..', '..SSSSSSSSSSSS..',
+               '..SSMMMMMMMMSS..', '..SSMTTTTTTMSS..', '..SSMMMMMMMMSS..', '...SBSSSSSSDS...', '....SSSSSSSS....', '.....SSSSSS.....'],
+        grin: ['....HHHHHHHH....', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.', '.HHSSSSSSSSSSHH.', '.HSSSSSSSSSSSSH.', '.HSSSSSSSSSSSSH.',
+               '.HSSSSSSSSSSSSH.', '.HSEPESSSSEPESH.', '.HSSSSSDDSSSSSH.', '..SSSSSDDSSSSS..', '..SSSSDDDDSSSS..', '..SSSSSSSSSSSS..',
+               '..SMMMMMMMMMMS..', '..SMTTTTTTTTMS..', '...SMMMMMMMMS...', '...SDSSSSSSDS...', '....SSSSSSSS....', '.....SSSSSS.....'],
+      },
+      ARMS: ['running', 'idle', 'waiting', 'blocked', 'done', 'unknown'],
+      LINES: {arrived: 'a marine enters', blocked: 'ouch', waiting: 'need a medkit', done: 'level clear', idle: 'idle', running: 'rip and tear'},
+      // the sprite as one box-shadow; the pupils first so they paint on top when they look aside
+      sprite(rows, dx){
+        const px = [], eyes = [];
+        rows.forEach((r, y) => { for(let x = 0; x < r.length; x++){ const c = r[x]; if(c === '.') continue;
+          (c === 'P' ? eyes : px).push(((c === 'P' ? x + dx : x) * 3) + 'px ' + (y * 3) + 'px 0 0 ' + this.COL[c]); } });
+        return eyes.concat(px).join(',');
+      },
+      hud(){
+        const h = el('i', 'ghud bar');
+        h.innerHTML = '<span class="ammo1"><b>—</b><em>ammo <u>· working</u></em></span>'
+          + '<span class="health"><b>—<small>%</small></b><em>health <u>· memory free</u></em></span>'
+          + '<span class="arms"><i>' + this.ARMS.map((k, i) => '<span title="' + k + '">' + (i + 2) + '</span>').join('') + '</i><em>arms <u>· states</u></em></span>'
+          + '<span class="face" title="the marine"><i><b></b></i></span>'
+          + '<span class="armor"><b>—<small>%</small></b><em>armor <u>· pressure headroom</u></em></span>'
+          + '<span class="keys"><i><span class="b" title="a session finished"></span><span class="y" title="a session waiting on you"></span><span class="r" title="a session stuck"></span></i><em>keys</em></span>'
+          + '<span class="ammo"><i><span class="c1"></span><u>bull · claude</u><span class="c2"></span><u>shel · agy</u><span class="c3"></span><u>rckt · codex</u><span class="c4"></span><u>cell · all</u></i></span>';
+        h._look = 0; h._grin = 0; h._face = '';
+        return h;
+      },
+      paintHud(h, diff){
+        const d = latest; if(!d) return;
+        const set = (sel, v) => { const b = h.querySelector(sel + ' b'); if(b.firstChild.nodeValue !== String(v)) b.firstChild.nodeValue = String(v); };
+        set('.ammo1', rootNum('--n-active') | 0);
+        set('.health', pct(100 - rootNum('--g-mem')));
+        set('.armor', pct(100 - rootNum('--g-pres')));
+        h.querySelectorAll('.arms i span').forEach((s, i) => { const on = rootNum('--n-' + this.ARMS[i]) > 0 ? '1' : '0'; if(s.dataset.on !== on) s.dataset.on = on; });
+        const keys = {b: '--n-done', y: '--n-waiting', r: '--n-blocked'};
+        Object.keys(keys).forEach(k => { const s = h.querySelector('.keys .' + k), on = rootNum(keys[k]) > 0 ? '1' : '0'; if(s.dataset.on !== on) s.dataset.on = on; });
+        const per = {claude: 0, antigravity: 0, codex: 0}, total = d.total | 0;
+        (d.lanes || []).forEach(l => { per[l.key] = l.count | 0; });
+        [['c1', per.claude], ['c2', per.antigravity], ['c3', per.codex], ['c4', total]].forEach(([k, n]) => {
+          const s = h.querySelector('.ammo .' + k), v = n + '/' + total; if(s.textContent !== v) s.textContent = v;
+        });
+        // the face
+        if(diff && diff.changed && diff.changed.some(c => c.to === 'done' || (c.from === 'running' && c.to === 'idle'))) h._grin = Date.now() + 3500;
+        const hurt = rootNum('--n-blocked') > 0 || rootNum('--g-pres') > 85;
+        const mood = hurt ? 'hurt' : Date.now() < h._grin ? 'grin' : 'ok';
+        if(mood === 'ok' && !diff) h._look = (h._look + 1) % 4;      // every reading, it looks about: centre, left, centre, right
+        const dx = mood === 'ok' ? [0, -1, 0, 1][h._look] : 0, key = mood + dx;
+        if(h._face !== key){ h._face = key; h.querySelector('.face b').style.boxShadow = this.sprite(this.FACE[mood], dx); }
+      },
+      make(){
+        const n = el('div', 'band inter');
+        n.innerHTML = '<h4><span class="lvl">—</span> finished<span class="say" aria-live="polite"></span></h4>'
+          + '<dl><dt>kills</dt><dd><b class="k">—</b><small>finished</small></dd><dt>items</dt><dd><b class="i">—</b><small>working</small></dd>'
+          + '<dt>secrets</dt><dd><b class="s">—</b><small>waiting on you</small></dd><dt>time</dt><dd><b class="t">—</b><small>oldest session</small></dd><dt>par</dt><dd><b>30:00</b></dd></dl>';
+        return n;
+      },
+      paint(n, diff){
+        const d = latest; if(!d) return;
+        const total = Math.max(1, d.total | 0), t = d.tally || {};
+        const p = k => Math.round(100 * (t[k] | 0) / total) + '%';
+        const lvl = board.querySelector('.project > header .nm')?.textContent || 'hangar';
+        const put = (sel, v) => { const e = n.querySelector(sel); if(e.firstChild.nodeValue !== v) e.firstChild.nodeValue = v; };
+        put('.lvl', lvl.toUpperCase()); put('.k', p('done')); put('.i', p('running')); put('.s', p('waiting'));
+        let t0 = 0; (d.lanes || []).forEach(l => (l.projects || []).forEach(pr => (pr.sessions || []).forEach(s => { if(s.started && (!t0 || s.started < t0)) t0 = s.started; })));
+        const sec = t0 ? Math.floor((Date.now() - t0) / 1000) : 0, mm = Math.floor(sec / 60), ss = String(sec % 60).padStart(2, '0');
+        put('.t', t0 ? (mm > 99 ? Math.floor(mm / 60) + 'h ' + (mm % 60) + 'm' : mm + ':' + ss) : '—');
+        const k = (diff && diff.arrived && diff.arrived.length) ? 'arrived' : (diff && diff.changed && diff.changed.length) ? diff.changed[0].to : '';
+        if(!k || !this.LINES[k] || (diff && diff.first)) return;
+        const say = n.querySelector('.say'); say.textContent = this.LINES[k]; say.classList.add('on');
+        clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 5000);
+      },
+    },
     /* Central Dogma. Always on: the sync ratio (cpu), the A.T. field (memory
        headroom) and the power source -- external on the cable, internal on
        the battery with the activity limit counting down, five minutes at a
@@ -8373,6 +8599,7 @@ const minBtn = document.getElementById('mmin');
 // so a theme stays portable: it needs no particular playlist to exist, and no
 // login. Theme packs drop their entry in here.
 const THEME_MUSIC = {
+  e1m1:      'doom 1993 e1m1 at dooms gate soundtrack',
   nerv:      'evangelion soundtrack shiro sagisu decisive battle',
   lumon:     'severance apple tv soundtrack theodore shapiro',
   console:   'deep electronic focus minimal tech ambient',
