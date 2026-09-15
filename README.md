@@ -243,8 +243,11 @@ tile's drawer has a "shell here" button; the sheet's `+` opens a picker — any
 folder the board knows about, or one typed under `~`, and shell / claude / agy /
 codex — and `×` closes the active one. The page sends a session id, or a folder
 plus an agent key; the server maps the key through a fixed table, so no command
-string ever comes from the browser. `⌘[` and `⌘]` cycle through terminal tabs,
-`⌘T` opens a new shell in `~`, and `⌘W` closes the active tab. Fresh and
+string ever comes from the browser. `⌘[` and `⌘]` cycle through terminal tabs
+in the order they sit on the bar — drag a tab along the bar to reorder them, and
+the order is kept per browser. A shell opened from the `+` button is named `~`
+or `~/folder`, not the login name. `⌘T` opens a new shell in `~`, and `⌘W`
+closes the active tab. Fresh and
 resumed Codex terminals run with `--yolo`. Mac editing keys work as in iTerm's
 Natural Text Editing preset (⌘←/→, ⌘⌫, ⌥←/→, ⌥⌫, ⌘K), Shift-Enter inserts a
 newline, and `⌘C`/`⌘V` copy a selection and paste as in any terminal. The

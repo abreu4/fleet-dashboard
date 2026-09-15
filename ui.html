@@ -2339,6 +2339,8 @@ html.theme-swapping .bubble > .halo{ animation:none; }
     border-bottom:2px solid transparent; white-space:nowrap;
   }
   .sheet .tab.sel{color:var(--accent); background:var(--cell); border-bottom-color:var(--accent)}
+  .sheet .tab{touch-action:none; user-select:none; transition:transform .12s ease}
+  .sheet .tab.drag{opacity:.85; box-shadow:inset 0 0 0 1px var(--accent); cursor:grabbing; transition:none; position:relative; z-index:1}
   .sheet .tab.dead{color:var(--unknown); text-decoration:line-through}
   .sheet .tab .nm{overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 auto}
   .sheet .tab .x{opacity:.45; font-size:13px; line-height:1; flex:none}
@@ -8553,8 +8555,58 @@ function refit(){
   }
 }
 
+/* The order of the tabs is yours: drag one along the bar. Kept per browser
+   by terminal id, which the server holds stable across a page reload, so a
+   hot reload of the page does not shuffle them back. */
+const ORDER_KEY = 'fleet.tab.order';
+let tabOrder = (() => {
+  try{ const v = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]'); return Array.isArray(v) ? v.filter(x => typeof x === 'string') : []; }
+  catch(e){ return []; }
+})();
+function tabList(){
+  const rank = new Map(tabOrder.map((id, i) => [id, i]));
+  return [...terms.values()]
+    .map((t, i) => [t, rank.has(t.id) ? rank.get(t.id) : 1e6 + i])   // unplaced tabs keep arrival order, after the placed
+    .sort((a, b) => a[1] - b[1]).map(([t]) => t);
+}
+function setTabOrder(ids){ tabOrder = ids; try{ localStorage.setItem(ORDER_KEY, JSON.stringify(ids)); }catch(e){} }
+/* The DOM stays put while a tab is dragged (moving the node would drop the
+   pointer capture with it): the tab follows the pointer by transform, the
+   others slide out of its way by transform, and the order is written and
+   the bar redrawn on release. */
+function dragTab(el, ev){
+  if(ev.button || ev.target.dataset.close) return;
+  const x0 = ev.clientX; let dragging = false, tabs = [], rects = [], from = 0, to = 0;
+  const move = e => {
+    if(!dragging){
+      if(Math.abs(e.clientX - x0) < 6) return;
+      dragging = true; el.classList.add('drag');
+      try{ el.setPointerCapture(ev.pointerId); }catch(err){}
+      tabs = [...tabsEl.querySelectorAll('.tab')]; rects = tabs.map(o => o.getBoundingClientRect()); from = tabs.indexOf(el);
+    }
+    const dx = e.clientX - x0, me = rects[from], cx = me.left + me.width / 2 + dx;
+    el.style.transform = 'translateX(' + dx + 'px)';
+    // it lands after every other tab whose middle it has passed
+    to = tabs.filter((o, i) => o !== el && rects[i].left + rects[i].width / 2 < cx).length;
+    tabs.forEach((o, i) => {
+      if(o === el) return;
+      const shift = (i < from && i >= to) ? me.width : (i > from && i <= to) ? -me.width : 0;
+      o.style.transform = shift ? 'translateX(' + shift + 'px)' : '';
+    });
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    if(!dragging) return;
+    el._dragged = true;                                     // the click that follows is not a click
+    tabs.forEach(o => { o.style.transform = ''; }); el.classList.remove('drag');
+    const ids = tabs.map(o => o.dataset.tid); ids.splice(from, 1); ids.splice(to, 0, el.dataset.tid);
+    setTabOrder(ids); drawTabs();
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+
 function drawTabs(){
-  const list = [...terms.values()];
+  const list = tabList();
   emptyEl.hidden = list.length > 0;
   if(!list.length) emptyEl.textContent = 'no terminals — open one from a session, or press + shell';
   tabsEl.innerHTML = list.map(t =>
@@ -8564,9 +8616,11 @@ function drawTabs(){
   if(closeBtn) closeBtn.disabled = !terms.has(activeTid);
   tabsEl.querySelectorAll('.tab').forEach(el => {
     el.onclick = ev => {
+      if(el._dragged){ el._dragged = false; return; }
       if(ev.target.dataset.close){ termPost('/api/term/close', {tid:ev.target.dataset.close}); return; }
       activate(el.dataset.tid);
     };
+    el.onpointerdown = ev => dragTab(el, ev);
   });
 }
 
@@ -8579,7 +8633,7 @@ function activate(tid){
 }
 
 function cycleTerminal(step){
-  const tids = [...terms.keys()];
+  const tids = tabList().map(t => t.id);          // the order on the bar, not arrival order
   if(!tids.length) return;
   const current = tids.indexOf(activeTid);
   const start = current < 0 ? (step > 0 ? -1 : 0) : current;
