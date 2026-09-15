@@ -4962,6 +4962,35 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 4. A closed lane is one strip of enamel, not a run of plate seams. */
 :root[data-theme="aperture"] .hrail{background-image:linear-gradient(90deg, var(--rail-a), var(--rail-b))}
 @media (prefers-reduced-motion:reduce){ :root[data-theme="aperture"] .traveller{display:none} }
+/* 5. The Weighted Companion Cube. It floats about the room, and the portals
+   do the one thing portals do to it: in one wall, out the other, speed kept
+   ("speedy thing goes in, speedy thing comes out"). Pick it up and throw
+   it; aim for a portal. One fixed element moved by transform alone, so the
+   compositor carries it and the board never relays out for it. */
+:root[data-theme="aperture"] .cube{
+  position:fixed; left:0; top:0; width:32px; height:32px; z-index:4; margin:-16px 0 0 -16px;
+  pointer-events:auto; cursor:grab; touch-action:none; user-select:none; will-change:transform;
+}
+:root[data-theme="aperture"] .cube.held{cursor:grabbing}
+:root[data-theme="aperture"] .cube i{
+  position:absolute; inset:0; border-radius:5px; font-style:normal;
+  background:linear-gradient(135deg, #dcdcdc, #a8a8a8);
+  box-shadow:inset 0 0 0 3px #737373, inset 0 0 0 5px #c4c4c4, 0 5px 12px rgba(0,0,0,.35);
+}
+:root[data-theme="aperture"] .cube i::before{content:""; position:absolute; inset:8px; border-radius:2px; background:#8d8d8d; box-shadow:inset 0 1px 0 rgba(0,0,0,.25)}
+:root[data-theme="aperture"] .cube i::after{
+  content:"\2665"; position:absolute; inset:0; display:grid; place-items:center; padding-top:1px;
+  font:13px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#ff5fa2; text-shadow:0 0 4px rgba(255,95,162,.6);
+}
+/* Out of a portal it comes squeezed, and rounds out on the way. */
+:root[data-theme="aperture"] .cube.pop i{animation:cube-pop .38s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes cube-pop{from{transform:scale(.25,1.15)} to{transform:none}}
+/* The portal it just used flares. */
+:root[data-theme="aperture"] .wrap.hot-b::before, :root[data-theme="aperture"] .wrap.hot-o::after{
+  box-shadow:0 0 0 3px #fff, 0 0 34px 10px color-mix(in srgb, var(--portal) 80%, transparent), inset 0 0 16px color-mix(in srgb, var(--portal) 90%, transparent);
+}
+:root[data-theme="aperture"] .wrap::before, :root[data-theme="aperture"] .wrap::after{transition:box-shadow .45s ease-out}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="aperture"] .cube{display:none} }
 /* ==== PASS 7: SONIC ====
    The score is live now (a hundred a session, the rings are what is
    running), every project is an act, and the one thing everybody knows
@@ -6777,6 +6806,103 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     dot.addEventListener('animationend', () => dot.remove(), {once:true});
     setTimeout(() => dot.remove(), 2000);
   });
+})();
+
+/* ---- the companion cube (portal) ---------------------------------------- */
+/* One cube, floating about the room at a walking pace, bouncing off the
+   walls -- except where the walls are portals: into the blue one on the
+   left and out of the orange one on the right, or the other way, with its
+   speed kept. Pick it up and throw it. Runs only while this is the world on
+   screen, and only while the tab is visible; the step moves one composited
+   layer and reads no layout. */
+(function(){
+  const PORTAL = {x:12, w:42, h:150}, ROAM = 42, SIZE = 32;
+  let cube = null, raf = 0, last = 0, x = 0, y = 0, vx = 0, vy = 0, spin = 0, held = null, taken = 0, wander = 0;
+  const root = document.documentElement;
+  const on = () => root.dataset.theme === 'aperture' && !reducedMotion() && root.dataset.motion !== 'off';
+  const bottom = () => innerHeight - taken;
+  const portalY = () => bottom() / 2;
+  const measure = () => { taken = parseFloat(getComputedStyle(root).getPropertyValue('--taken')) || 0; };
+  const flare = k => {
+    const w = document.querySelector('.wrap'); if(!w) return;
+    w.classList.add(k); setTimeout(() => w.classList.remove(k), 420);
+  };
+  const pop = () => { cube.classList.remove('pop'); void cube.offsetWidth; cube.classList.add('pop'); };
+  const place = () => { cube.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) rotate(' + spin.toFixed(1) + 'deg)'; };
+  const step = t => {
+    raf = 0;
+    if(!cube || !on()) return;
+    const dt = Math.min(.05, (t - last) / 1000 || 0); last = t;
+    if(!held){
+      // a thrown cube slows back to its wander, never to a stop
+      const sp = Math.hypot(vx, vy) || ROAM;
+      const k = Math.max(ROAM, sp * Math.exp(-dt / .9)) / sp;
+      vx *= k; vy *= k;
+      // and drifts off its line a little now and then, so it roams
+      if((wander -= dt) <= 0){
+        wander = 1 + Math.random() * 2;
+        const a = (Math.random() - .5) * .8, c = Math.cos(a), s = Math.sin(a);
+        [vx, vy] = [vx * c - vy * s, vx * s + vy * c];
+      }
+      x += vx * dt; y += vy * dt; spin += vx * dt * .6;
+      const r = SIZE / 2, py = portalY(), inPortal = Math.abs(y - py) < PORTAL.h / 2 - 10;
+      // the walls: a portal where there is one, otherwise a bounce
+      if(x - r < PORTAL.x + PORTAL.w && vx < 0){
+        if(inPortal){ x = innerWidth - PORTAL.x - PORTAL.w - r - 1; flare('hot-b'); flare('hot-o'); pop(); }
+        else if(x - r < 0){ x = r; vx = -vx; }
+      }else if(x + r > innerWidth - PORTAL.x - PORTAL.w && vx > 0){
+        if(inPortal){ x = PORTAL.x + PORTAL.w + r + 1; flare('hot-o'); flare('hot-b'); pop(); }
+        else if(x + r > innerWidth){ x = innerWidth - r; vx = -vx; }
+      }
+      if(y - r < 0){ y = r; vy = Math.abs(vy); }
+      if(y + r > bottom()){ y = bottom() - r; vy = -Math.abs(vy); }
+      place();
+    }
+    if(!document.hidden) raf = requestAnimationFrame(step);
+  };
+  const run = () => { if(!raf && cube && on() && !document.hidden){ last = performance.now(); raf = requestAnimationFrame(step); } };
+  const grab = e => {
+    if(e.button) return;
+    held = {id:e.pointerId, t:e.timeStamp, x:e.clientX, y:e.clientY, vx:0, vy:0};
+    cube.classList.add('held'); cube.setPointerCapture(e.pointerId); e.preventDefault();
+  };
+  const drag = e => {
+    if(!held || e.pointerId !== held.id) return;
+    const dt = Math.max(1, e.timeStamp - held.t) / 1000;
+    // the throw is the hand's own speed over the last few moves
+    held.vx = held.vx * .5 + ((e.clientX - held.x) / dt) * .5;
+    held.vy = held.vy * .5 + ((e.clientY - held.y) / dt) * .5;
+    held.t = e.timeStamp; held.x = e.clientX; held.y = e.clientY;
+    x = e.clientX; y = e.clientY; place();
+  };
+  const drop = e => {
+    if(!held || e.pointerId !== held.id) return;
+    // a hand that stopped before letting go was setting it down, not throwing
+    const sp = e.timeStamp - held.t < 120 ? Math.hypot(held.vx, held.vy) : 0;
+    if(sp > ROAM){ vx = held.vx; vy = held.vy; }
+    held = null; cube.classList.remove('held'); run();
+  };
+  const build = () => {
+    cube = document.createElement('i'); cube.className = 'cube'; cube.title = 'the companion cube -- throw it into a portal';
+    cube.setAttribute('aria-hidden', 'true'); cube.innerHTML = '<i></i>';
+    cube.addEventListener('pointerdown', grab); cube.addEventListener('pointermove', drag);
+    cube.addEventListener('pointerup', drop); cube.addEventListener('pointercancel', drop);
+    document.body.appendChild(cube);
+    measure();
+    x = innerWidth * (.3 + Math.random() * .4); y = bottom() * (.4 + Math.random() * .3);
+    const a = Math.random() * Math.PI * 2; vx = Math.cos(a) * ROAM; vy = Math.sin(a) * ROAM;
+    place(); run();
+  };
+  const sync = () => {
+    if(on() && !cube) build();
+    else if(!on() && cube){ cube.remove(); cube = null; held = null; if(raf){ cancelAnimationFrame(raf); raf = 0; } }
+    else run();
+  };
+  document.addEventListener('fleet:theme', sync);
+  document.addEventListener('visibilitychange', run);
+  // the sheet takes its share of the room; re-measure when it moves, not every frame
+  setInterval(() => { if(cube) measure(); }, 1000);
+  sync();
 })();
 
 /* ---- rings, scattered (sonic) ------------------------------------------- */
