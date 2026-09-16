@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FLEET · agent console</title>
+<!-- Inline, so a browser tab stops asking the server for /favicon.ico (a 404 in the console on every load). -->
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'><rect%20width='32'%20height='32'%20rx='7'%20fill='#0b1a2a'/><path%20d='M10%208h13v4h-9v4h8v4h-8v6h-4z'%20fill='#5ee6d8'/></svg>">
 <style>
   /* ============================================================
      FLEET — natural / adorned theme pass
@@ -125,7 +127,9 @@
     display:flex; flex-wrap:nowrap; align-items:stretch; gap:8px; padding:8px 10px;
     border-bottom:1px solid var(--edge); background:linear-gradient(180deg,var(--hud-a),var(--hud-b));
   }
-  .brand{display:flex; flex-direction:column; justify-content:center; gap:9px;
+  /* `safe`: a tally too tall for the HUD (six states in a world with wide
+     chips) clips its last row, not the wordmark above it. */
+  .brand{display:flex; flex-direction:column; justify-content:center; justify-content:safe center; gap:9px;
          flex:0 0 236px; padding-right:2px}
   .brand b{font:600 17px/1 var(--mono); letter-spacing:.24em; color:var(--accent);
            text-shadow:0 0 calc(var(--glow)*15px) var(--accent)}
@@ -187,7 +191,14 @@
               overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
   .readout dd b{color:var(--ink); font-weight:600; font-size:1.1em}
 
-  .tally{display:grid; grid-template-columns:1fr 1fr; gap:4px; width:228px}
+  /* Dense, so a chip given the whole row (see fitHud) leaves no hole beside
+     the one before it. */
+  .tally{display:grid; grid-template-columns:1fr 1fr; grid-auto-flow:row dense; gap:4px; width:228px}
+  .tally .chip.wide{grid-column:1 / -1}
+  /* Five or six states at once is three rows, and in a world with tall
+     plaques (Team Fortress) the third row fell off the HUD. Rare enough that
+     the chips can sit closer for it: same words, same size, less air. */
+  .tally:has(> :nth-child(5)) .chip{padding-top:1px; padding-bottom:1px; line-height:1.3}
   .chip{
     display:flex; align-items:center; gap:6px; padding:3px 7px; border-radius:4px;
     border:1px solid var(--edge); background:var(--cell);
@@ -3393,8 +3404,47 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   --hud-a:#0a2e1e; --hud-b:#061d13; --rail-a:#0c3422; --rail-b:#061e14;
   /* A dark golden yellow instead of the fake metallic gold. */
   --leaf:#cca000;
-  /* the baize: a fine wool weave, the default cloth (see the bets) */
-  --weave:repeating-linear-gradient(45deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px), repeating-linear-gradient(-45deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
+  /* The cloth, in six layers the lanes stack (see .lane below): a weave
+     (two images, always two, so the size list lines up), the nap -- a fine
+     grey fibre grain, the short pile itself -- the pile: broad white
+     highlights where the nap lies flat under the lamp, which is what makes
+     velvet read as velvet and not as a flat colour, a sheen band from the
+     lamp, and a vignette, because a pile goes dark at a grazing angle. This
+     is the default cloth, the green baize; the outside bets lay the others. */
+  --weave:repeating-linear-gradient(45deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px), repeating-linear-gradient(-45deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px);
+  --weave-size:auto, auto;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.075'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.032 .05' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.07'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(112deg, transparent 30%, rgba(255,255,255,.035) 48%, transparent 66%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.34) 100%);
+  /* The racetrack: the oval betting ring printed on a European table. A
+     stadium -- two semicircles and two straights -- with the ends' radius
+     fixed, so every lane prints the same oval and only the straights run
+     with the lane's width. (An ellipse sized in percent of the lane gave
+     each agent a different shape: fat on a tall lane, squashed on a short
+     one.) Four layers: the two caps are half-circle rings, the straights
+     are two rules. It is printed on .projects, the cloth beside the rail,
+     so it sits centred on the felt whatever the rail's width. */
+  --track-r:46px;                                   /* the ends' radius: the shortest lane's cloth is ~108px */
+  --track-x:22px;                                   /* inset from the cloth's edge */
+  --track-w:1.5px;
+  --track-ink:rgba(234,179,8,.13);
+  --track:
+    radial-gradient(circle var(--track-r) at right, transparent calc(var(--track-r) - var(--track-w) - .6px), var(--track-ink) calc(var(--track-r) - var(--track-w)) calc(var(--track-r) - .4px), transparent calc(var(--track-r) + .2px)),
+    radial-gradient(circle var(--track-r) at left,  transparent calc(var(--track-r) - var(--track-w) - .6px), var(--track-ink) calc(var(--track-r) - var(--track-w)) calc(var(--track-r) - .4px), transparent calc(var(--track-r) + .2px)),
+    linear-gradient(var(--track-ink), var(--track-ink)),
+    linear-gradient(var(--track-ink), var(--track-ink));
+  --track-size:
+    var(--track-r) calc(2 * var(--track-r)),
+    var(--track-r) calc(2 * var(--track-r)),
+    calc(100% - 2 * var(--track-x) - 2 * var(--track-r)) var(--track-w),
+    calc(100% - 2 * var(--track-x) - 2 * var(--track-r)) var(--track-w);
+  --track-pos:
+    var(--track-x) 50%,
+    calc(100% - var(--track-x)) 50%,
+    50% calc(50% - var(--track-r) + var(--track-w) / 2),
+    50% calc(50% + var(--track-r) - var(--track-w) / 2);
+  --leather:#1a140f;
 }
 
 /* A lamp off the top-left corner and the table falling away into the corners.
@@ -3405,31 +3455,46 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     radial-gradient(118% 96% at 16% -10%, rgba(244,241,228,.055), transparent 54%),
     radial-gradient(136% 120% at 50% 52%, transparent 52%, rgba(1,8,5,.60) 100%);
 }
-/* THE TELL, 1 -- the board itself. Squares at tile scale, not the micro-chequer
-   of an arcade hillside, so a lane reads as a board with sessions standing on
-   it. Marble over lacquer, and the yellow fillet inlaid just inside the frame. */
+/* THE TELL, 1 -- the table itself. A lane is a stretch of cloth inside a
+   padded leather rail: the cloth is the six layers the felt tokens describe,
+   the racetrack is printed on it, and the rail is a dark leather border with
+   a cream stitch run down the middle of it. The chequer that used to be here
+   was the chessboard this world began as; a roulette table has no squares.
+   The project cells are glass over the cloth, so the pile shows through
+   between the cards; the stone stays on the HUD, the rails and the headers,
+   which is the marble surround the table is set into. */
 :root[data-theme="staunton"] .lane{
-  background-image:
-    conic-gradient(from 90deg at 50% 50%, rgba(244,241,228,.038) 0 25%, transparent 0 50%, rgba(244,241,228,.038) 0 75%, transparent 0),
-    var(--weave),
-    var(--grain);
-  background-size:76px 76px, auto, auto, auto, auto;
-  box-shadow:inset 0 0 0 1px rgba(234,179,8,.20), inset 0 1px 0 rgba(244,241,228,.05);
+  background-color:var(--panel);
+  background-image:var(--vignette), var(--sheen), var(--pile), var(--nap), var(--weave);
+  background-size:auto, auto, 360px 360px, 120px 120px, var(--weave-size);
+  border:3px solid var(--leather); border-radius:9px;
+  outline:1px dashed rgba(244,241,228,.30); outline-offset:-2px;
+  box-shadow:inset 0 0 0 1px rgba(234,179,8,.16), inset 0 0 18px rgba(0,0,0,.35),
+             0 1px 0 rgba(255,255,255,.04), 0 8px 18px -12px rgba(0,0,0,.9);
 }
-/* Removed chess engraved file letters for casino royale theme */
-/* Pieces stand on the square: a stone face, a bright arris catching the lamp,
-   and a yellow hairline under it. */
+:root[data-theme="staunton"] .lane.flat{--track-ink:transparent; border-width:2px; border-radius:7px; outline-offset:-1px}
+:root[data-theme="staunton"] .projects{
+  background-image:var(--track); background-size:var(--track-size);
+  background-position:var(--track-pos); background-repeat:no-repeat;
+}
+:root[data-theme="staunton"] .lane::after{display:none}
+:root[data-theme="staunton"] .project{background:color-mix(in srgb, var(--cell) 42%, transparent)}
+/* A session is a card dealt onto the cloth: a plain face, a printed hairline
+   a few pixels in from the edge, its suit in the corner where a card carries
+   its index (see the pips, below), and a shadow onto the pile. */
 :root[data-theme="staunton"] .bubble{
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23s)' opacity='.06'/%3E%3C/svg%3E");
-  box-shadow:inset 0 1px 0 rgba(244,241,228,.10), inset 0 -1px 0 rgba(234,179,8,.16);
+  background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 1px, transparent 1px 2px);
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.09), inset 0 -1px 0 rgba(1,8,5,.35),
+             0 2px 6px -1px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.03);
 }
+:root[data-theme="staunton"] .bubble:not([data-stale="2"]){outline:1px solid rgba(234,179,8,.13); outline-offset:-4px}
 :root[data-theme="staunton"] .bubble:hover{
   box-shadow:inset 0 1px 0 rgba(244,241,228,.14),
              0 0 0 1px rgba(234,179,8,.55),
              0 10px 22px -14px rgba(1,8,5,.9);
 }
 :root[data-theme="staunton"] .bubble.sel{
-  box-shadow:inset 0 1px 0 rgba(244,241,228,.16), 0 0 0 1px var(--accent);
+  box-shadow:inset 0 1px 0 rgba(244,241,228,.16), 0 0 0 1px var(--accent), 0 4px 10px -2px rgba(0,0,0,.8);
 }
 /* The HUD is the marble slab the board sits on, with a yellow rule along its
    bottom edge -- the one place the theme allows a hard metal line. */
@@ -4116,7 +4181,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 2. The round timer: the clock sits in the dark plaque the game hangs at
    the top of every match, cream digits on charcoal. */
 :root[data-theme="ochre"] #clock{
-  display:inline-block; margin-top:6px; padding:2px 12px 1px; border-radius:7px;
+  display:inline-block; margin-top:3px; padding:1px 12px 0; border-radius:7px;
   background:#2c2723; color:#fff1d2; border:2px solid #1c1815;
   font:700 13px/1.5 Rockwell, "Superclarendon", Georgia, serif; letter-spacing:.08em;
   text-shadow:1px 1px 0 rgba(0,0,0,.5); box-shadow:2px 2px 0 rgba(41,39,34,.18);
@@ -4832,7 +4897,9 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   border:0; border-bottom:4px solid #2a231b;
   box-shadow:inset 0 -1px 0 rgba(255,246,220,.7), 0 4px 0 rgba(41,39,34,.18);
 }
-:root[data-theme="ochre"] .brand{padding-left:6px}
+/* The plaques are tall; the column's gap gives some of it back so three
+   rows of them still clear the HUD at 900px. */
+:root[data-theme="ochre"] .brand{padding-left:6px; gap:5px}
 /* The paint tin's label, hanging off the wordmark. */
 :root[data-theme="ochre"] .brand b::after{
   content:"TEAM SPIRIT"; display:inline-block; margin-left:9px; padding:2px 5px;
@@ -4928,32 +4995,60 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .hrail .bets b.on{color:#1a1400; background:var(--accent)}
 :root[data-theme="staunton"] .hrail .bets i{color:rgba(234,179,8,.35); font-style:normal; padding:4px 0 3px}
 @media (max-width:1100px){ :root[data-theme="staunton"] .hrail .bets{display:none} }
-/* The cloths. Each is the table's colours and one weave, drawn under the
-   marble on the lanes. */
+/* The cloths. Each is the table's colours and its own six layers -- weave,
+   nap, pile, sheen, vignette -- tuned to the material: a matte wool baize, a
+   smooth speed cloth with a satin sheen, a crushed velvet with the broadest
+   highlights and the deepest shade, a pebbled leather with a hard gloss band,
+   a fine plain-weave burgundy, and the pinstripe over a wool ground. */
 :root[data-theme="staunton"][data-felt="speed"]{
   --void:#061225; --panel:#0a1c36; --cell:#0d2545; --tile:#123056; --tile-hi:#17396a; --edge:#24507f; --edge-hot:#3f7ab8;
   --hud-a:#0d2545; --hud-b:#081a30; --rail-a:#0f2a4d; --rail-b:#08182c;
-  --weave:repeating-linear-gradient(60deg, rgba(255,255,255,.028) 0 1px, transparent 1px 6px), repeating-linear-gradient(-60deg, rgba(255,255,255,.028) 0 1px, transparent 1px 6px);
+  --weave:repeating-linear-gradient(60deg, rgba(255,255,255,.035) 0 1px, transparent 1px 5px), repeating-linear-gradient(-60deg, rgba(255,255,255,.02) 0 1px, transparent 1px 5px);
+  --weave-size:auto, auto;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.016 .07' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.06'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(104deg, transparent 26%, rgba(255,255,255,.075) 46%, transparent 70%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.30) 100%);
 }
 :root[data-theme="staunton"][data-felt="velvet"]{
-  --void:#1a0508; --panel:#2a0a0f; --cell:#360d13; --tile:#46121a; --tile-hi:#561822; --edge:#6e2430; --edge-hot:#a63a4a;
+  --void:#1a0508; --panel:#2e0a10; --cell:#3a0d14; --tile:#4a131c; --tile-hi:#5a1a24; --edge:#722532; --edge-hot:#a63a4a;
   --hud-a:#3a0d14; --hud-b:#22070c; --rail-a:#3d0e16; --rail-b:#23070c;
-  --weave:radial-gradient(120% 60% at 30% 0%, rgba(255,255,255,.07), transparent 60%), repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  --weave:linear-gradient(transparent,transparent), linear-gradient(transparent,transparent);
+  --weave-size:auto, auto;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.085'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.011 .055' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.15'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(118deg, transparent 28%, rgba(255,255,255,.065) 47%, transparent 68%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.42) 100%);
 }
 :root[data-theme="staunton"][data-felt="leather"]{
-  --void:#0a0a0a; --panel:#151515; --cell:#1c1c1c; --tile:#242424; --tile-hi:#2e2e2e; --edge:#3a3a3a; --edge-hot:#5c5c5c;
-  --hud-a:#1e1e1e; --hud-b:#111; --rail-a:#202020; --rail-b:#121212;
-  --weave:radial-gradient(circle at 3px 3px, rgba(255,255,255,.035) 0 1px, transparent 1.6px) 0 0/9px 9px, radial-gradient(circle at 7px 5px, rgba(0,0,0,.35) 0 1px, transparent 1.6px) 0 0/11px 13px;
+  --void:#0a0a0a; --panel:#161616; --cell:#1c1c1c; --tile:#252525; --tile-hi:#303030; --edge:#3c3c3c; --edge-hot:#5e5e5e;
+  --hud-a:#1e1e1e; --hud-b:#111; --rail-a:#202020; --rail-b:#121212; --leather:#2a1d14;
+  --weave:radial-gradient(circle at 3px 3px, rgba(255,255,255,.05) 0 1px, transparent 1.7px), radial-gradient(circle at 7px 5px, rgba(0,0,0,.42) 0 1px, transparent 1.7px);
+  --weave-size:9px 9px, 11px 13px;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.03 .03' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.05'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(108deg, transparent 34%, rgba(255,255,255,.11) 46%, transparent 58%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.46) 100%);
 }
 :root[data-theme="staunton"][data-felt="burgundy"]{
-  --void:#160309; --panel:#24060f; --cell:#2d0813; --tile:#3a0b19; --tile-hi:#4a1022; --edge:#62182f; --edge-hot:#8f2848;
+  --void:#160309; --panel:#26060f; --cell:#2d0813; --tile:#3a0b19; --tile-hi:#4a1022; --edge:#62182f; --edge-hot:#8f2848;
   --hud-a:#310912; --hud-b:#1c050b; --rail-a:#340a14; --rail-b:#1d050b;
-  --weave:repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+  --weave:repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.2) 0 1px, transparent 1px 3px);
+  --weave-size:auto, auto;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.095'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.03 .055' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.055'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(112deg, transparent 30%, rgba(255,255,255,.03) 48%, transparent 66%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.36) 100%);
 }
 :root[data-theme="staunton"][data-felt="royal"]{
-  --void:#0d0618; --panel:#170b2a; --cell:#1e1036; --tile:#271546; --tile-hi:#311c57; --edge:#43286f; --edge-hot:#6a44a8;
+  --void:#0d0618; --panel:#180b2c; --cell:#1e1036; --tile:#271546; --tile-hi:#311c57; --edge:#43286f; --edge-hot:#6a44a8;
   --hud-a:#20113a; --hud-b:#130923; --rail-a:#22123d; --rail-b:#130924;
-  --weave:repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 14px);
+  --weave:repeating-linear-gradient(90deg, rgba(255,255,255,.055) 0 1px, transparent 1px 14px), repeating-linear-gradient(45deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);
+  --weave-size:auto, auto;
+  --nap:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
+  --pile:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.018 .05' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .15 .7 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='360' height='360' filter='url(%23p)' opacity='.08'/%3E%3C/svg%3E");
+  --sheen:linear-gradient(112deg, transparent 30%, rgba(255,255,255,.05) 48%, transparent 66%);
+  --vignette:radial-gradient(125% 105% at 50% 42%, transparent 52%, rgba(0,0,0,.36) 100%);
 }
 /* 3. The drop. The wheel picks up for the length of the spin, the ball runs
    the outer track and rattles down into a pocket, and the plaque shows the
@@ -4994,6 +5089,65 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   :root[data-theme="staunton"] .ball{display:none}
   :root[data-theme="staunton"] .plaque{animation:none}
 }
+/* 4. More of the room. Everything a casino is known by that the table did not
+   have yet, each of them on a figure the board already carries:
+   -- the pips: every card wears its suit in the corner, and the suit is the
+      state (hearts in play, diamonds for a jackpot, spades for a bust, clubs
+      for a hand waiting on your bet; a folded card shows its suit faintly);
+   -- the dice: a project's head count is a die, pips up to six and the
+      numeral on the face past that;
+   -- the rail chip: an agent's count on its rail is a chip in the house
+      yellow, like the tally's;
+   -- the dealer button: the card you have in hand (the open panel) wears it;
+   -- the frets: the gauges' empty track is the wheel's fret ring;
+   -- the cloth's own printing: an empty lane says PLACE YOUR BETS in the
+      table's yellow, spaced the way the felt is lettered;
+   -- the wallpaper: the side panel is papered in the four suits, faintly. */
+:root[data-theme="staunton"] .bubble::after{
+  content:"\2660"; position:absolute; top:5px; right:8px; z-index:1; pointer-events:none;
+  font:600 11px/1 var(--mono); font-variant-emoji:text; color:var(--rib); opacity:.8; transition:opacity .12s;
+}
+:root[data-theme="staunton"] .bubble[data-state="running"]::after{content:"\2665"}
+:root[data-theme="staunton"] .bubble[data-state="done"]::after{content:"\2666"}
+:root[data-theme="staunton"] .bubble[data-state="waiting"]::after{content:"\2663"}
+:root[data-theme="staunton"] .bubble[data-state="idle"]::after,
+:root[data-theme="staunton"] .bubble[data-state="unknown"]::after{opacity:.32}
+:root[data-theme="staunton"] .bubble:hover::after, :root[data-theme="staunton"] .bubble.sel::after{opacity:0}
+:root[data-theme="staunton"] .bubble .nm{padding-right:14px}
+:root[data-theme="staunton"] .bubble.sel .foot::after{
+  content:"D"; margin-left:auto; flex:none; width:14px; height:14px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font:700 9px/1 var(--mono); letter-spacing:0; color:#04140d; text-shadow:none;
+  background:linear-gradient(180deg,#fbf8ec,#ddd6bf); box-shadow:0 1px 0 rgba(1,8,5,.6);
+}
+:root[data-theme="staunton"] .project > header .ct{
+  width:16px; height:16px; flex:none; margin-left:auto; border-radius:3px; opacity:1;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:9.5px; font-weight:700; letter-spacing:0; line-height:1; color:#04140d; text-shadow:none;
+  background:linear-gradient(180deg,#fbf8ec,#ddd6bf);
+  box-shadow:inset 0 -1px 0 rgba(0,0,0,.28), 0 1px 0 rgba(1,8,5,.6), 0 2px 3px -1px rgba(0,0,0,.6);
+}
+:root[data-theme="staunton"] .project.min > header .ct{margin-left:0; margin-top:auto}
+:root[data-theme="staunton"] .project[data-count="1"] > header .ct{color:transparent; background:radial-gradient(circle at 8px 8px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .project[data-count="2"] > header .ct{color:transparent; background:radial-gradient(circle at 4px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 12px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .project[data-count="3"] > header .ct{color:transparent; background:radial-gradient(circle at 4px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 8px 8px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 12px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .project[data-count="4"] > header .ct{color:transparent; background:radial-gradient(circle at 4px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 4px 12px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 12px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .project[data-count="5"] > header .ct{color:transparent; background:radial-gradient(circle at 4px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 8px 8px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 4px 12px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 12px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .project[data-count="6"] > header .ct{color:transparent; background:radial-gradient(circle at 4px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 4px 8px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 4px 12px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 4px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 8px, #04140d 1.5px, transparent 2.1px), radial-gradient(circle at 12px 12px, #04140d 1.5px, transparent 2.1px), linear-gradient(180deg,#fbf8ec,#ddd6bf)}
+:root[data-theme="staunton"] .rail .rcount{
+  width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; letter-spacing:0; color:#04140d; text-shadow:none; opacity:1;
+  background:
+    radial-gradient(circle, var(--leaf) 0 43%, rgba(1,8,5,.55) 44% 47%, transparent 48%),
+    repeating-conic-gradient(from 8deg, #f4f1e4 0 18deg, var(--leaf) 18deg 60deg);
+  box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--leaf);
+}
+:root[data-theme="staunton"] .track{stroke:rgba(234,179,8,.32); stroke-dasharray:2.2 1.5; stroke-linecap:butt}
+:root[data-theme="staunton"] .empty{
+  margin:auto; text-align:center; color:rgba(234,179,8,.62); font-weight:600;
+  letter-spacing:.34em; text-transform:uppercase; text-shadow:0 1px 0 rgba(1,8,5,.6);
+}
+:root[data-theme="staunton"] .panel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23f4f1e4' fill-opacity='.04'%3E%3Cpath transform='translate(10 10) scale(.8)' d='M8 1 C8 1 2 6.5 2 10.5 C2 12.5 3.5 14 5.5 14 C6.5 14 8 13 8 13 C8 13 9.5 14 10.5 14 C12.5 14 14 12.5 14 10.5 C14 6.5 8 1 8 1 Z M8 13 L6.5 16 L9.5 16 Z'/%3E%3Cpath transform='translate(58 10) scale(.8)' d='M8 14.5 C8 14.5 1.5 9.5 1.5 5.5 C1.5 3.3 3.2 1.8 5.2 1.8 C6.6 1.8 7.6 2.6 8 3.5 C8.4 2.6 9.4 1.8 10.8 1.8 C12.8 1.8 14.5 3.3 14.5 5.5 C14.5 9.5 8 14.5 8 14.5 Z'/%3E%3Cg transform='translate(34 58) scale(.8)'%3E%3Ccircle cx='8' cy='4.5' r='2.5'/%3E%3Ccircle cx='4.5' cy='9.5' r='2.5'/%3E%3Ccircle cx='11.5' cy='9.5' r='2.5'/%3E%3Cpath d='M8 10 L6 15 L10 15 Z'/%3E%3C/g%3E%3Cpath transform='translate(82 58) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3Cpath transform='translate(34 -14) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3C/g%3E%3C/svg%3E"), var(--grain); background-size:96px 96px, auto}
 /* ==== PASS 7: HOTLINE MIAMI ====
    The wordmark was seventeen pixels of dim Phosphate, and the sun was a
    twelve-percent ghost behind the lanes. The things the game's title screen
@@ -6573,7 +6727,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
         </optgroup>
       </select>
       <button class="ghost" id="pause" title="pause / resume live polling">⏸<span> pause</span></button>
-      <button class="ghost" id="collapse" title="collapse all tiles to one-line summaries">⊟<span> collapse</span></button>
+      <button class="ghost" id="collapse" title="collapse all tiles to one-line summaries"><span> collapse</span></button>
       <button class="ghost" id="flush"
               title="clear finished and quiet sessions off the board — nothing is killed, and anything that wakes up comes back">⏏<span> flush</span></button>
       <button class="ghost" id="refresh" title="force refresh ui layout without stopping music">↻<span> refresh</span></button>
@@ -6892,7 +7046,7 @@ const VOICE = {
               blank:'nothing in the loadout', quiet:'ceasefire'},
   /* casino royale */
   staunton:  {blocked:'bust', waiting:'your bet', running:'in play', idle:'folded', done:'jackpot', unknown:'off table',
-              blank:'no hands dealt yet', quiet:'the table is closed'},
+              blank:'no hands dealt yet', quiet:'the table is closed', empty:'place your bets'},
   /* the matrix */
   matrix:    {blocked:'agent', waiting:'operator', running:'inside', idle:'asleep', done:'unplugged', unknown:'glitch',
               blank:'no signal on this line', quiet:'no one is plugged in', offline:'NO CARRIER'},
@@ -7084,18 +7238,61 @@ function drawHud(d){
     ['uptime', '<b>'+dur(h.uptime)+'</b>'],
   ];
   const ro = document.getElementById('readout');
+  let moved = false;
   if(!HUD.dds || ro.children.length !== cells.length){
     ro.innerHTML = cells.map(([k, v]) => cell(k, v)).join('');
     HUD.dds = [...ro.querySelectorAll('dd')]; HUD.cells = cells.map(c => c[1]);
+    moved = true;
   }else cells.forEach(([, v], i) => {
-    if(HUD.cells[i] !== v){ HUD.cells[i] = v; HUD.dds[i].innerHTML = v; }
+    if(HUD.cells[i] !== v){ HUD.cells[i] = v; HUD.dds[i].innerHTML = v; moved = true; }
   });
 
   const tally = STATES.filter(s=>d.tally[s])
     .map(s=>'<span class="chip" data-s="'+s+'" title="'+s+'"><i class="dot s-'+s+'"></i><span class="lb">'+esc(voice(s))+'</span><span class="n">'+d.tally[s]+'</span></span>').join('');
-  if(tally !== HUD.tally){ HUD.tally = tally; document.getElementById('tally').innerHTML = tally; }
+  // Keyed on the theme as well: the same words in another world's face are
+  // another width.
+  const tallyKey = tally + '|' + document.documentElement.dataset.theme;
+  if(tallyKey !== HUD.tally){ HUD.tally = tallyKey; document.getElementById('tally').innerHTML = tally; moved = true; }
+  if(moved) fitHud();
   drawTrace(d.history||[]);
 }
+/* A word that does not fit its box shrinks a little before it ellipsizes.
+   The tally's chips and the readout's cells are fixed boxes, and a world's
+   own words for the states ("mission complete", "aspiration met", "rip and
+   tear") or a wide display face ran past them and read as "MISSION …" all
+   day -- as did "100% AC" in the readout on a 1440-wide screen. Tracking goes
+   first, then the size, down to a floor; past that the ellipsis is still the
+   answer. Runs only when the words, the theme or the window change, and again
+   once a world's face has loaded, since the first measure was in the fallback. */
+function shrinkToFit(el, floor){
+  el.style.letterSpacing = '0';
+  if(el.scrollWidth <= el.clientWidth) return true;
+  const base = parseFloat(getComputedStyle(el).fontSize) || 11;
+  for(let px = base - .5; px >= floor; px -= .5){
+    el.style.fontSize = px + 'px';
+    if(el.scrollWidth <= el.clientWidth) return true;
+  }
+  return false;
+}
+function fitHud(){
+  const els = [...document.querySelectorAll('.chip .lb, .readout dd, .readout dt')];
+  els.forEach(el => { el.style.letterSpacing = ''; el.style.fontSize = ''; el.parentElement.classList.remove('wide'); });
+  // One layout for the lot; only what overflows pays for the steps.
+  els.filter(el => el.scrollWidth > el.clientWidth).forEach(el => {
+    if(shrinkToFit(el, 8.5)) return;
+    // A word longer than a chip is at any readable size ("mission complete"
+    // in a display face) takes the tally's whole row instead.
+    const chip = el.closest('.chip'), brand = el.closest('.brand');
+    if(!chip) return;
+    chip.classList.add('wide'); el.style.letterSpacing = ''; el.style.fontSize = '';
+    // ...if the extra row fits under the wordmark; the HUD clips what does not.
+    if(brand && brand.scrollHeight > brand.clientHeight + 1){ chip.classList.remove('wide'); shrinkToFit(el, 8.5); return; }
+    if(el.scrollWidth > el.clientWidth) shrinkToFit(el, 8.5);
+  });
+}
+addEventListener('resize', fitHud);
+if(document.fonts && document.fonts.addEventListener)
+  document.fonts.addEventListener('loadingdone', fitHud);
 
 /* The trace's four colours come from computed style, and asking for computed
    style right after the HUD has been touched forces a synchronous style pass
@@ -7710,9 +7907,17 @@ document.getElementById('pause').onclick = e => {
 };
 const collapseBtn = document.getElementById('collapse');
 /* One writer for the square's face. The words live in a span the HUD row
-   hides; written as plain text they spilled out of the square. */
+   hides; written as plain text they spilled out of the square. Drawn, like
+   the sound button, because ⊟/⊞ read as two of the same box: the face says
+   what the click does -- a burst to blow the board open, a clam to fold it
+   shut. */
+const ICON_BURST = '<svg viewBox="0 0 16 16" fill="currentColor" stroke="none" aria-hidden="true">'
+  + '<path d="M8 .4L9.05 4.77 11.76 2.82 10.75 6l4.67-.41L11.4 8l2.5 1.92-3.15.08 1.6 3.99-3.3-2.76L8 14.8l-1.05-3.57-3.48 3 1.78-4.23-3.24-.05L4.6 8 .87 5.68 5.25 6 4.12 2.66l2.83 2.11z"/></svg>';
+const ICON_CLAM = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'
+  + '<path d="M1.5 9.5c0 3 2.9 5 6.5 5s6.5-2 6.5-5z" fill="currentColor" stroke="none"/>'
+  + '<path d="M1.5 9.5C1.5 5.5 4.4 3 8 3s6.5 2.5 6.5 6.5"/><path d="M8 3v6.5M4.4 4.2l2 5.3M11.6 4.2l-2 5.3"/></svg>';
 function labelCollapse(){
-  collapseBtn.innerHTML = compact ? '⊞<span> expand</span>' : '⊟<span> collapse</span>';
+  collapseBtn.innerHTML = compact ? ICON_BURST + '<span> expand</span>' : ICON_CLAM + '<span> collapse</span>';
   collapseBtn.title = (compact ? 'expand every tile' : 'collapse all tiles to one-line summaries') + ' (\u2318E)';
   collapseBtn.classList.toggle('lit', compact);
 }
@@ -8108,13 +8313,21 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     });
     mark();
   };
+  const lay = k => {
+    if(!FELTS.some(f => f[0] === k)) return;
+    felt = k; root.dataset.felt = felt; mark();
+    try{ localStorage.setItem(KEY, felt); }catch(e){}
+    document.dispatchEvent(new CustomEvent('fleet:felt', {detail:{felt}}));
+  };
   document.addEventListener('fleet:paint', dress);
   document.addEventListener('fleet:theme', dress);
   board.addEventListener('click', e => {
     const b = e.target.closest('.bets b'); if(!b) return;
-    felt = b.dataset.felt; root.dataset.felt = felt; mark();
-    try{ localStorage.setItem(KEY, felt); }catch(e){}
+    lay(b.dataset.felt);
   });
+  // The bets only print on a closed rail, and a board with every agent busy
+  // has none; the settings card offers the same six cloths through this.
+  window.fleetFelt = {list: () => FELTS.map(f => f.slice()), get: () => felt, set: lay};
 })();
 
 /* ---- rings, scattered (sonic) ------------------------------------------- */
@@ -9251,6 +9464,8 @@ function openSettings(){
       +   '<div class="picks" data-k="picks"></div></section>'
       + '<section><h3>tiles <span class="hint">how large the board draws them</span></h3>'
       +   '<div class="row"><span>scale</span><input type="range" min="100" max="200" step="5" data-k="scale"><b class="pct" data-k="scale-pct"></b></div></section>'
+      + '<section data-k="felt-sec" hidden><h3>table <span class="hint">the cloth on the casino table \u2014 the outside bets printed on a closed rail lay it too</span></h3>'
+      +   '<div class="picks" data-k="felt"></div></section>'
       + '<section><h3>terminal <span class="hint">the face the sheet\u2019s shells use \u2014 applies to open ones as you change it</span></h3>'
       +   '<div class="row"><span>face</span><select data-k="tf-face"></select></div>'
       +   '<div class="row"><span>weight</span><select data-k="tf-weight"><option value="400">regular</option><option value="500">medium</option><option value="600">semibold</option><option value="700">bold</option></select></div>'
@@ -9304,7 +9519,20 @@ function openSettings(){
       try{ localStorage.setItem(MOTION_KEY, q('motion').checked ? 'off' : 'on'); }catch(e){}
       applyMotion();
     };
+    // the table: the six cloths, on the casino table only
+    const fillFelt = () => {
+      const F = window.fleetFelt, on = document.documentElement.dataset.theme === 'staunton' && F;
+      q('felt-sec').hidden = !on; if(!on) return;
+      q('felt').innerHTML = F.list().map(([k, bet, cloth]) =>
+        '<span class="pick'+(k === F.get() ? ' now' : '')+'" role="button" tabindex="0" data-felt="'+k+'"><b>'+esc(bet)+'</b>'+esc(cloth)+'</span>').join('');
+    };
+    q('felt').addEventListener('click', e => { const b = e.target.closest('[data-felt]'); if(b) window.fleetFelt.set(b.dataset.felt); });
+    q('felt').addEventListener('keydown', e => { const b = e.target.closest('[data-felt]'); if(b && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); window.fleetFelt.set(b.dataset.felt); } });
+    document.addEventListener('fleet:theme', fillFelt);
+    document.addEventListener('fleet:felt', fillFelt);
+    settingsEl.fillFelt = fillFelt;
   }
+  settingsEl.fillFelt();
   fillSettings();
   settingsEl.classList.add('on');
   settingsEl.querySelector('[data-k="close"]').focus();
@@ -10505,6 +10733,6 @@ if(TERMCFG.enabled){
      wide, like the pty and iTerm already believe. -->
 <script>!function(e,t){"object"==typeof exports&&"object"==typeof module?module.exports=t():"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?exports.Unicode11Addon=t():e.Unicode11Addon=t()}(this,(()=>(()=>{"use strict";var e={433:(e,t,i)=>{Object.defineProperty(t,"__esModule",{value:!0}),t.UnicodeV11=void 0;const r=i(938),s=[[768,879],[1155,1161],[1425,1469],[1471,1471],[1473,1474],[1476,1477],[1479,1479],[1536,1541],[1552,1562],[1564,1564],[1611,1631],[1648,1648],[1750,1757],[1759,1764],[1767,1768],[1770,1773],[1807,1807],[1809,1809],[1840,1866],[1958,1968],[2027,2035],[2045,2045],[2070,2073],[2075,2083],[2085,2087],[2089,2093],[2137,2139],[2259,2306],[2362,2362],[2364,2364],[2369,2376],[2381,2381],[2385,2391],[2402,2403],[2433,2433],[2492,2492],[2497,2500],[2509,2509],[2530,2531],[2558,2558],[2561,2562],[2620,2620],[2625,2626],[2631,2632],[2635,2637],[2641,2641],[2672,2673],[2677,2677],[2689,2690],[2748,2748],[2753,2757],[2759,2760],[2765,2765],[2786,2787],[2810,2815],[2817,2817],[2876,2876],[2879,2879],[2881,2884],[2893,2893],[2902,2902],[2914,2915],[2946,2946],[3008,3008],[3021,3021],[3072,3072],[3076,3076],[3134,3136],[3142,3144],[3146,3149],[3157,3158],[3170,3171],[3201,3201],[3260,3260],[3263,3263],[3270,3270],[3276,3277],[3298,3299],[3328,3329],[3387,3388],[3393,3396],[3405,3405],[3426,3427],[3530,3530],[3538,3540],[3542,3542],[3633,3633],[3636,3642],[3655,3662],[3761,3761],[3764,3772],[3784,3789],[3864,3865],[3893,3893],[3895,3895],[3897,3897],[3953,3966],[3968,3972],[3974,3975],[3981,3991],[3993,4028],[4038,4038],[4141,4144],[4146,4151],[4153,4154],[4157,4158],[4184,4185],[4190,4192],[4209,4212],[4226,4226],[4229,4230],[4237,4237],[4253,4253],[4448,4607],[4957,4959],[5906,5908],[5938,5940],[5970,5971],[6002,6003],[6068,6069],[6071,6077],[6086,6086],[6089,6099],[6109,6109],[6155,6158],[6277,6278],[6313,6313],[6432,6434],[6439,6440],[6450,6450],[6457,6459],[6679,6680],[6683,6683],[6742,6742],[6744,6750],[6752,6752],[6754,6754],[6757,6764],[6771,6780],[6783,6783],[6832,6846],[6912,6915],[6964,6964],[6966,6970],[6972,6972],[6978,6978],[7019,7027],[7040,7041],[7074,7077],[7080,7081],[7083,7085],[7142,7142],[7144,7145],[7149,7149],[7151,7153],[7212,7219],[7222,7223],[7376,7378],[7380,7392],[7394,7400],[7405,7405],[7412,7412],[7416,7417],[7616,7673],[7675,7679],[8203,8207],[8234,8238],[8288,8292],[8294,8303],[8400,8432],[11503,11505],[11647,11647],[11744,11775],[12330,12333],[12441,12442],[42607,42610],[42612,42621],[42654,42655],[42736,42737],[43010,43010],[43014,43014],[43019,43019],[43045,43046],[43204,43205],[43232,43249],[43263,43263],[43302,43309],[43335,43345],[43392,43394],[43443,43443],[43446,43449],[43452,43453],[43493,43493],[43561,43566],[43569,43570],[43573,43574],[43587,43587],[43596,43596],[43644,43644],[43696,43696],[43698,43700],[43703,43704],[43710,43711],[43713,43713],[43756,43757],[43766,43766],[44005,44005],[44008,44008],[44013,44013],[64286,64286],[65024,65039],[65056,65071],[65279,65279],[65529,65531]],n=[[66045,66045],[66272,66272],[66422,66426],[68097,68099],[68101,68102],[68108,68111],[68152,68154],[68159,68159],[68325,68326],[68900,68903],[69446,69456],[69633,69633],[69688,69702],[69759,69761],[69811,69814],[69817,69818],[69821,69821],[69837,69837],[69888,69890],[69927,69931],[69933,69940],[70003,70003],[70016,70017],[70070,70078],[70089,70092],[70191,70193],[70196,70196],[70198,70199],[70206,70206],[70367,70367],[70371,70378],[70400,70401],[70459,70460],[70464,70464],[70502,70508],[70512,70516],[70712,70719],[70722,70724],[70726,70726],[70750,70750],[70835,70840],[70842,70842],[70847,70848],[70850,70851],[71090,71093],[71100,71101],[71103,71104],[71132,71133],[71219,71226],[71229,71229],[71231,71232],[71339,71339],[71341,71341],[71344,71349],[71351,71351],[71453,71455],[71458,71461],[71463,71467],[71727,71735],[71737,71738],[72148,72151],[72154,72155],[72160,72160],[72193,72202],[72243,72248],[72251,72254],[72263,72263],[72273,72278],[72281,72283],[72330,72342],[72344,72345],[72752,72758],[72760,72765],[72767,72767],[72850,72871],[72874,72880],[72882,72883],[72885,72886],[73009,73014],[73018,73018],[73020,73021],[73023,73029],[73031,73031],[73104,73105],[73109,73109],[73111,73111],[73459,73460],[78896,78904],[92912,92916],[92976,92982],[94031,94031],[94095,94098],[113821,113822],[113824,113827],[119143,119145],[119155,119170],[119173,119179],[119210,119213],[119362,119364],[121344,121398],[121403,121452],[121461,121461],[121476,121476],[121499,121503],[121505,121519],[122880,122886],[122888,122904],[122907,122913],[122915,122916],[122918,122922],[123184,123190],[123628,123631],[125136,125142],[125252,125258],[917505,917505],[917536,917631],[917760,917999]],o=[[4352,4447],[8986,8987],[9001,9002],[9193,9196],[9200,9200],[9203,9203],[9725,9726],[9748,9749],[9800,9811],[9855,9855],[9875,9875],[9889,9889],[9898,9899],[9917,9918],[9924,9925],[9934,9934],[9940,9940],[9962,9962],[9970,9971],[9973,9973],[9978,9978],[9981,9981],[9989,9989],[9994,9995],[10024,10024],[10060,10060],[10062,10062],[10067,10069],[10071,10071],[10133,10135],[10160,10160],[10175,10175],[11035,11036],[11088,11088],[11093,11093],[11904,11929],[11931,12019],[12032,12245],[12272,12283],[12288,12329],[12334,12350],[12353,12438],[12443,12543],[12549,12591],[12593,12686],[12688,12730],[12736,12771],[12784,12830],[12832,12871],[12880,19903],[19968,42124],[42128,42182],[43360,43388],[44032,55203],[63744,64255],[65040,65049],[65072,65106],[65108,65126],[65128,65131],[65281,65376],[65504,65510]],c=[[94176,94179],[94208,100343],[100352,101106],[110592,110878],[110928,110930],[110948,110951],[110960,111355],[126980,126980],[127183,127183],[127374,127374],[127377,127386],[127488,127490],[127504,127547],[127552,127560],[127568,127569],[127584,127589],[127744,127776],[127789,127797],[127799,127868],[127870,127891],[127904,127946],[127951,127955],[127968,127984],[127988,127988],[127992,128062],[128064,128064],[128066,128252],[128255,128317],[128331,128334],[128336,128359],[128378,128378],[128405,128406],[128420,128420],[128507,128591],[128640,128709],[128716,128716],[128720,128722],[128725,128725],[128747,128748],[128756,128762],[128992,129003],[129293,129393],[129395,129398],[129402,129442],[129445,129450],[129454,129482],[129485,129535],[129648,129651],[129656,129658],[129664,129666],[129680,129685],[131072,196605],[196608,262141]];let l;function d(e,t){let i,r=0,s=t.length-1;if(e<t[0][0]||e>t[s][1])return!1;for(;s>=r;)if(i=r+s>>1,e>t[i][1])r=i+1;else{if(!(e<t[i][0]))return!0;s=i-1}return!1}t.UnicodeV11=class{constructor(){if(this.version="11",!l){l=new Uint8Array(65536),l.fill(1),l[0]=0,l.fill(0,1,32),l.fill(0,127,160);for(let e=0;e<s.length;++e)l.fill(0,s[e][0],s[e][1]+1);for(let e=0;e<o.length;++e)l.fill(2,o[e][0],o[e][1]+1)}}wcwidth(e){return e<32?0:e<127?1:e<65536?l[e]:d(e,n)?0:d(e,c)?2:1}charProperties(e,t){let i=this.wcwidth(e),s=0===i&&0!==t;if(s){const e=r.UnicodeService.extractWidth(t);0===e?s=!1:e>i&&(i=e)}return r.UnicodeService.createPropertyValue(0,i,s)}}},345:(e,t)=>{Object.defineProperty(t,"__esModule",{value:!0}),t.runAndSubscribe=t.forwardEvent=t.EventEmitter=void 0,t.EventEmitter=class{constructor(){this._listeners=[],this._disposed=!1}get event(){return this._event||(this._event=e=>(this._listeners.push(e),{dispose:()=>{if(!this._disposed)for(let t=0;t<this._listeners.length;t++)if(this._listeners[t]===e)return void this._listeners.splice(t,1)}})),this._event}fire(e,t){const i=[];for(let e=0;e<this._listeners.length;e++)i.push(this._listeners[e]);for(let r=0;r<i.length;r++)i[r].call(void 0,e,t)}dispose(){this.clearListeners(),this._disposed=!0}clearListeners(){this._listeners&&(this._listeners.length=0)}},t.forwardEvent=function(e,t){return e((e=>t.fire(e)))},t.runAndSubscribe=function(e,t){return t(void 0),e((e=>t(e)))}},490:(e,t,i)=>{Object.defineProperty(t,"__esModule",{value:!0}),t.UnicodeV6=void 0;const r=i(938),s=[[768,879],[1155,1158],[1160,1161],[1425,1469],[1471,1471],[1473,1474],[1476,1477],[1479,1479],[1536,1539],[1552,1557],[1611,1630],[1648,1648],[1750,1764],[1767,1768],[1770,1773],[1807,1807],[1809,1809],[1840,1866],[1958,1968],[2027,2035],[2305,2306],[2364,2364],[2369,2376],[2381,2381],[2385,2388],[2402,2403],[2433,2433],[2492,2492],[2497,2500],[2509,2509],[2530,2531],[2561,2562],[2620,2620],[2625,2626],[2631,2632],[2635,2637],[2672,2673],[2689,2690],[2748,2748],[2753,2757],[2759,2760],[2765,2765],[2786,2787],[2817,2817],[2876,2876],[2879,2879],[2881,2883],[2893,2893],[2902,2902],[2946,2946],[3008,3008],[3021,3021],[3134,3136],[3142,3144],[3146,3149],[3157,3158],[3260,3260],[3263,3263],[3270,3270],[3276,3277],[3298,3299],[3393,3395],[3405,3405],[3530,3530],[3538,3540],[3542,3542],[3633,3633],[3636,3642],[3655,3662],[3761,3761],[3764,3769],[3771,3772],[3784,3789],[3864,3865],[3893,3893],[3895,3895],[3897,3897],[3953,3966],[3968,3972],[3974,3975],[3984,3991],[3993,4028],[4038,4038],[4141,4144],[4146,4146],[4150,4151],[4153,4153],[4184,4185],[4448,4607],[4959,4959],[5906,5908],[5938,5940],[5970,5971],[6002,6003],[6068,6069],[6071,6077],[6086,6086],[6089,6099],[6109,6109],[6155,6157],[6313,6313],[6432,6434],[6439,6440],[6450,6450],[6457,6459],[6679,6680],[6912,6915],[6964,6964],[6966,6970],[6972,6972],[6978,6978],[7019,7027],[7616,7626],[7678,7679],[8203,8207],[8234,8238],[8288,8291],[8298,8303],[8400,8431],[12330,12335],[12441,12442],[43014,43014],[43019,43019],[43045,43046],[64286,64286],[65024,65039],[65056,65059],[65279,65279],[65529,65531]],n=[[68097,68099],[68101,68102],[68108,68111],[68152,68154],[68159,68159],[119143,119145],[119155,119170],[119173,119179],[119210,119213],[119362,119364],[917505,917505],[917536,917631],[917760,917999]];let o;t.UnicodeV6=class{constructor(){if(this.version="6",!o){o=new Uint8Array(65536),o.fill(1),o[0]=0,o.fill(0,1,32),o.fill(0,127,160),o.fill(2,4352,4448),o[9001]=2,o[9002]=2,o.fill(2,11904,42192),o[12351]=1,o.fill(2,44032,55204),o.fill(2,63744,64256),o.fill(2,65040,65050),o.fill(2,65072,65136),o.fill(2,65280,65377),o.fill(2,65504,65511);for(let e=0;e<s.length;++e)o.fill(0,s[e][0],s[e][1]+1)}}wcwidth(e){return e<32?0:e<127?1:e<65536?o[e]:function(e,t){let i,r=0,s=t.length-1;if(e<t[0][0]||e>t[s][1])return!1;for(;s>=r;)if(i=r+s>>1,e>t[i][1])r=i+1;else{if(!(e<t[i][0]))return!0;s=i-1}return!1}(e,n)?0:e>=131072&&e<=196605||e>=196608&&e<=262141?2:1}charProperties(e,t){let i=this.wcwidth(e),s=0===i&&0!==t;if(s){const e=r.UnicodeService.extractWidth(t);0===e?s=!1:e>i&&(i=e)}return r.UnicodeService.createPropertyValue(0,i,s)}}},938:(e,t,i)=>{Object.defineProperty(t,"__esModule",{value:!0}),t.UnicodeService=void 0;const r=i(345),s=i(490);class n{static extractShouldJoin(e){return 0!=(1&e)}static extractWidth(e){return e>>1&3}static extractCharKind(e){return e>>3}static createPropertyValue(e,t,i=!1){return(16777215&e)<<3|(3&t)<<1|(i?1:0)}constructor(){this._providers=Object.create(null),this._active="",this._onChange=new r.EventEmitter,this.onChange=this._onChange.event;const e=new s.UnicodeV6;this.register(e),this._active=e.version,this._activeProvider=e}dispose(){this._onChange.dispose()}get versions(){return Object.keys(this._providers)}get activeVersion(){return this._active}set activeVersion(e){if(!this._providers[e])throw new Error(`unknown Unicode version "${e}"`);this._active=e,this._activeProvider=this._providers[e],this._onChange.fire(e)}register(e){this._providers[e.version]=e}wcwidth(e){return this._activeProvider.wcwidth(e)}getStringCellWidth(e){let t=0,i=0;const r=e.length;for(let s=0;s<r;++s){let o=e.charCodeAt(s);if(55296<=o&&o<=56319){if(++s>=r)return t+this.wcwidth(o);const i=e.charCodeAt(s);56320<=i&&i<=57343?o=1024*(o-55296)+i-56320+65536:t+=this.wcwidth(i)}const c=this.charProperties(o,i);let l=n.extractWidth(c);n.extractShouldJoin(c)&&(l-=n.extractWidth(i)),t+=l,i=c}return t}charProperties(e,t){return this._activeProvider.charProperties(e,t)}}t.UnicodeService=n}},t={};function i(r){var s=t[r];if(void 0!==s)return s.exports;var n=t[r]={exports:{}};return e[r](n,n.exports,i),n.exports}var r={};return(()=>{var e=r;Object.defineProperty(e,"__esModule",{value:!0}),e.Unicode11Addon=void 0;const t=i(433);e.Unicode11Addon=class{activate(e){e.unicode.register(new t.UnicodeV11)}dispose(){}}})(),r})()));
 //# sourceMappingURL=addon-unicode11.js.map</script>
-<script src="/vendor/fleet-sounds.js?v=5"></script>
+<script src="/vendor/fleet-sounds.js?v=6"></script>
 </body>
 </html>

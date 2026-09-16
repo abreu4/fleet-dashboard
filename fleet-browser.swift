@@ -31,7 +31,7 @@ final class FleetApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKU
         // Notifications have to survive the automatic reloads used to pick up
         // dashboard updates, so do not put each fresh Web Audio context behind
         // WKWebView's media gesture gate. The page still owns its persisted
-        // mute/volume controls and defaults click noises off.
+        // mute / volume / click-cue controls.
         configuration.mediaTypesRequiringUserActionForPlayback = []
         webView = WKWebView(frame: window.contentView!.bounds, configuration: configuration)
         webView.autoresizingMask = [.width, .height]

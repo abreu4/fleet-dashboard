@@ -23,10 +23,12 @@
  * (8-bit for cardstock, wood and harp for vellum, ...) while the baseline
  * stays snappy. Still short: taps <= 60 ms, alerts <= 400 ms, done <= 500 ms.
  *
- * The user is respected: muted by default, state persisted in localStorage
- * (fleet.sound.muted / fleet.sound.volume), AudioContext created lazily on the
- * first click (browsers demand a gesture), alerts rate-limited to one per
- * 1.5 s so a burst of state changes is one sound, not a drum roll.
+ * The user is respected: on by default -- the cues that mean something
+ * (needed / finished) and a tick for your own clicks, each switchable --
+ * state persisted in localStorage (fleet.sound.*), the AudioContext warmed
+ * at load and resumed by any gesture where the browser wants one, alerts
+ * rate-limited to one per 1.5 s so a burst of state changes is one sound,
+ * not a drum roll.
  *
  * Public surface: window.FleetSounds = { play, pack, packs, volume, mute, muted }.
  */
@@ -43,17 +45,21 @@
   var LS_PACK   = 'fleet.sound.pack';             // 'theme' = follow the theme, else a pack key
   var LS_SOFT   = 'fleet.sound.soft';             // cap drive + lowpass the master
   var DEFAULT_VOLUME = 0.6;
-  // What this board is for is ambient awareness, so the defaults are the quiet
-  // ones: a sound when something needs you (blocked / waiting) or finishes, and
-  // nothing for your own clicks unless you ask. 'soft' caps every pack's drive
-  // and rolls off the top end, because a square wave through a hard clipper is
-  // an alarm, not a cue.
+  // A sound when something needs you (blocked / waiting) or finishes, and a
+  // tick for your own clicks. The clicks started out off, on the theory that a
+  // status board should stay quiet unless it has news -- and the board then
+  // read as broken, twice: a tile that clicks silently looks like a tile whose
+  // sound has failed. On by default; the sound panel switches them off. 'soft'
+  // caps every pack's drive and rolls off the top end, because a square wave
+  // through a hard clipper is an alarm, not a cue.
   var VOLUME_STEPS = [0.35, 0.6, 0.85, 1];  // shift+click on the toggle cycles these
   var MAKEUP = 1.8;                         // after the compressor: 1.0 is loud on laptop speakers
   var SOFT_HZ = 5600;                       // soft mode roll-off; 3.4k dulled the chimes to nothing
   var ALERT_GAP_MS = 1500;                  // never more than one alert per 1.5 s
   var DONE_GAP_MS = 800;
   var MAX_VOICES = 24;                      // concurrent oscillators/buffers, hard cap
+  var LEAD_S = 0.012;                       // schedule this far ahead of the render clock
+  var CEIL_KNEE = 0.72, CEIL_TOP = 0.97;    // the output ceiling: linear to the knee, never past the top
   var FALLBACK_PACK = 'quiet';
   var CONTROL_SEL = 'button, select, .bubble';
 
@@ -70,7 +76,7 @@
 
   var muted = readLS(LS_MUTED, false) === true;             // default: on (a sound when you're needed)
   var volume = clamp(Number(readLS(LS_VOLUME, DEFAULT_VOLUME)) || DEFAULT_VOLUME, 0, 1);
-  var clicks = readLS(LS_CLICKS, false) === true;             // default: off
+  var clicks = readLS(LS_CLICKS, true) !== false;             // default: on
   var fixedPack = readLS(LS_PACK, 'theme') || 'theme';
   var soft = readLS(LS_SOFT, true) !== false;                 // default: on
 
@@ -89,18 +95,37 @@
   var pendingCue = null;
   var packBus = null, packShaper = null, verbNode = null, wetGain = null;
   var noiseBuf = null;
-  var activeVoices = 0;
+  var voiceEnds = [];                       // scheduled end time of every voice still sounding
   var curveCache = {}, impulseCache = {}, pluckCache = {};
   var tilt = null;
+  var pendingName = null;
+  var resumedAt = 0;                        // wall clock of the last resume: the render clock lags it
+  var clockSeen = -1, clockWall = 0;        // the last currentTime read, and when
 
+  // Ask a sleeping context to wake, swallowing the refusal a browser gives
+  // without a gesture (an unhandled rejection per poll is noise, not news).
+  function askResume() {
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return null;
+    try {
+      var p = ctx.resume();
+      if (p && p.catch) p.catch(function () { /* wants a gesture; the click handlers bring one */ });
+      return p;
+    } catch (e) { return null; }
+  }
   function ensureCtx() {
+    if (ctx && ctx.state === 'closed') {
+      // A closed context never comes back (WebKit closes one it has held
+      // interrupted for long enough); drop it and build afresh below.
+      ctx = master = comp = tilt = null;
+      packBus = packShaper = verbNode = wetGain = null;
+      noiseBuf = null; impulseCache = {}; pluckCache = {}; voiceEnds = [];
+      audible = false;
+    }
     if (ctx) {
       // WebKit may report `interrupted` as well as `suspended` after a display
       // sleep, output-device change, or an automatic dashboard reload. Both
       // states need an explicit resume before the next synthesized cue.
-      if (ctx.state !== 'running' && ctx.state !== 'closed') {
-        try { ctx.resume(); } catch (e) { /* a normal browser may still require a gesture */ }
-      }
+      askResume();
       return ctx;
     }
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -111,13 +136,16 @@
     // is audible: that made the speaker's recovery click mute the board.
     ctx.onstatechange = function () {
       if (ctx.state !== 'running') audible = false;
+      else resumedAt = Date.now();
       label();
       if (ctx.state === 'running' && pendingCue && !muted) {
-        var layers = pendingCue;
-        pendingCue = null;
+        var layers = pendingCue, name = pendingName;
+        pendingCue = pendingName = null;
         trigger(layers);
+        note(name, 'played after resume');
       }
     };
+    resumedAt = Date.now();
 
     master = ctx.createGain();
     master.gain.value = muted ? 0 : volume;
@@ -139,7 +167,22 @@
     comp.connect(tilt);
     tilt.connect(makeup);
     makeup.connect(master);
-    master.connect(ctx.destination);
+    // The last thing before the speaker is a ceiling: linear up to the knee,
+    // then a tanh that never reaches the top. The compressor alone let the
+    // louder volume steps clip the DAC (measured: alert peaked at 1.44 with
+    // the volume at 1, 1.04 at .85), which is the crackle in a cue that was
+    // clean at .6. The half-gain in front lets the curve see peaks up to 2.
+    var half = ctx.createGain();
+    half.gain.value = 0.5;
+    var ceiling = ctx.createWaveShaper();
+    ceiling.curve = ceilingCurve();
+    // No oversampling here: its reconstruction filter overshoots the curve's
+    // top by a tenth on a hard peak (measured 1.11 for a ceiling of .97),
+    // which is the one thing this node exists to prevent.
+    ceiling.oversample = 'none';
+    master.connect(half);
+    half.connect(ceiling);
+    ceiling.connect(ctx.destination);
 
     // 1 s of white noise, shared by every noise burst (random start offset).
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -195,6 +238,17 @@
       c[i] = y;
     }
     return (curveCache[key] = c);
+  }
+
+  // The output ceiling, over an input range of [-2, 2] (see the half-gain).
+  function ceilingCurve() {
+    var n = 8192, c = new Float32Array(n), span = CEIL_TOP - CEIL_KNEE;
+    for (var i = 0; i < n; i++) {
+      var x = ((i / (n - 1)) * 2 - 1) * 2, a = Math.abs(x);
+      var y = a <= CEIL_KNEE ? a : CEIL_KNEE + span * Math.tanh((a - CEIL_KNEE) / span);
+      c[i] = x < 0 ? -y : y;
+    }
+    return c;
   }
 
   // Exponentially decaying noise = a small, dark room. Enough for a "hint".
@@ -285,8 +339,11 @@
     g.connect(packBus);
     if (offset !== undefined) src.start(t, offset); else src.start(t);
     src.stop(end + 0.02);
-    activeVoices++;
-    src.onended = function () { activeVoices--; try { g.disconnect(); } catch (e) { /* gone */ } };
+    // The budget is kept by scheduled end time, not by `ended` events: a
+    // context that sleeps mid-cue can leave those unfired, and a counter that
+    // only ever went up would eventually drop every layer past the cap.
+    voiceEnds.push(end + 0.02);
+    src.onended = function () { try { g.disconnect(); } catch (e) { /* gone */ } };
     return end;
   }
 
@@ -335,13 +392,31 @@
 
   var KIND = { osc: playOsc, noise: playNoise, fm: playFM, pluck: playPluck };
 
-  function trigger(layers) {
+  // Voices still sounding, by the clock.
+  function voices() {
+    var now = ctx.currentTime, keep = [];
+    for (var i = 0; i < voiceEnds.length; i++) if (voiceEnds[i] > now) keep.push(voiceEnds[i]);
+    voiceEnds = keep;
+    return keep.length;
+  }
+
+  function trigger(layers, retry) {
     if (!ctx || !packBus) return;
+    retry = retry || 0;
+    // A cue scheduled before the render clock is moving -- the first tens of
+    // milliseconds after the context is created or resumed -- lands in the
+    // past and comes out clipped or not at all (measured: a tap at
+    // currentTime 0 was silent, one at 0.005 lost its transient). Wait for
+    // the clock, briefly, then play regardless.
+    var now = ctx.currentTime, wall = Date.now();
+    var frozen = now === 0 || (now === clockSeen && wall - clockWall > 60) || wall - resumedAt < 80;
+    if (now !== clockSeen) { clockSeen = now; clockWall = wall; }
+    if (frozen && retry < 8) { setTimeout(function () { trigger(layers, retry + 1); }, 35); return; }
     audible = true;
     label();
-    var t0 = ctx.currentTime + 0.004;
+    var t0 = now + LEAD_S, n = voices();
     for (var i = 0; i < layers.length; i++) {
-      if (activeVoices >= MAX_VOICES) break;
+      if (n++ >= MAX_VOICES) break;
       var L = layers[i];
       try { KIND[L.k](t0 + (L.at || 0), L); } catch (e) { /* one bad layer never kills the sound */ }
     }
@@ -497,8 +572,8 @@
      * transient, radar ping for alerts. */
     console: {
       drive: { type: 'hard', k: 8.5 }, verb: { time: 0.05, mix: 0.02 },
-      tap:    [click({ hp: 3000, g: 0.9 }), thump({ f: 100, g: 0.8 })],
-      tile:   [click({ hp: 2000, g: 0.9 }), thump({ f: 150, g: 0.9 })],
+      tap:    [click({ hp: 3000, g: 0.9 }), S('sine', 1760, { a: 0.0008, d: 0.035, g: 0.6 }), thump({ f: 100, g: 0.8 })],
+      tile:   [click({ hp: 2000, g: 0.9 }), S('sine', 1175, { a: 0.0008, d: 0.04, g: 0.65 }), thump({ f: 150, g: 0.9 })],
       switch: [click({ g: 1.0 }), thump({ f: 80, g: 1.0 }), N(0.02, 'white', { hp: 4000, d: 0.08, g: 0.4 })],
       alert:  [thump({ f: 160, g: 1.0 }), S('square', 900, { a: 0.01, d: 0.08, g: 0.3 }), at(0.12, S('square', 900, { a: 0.01, d: 0.08, g: 0.2 }))],
       done:   [click({ g: 1.0 }), thump({ f: 120, g: 1.0 }), S('square', 500, { a: 0.01, d: 0.15, g: 0.3 }), at(0.15, S('square', 1000, { a: 0.01, d: 0.2, g: 0.2 }))]
@@ -535,10 +610,13 @@
     },
 
     /* Graphite, disciplined: dry, short, near-silent — but still a hit. */
+    /* A tap on a laptop speaker is its mid body or nothing: the sub-thump is
+     * below what the Air's drivers reproduce, and a 7 ms click alone measured
+     * 20 dB under the alert's tone. So every tap here carries a short tone. */
     neutral: {
       drive: { type: 'soft', k: 1.3 },
-      tap:    [click({ hp: 3500, d: 0.007, g: 0.4 }), thump({ f: 110, d: 0.03, g: 0.45 })],
-      tile:   [click({ hp: 2400, d: 0.009, g: 0.4 }), thump({ f: 130, d: 0.035, g: 0.5 })],
+      tap:    [click({ hp: 3500, d: 0.007, g: 0.4 }), S('sine', 1320, { a: 0.001, d: 0.03, g: 0.34 }), thump({ f: 110, d: 0.03, g: 0.45 })],
+      tile:   [click({ hp: 2400, d: 0.009, g: 0.4 }), S('sine', 990, { a: 0.001, d: 0.04, g: 0.36 }), thump({ f: 130, d: 0.035, g: 0.5 })],
       switch: [click({ g: 0.35 }), S('sine', 660, { a: 0.002, d: 0.07, g: 0.22 }), thump({ g: 0.4 })],
       alert:  [thump({ f: 140, g: 0.5 }), S('sine', 660, { a: 0.003, d: 0.2, g: 0.32 })],
       done:   [click({ g: 0.2 }), S('sine', 880, { a: 0.003, d: 0.22, g: 0.28 })]
@@ -820,23 +898,21 @@
       // same cue once resume completes rather than losing the notification.
       // Keep only the latest cue. A sleeping display may accumulate many
       // state changes; on wake we want one useful notification, not a queue.
-      pendingCue = layers;
-      try {
-        var resumed = ctx.resume();
-        var fired = false;
-        var afterResume = function () {
-          if (!fired && ctx.state === 'running') {
-            fired = true;
-            var queued = pendingCue;
-            pendingCue = null;
-            if (queued && !muted) { trigger(queued); note(name, 'played after resume'); }
-          } else if (!fired) note(name, 'still waiting: context ' + ctx.state + ' (a click on the page unlocks it)');
-        };
-        if (resumed && resumed.then) resumed.then(afterResume);
-        // Older WebKit builds did not reliably return the resume promise even
-        // when the context resumed. The guarded follow-up covers that path.
-        setTimeout(afterResume, 80);
-      } catch (e) { /* no */ }
+      pendingCue = layers; pendingName = name;
+      var resumed = askResume();
+      var fired = false;
+      var afterResume = function () {
+        if (!fired && ctx.state === 'running') {
+          fired = true;
+          var queued = pendingCue, queuedName = pendingName;
+          pendingCue = pendingName = null;
+          if (queued && !muted) { trigger(queued); note(queuedName, 'played after resume'); }
+        } else if (!fired && pendingCue) note(name, 'still waiting: context ' + ctx.state + ' (a click on the page unlocks it)');
+      };
+      if (resumed && resumed.then) resumed.then(afterResume, function () { /* refused: the watchdog keeps asking */ });
+      // Older WebKit builds did not reliably return the resume promise even
+      // when the context resumed. The guarded follow-up covers that path.
+      setTimeout(afterResume, 80);
       return false;
     }
     trigger(layers);
@@ -857,7 +933,7 @@
 
   function setMuted(on) {
     muted = !!on;
-    if (muted) pendingCue = null;
+    if (muted) pendingCue = pendingName = null;
     writeLS(LS_MUTED, muted);
     if (master) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.01);
     label();
@@ -892,7 +968,7 @@
     var stuck = !muted && ctx && ctx.state !== 'running' && ctx.state !== 'closed';
     btn.innerHTML = (muted ? ICON_OFF : ICON_ON) + '<span> ' + (muted ? 'off' : stuck ? 'unlock' : 'on') + '</span>';
     btn.title = 'sound ' + (muted ? 'off' : 'on') + ' · volume ' + Math.round(volume * 100) + '%'
-              + (!muted && !audible ? '\nclick: activate and test sound' : '\nclick: mute / unmute')
+              + (stuck ? '\nclick: unlock audio and test it' : '\nclick: mute / unmute')
               + ' · shift+click: cycle volume · volume, pack and cues under \u22ef';
     btn.setAttribute('aria-pressed', muted ? 'false' : 'true');
   }
@@ -907,7 +983,10 @@
       // Capture this before ensureCtx(): resume is asynchronous in WebKit.
       // Otherwise an interrupted context still looks "audible" here and the
       // recovery click takes the mute branch instead of testing the output.
-      var needsActivation = !audible || !ctx || ctx.state !== 'running';
+      // Only the context's own state counts: an `audible` flag that was
+      // false until a cue had played made the first click after every reload
+      // play a sound and leave the board on, when it meant "off".
+      var needsActivation = !ctx || ctx.state !== 'running';
       ensureCtx();                                  // this IS the gesture the browser wants
       if (e.shiftKey) {
         cycleVolume();
@@ -990,6 +1069,17 @@
     }
   });
 
+  // A context the browser put to sleep (display off, output device changed)
+  // stays asleep until something asks. Ask every few seconds while sound is
+  // on, and the moment the page is looked at again. The kiosk has no gesture
+  // gate, so this alone brings the cues back without anyone clicking the
+  // board; a browser that wants a gesture refuses quietly and the button
+  // keeps saying "unlock".
+  function wake() { askResume(); label(); }
+  setInterval(function () { if (!muted && ctx) wake(); }, 4000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !muted && ctx) wake(); });
+  window.addEventListener('focus', function () { if (!muted && ctx) wake(); });
+
   // Fallback: follow <html data-theme> whichever way it was set.
   var root = document.documentElement;
   switchTo(root.getAttribute('data-theme'), false);
@@ -1022,7 +1112,7 @@
     state: function () { return ctx ? ctx.state : 'uninitialized'; },
     /** What became of the last cue: {name, at, outcome, ctx, pack}, or null. */
     last: function () { return last; },
-    /** UI click cues on/off (default off), persisted. */
+    /** UI click cues on/off (default on), persisted. */
     clicks: function (on) { if (on !== undefined) { clicks = !!on; writeLS(LS_CLICKS, clicks); } return clicks; },
     /** Pin one pack for every theme, or 'theme' to follow the theme. Persisted. */
     fixed: function (key) {

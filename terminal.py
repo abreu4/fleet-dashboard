@@ -16,7 +16,6 @@ RFC 6455 framing; the measurement is in DELIVERY.md.
 import base64
 import errno
 import fcntl
-import json
 import os
 import pty
 import queue
