@@ -8459,11 +8459,11 @@ function select(id){
   // on it), a session with an id that is not running is *resumed*, anything
   // else gets a shell.
   const verb = attachable(s) ? 'attach' : (s.resume && s.sessionId && s.state !== 'running') ? 'resume' : 'shell';
-  // `reveal` looks for the iTerm tab this session is already living in and
-  // brings that forward, rather than opening a second window onto it.
+  // Every terminal button first looks for the tab this session is already
+  // living in -- a sheet pty here, an iTerm or Terminal tab out there -- and
+  // brings that forward rather than opening a second window onto it.
   const here = (window.FLEET_TERM || {}).enabled
     ? '<div class="row main"><button data-here="1">' + verb + ' here</button></div>' : '';
-  if(targets.iterm) buttons.push(['reveal','its iTerm tab']);
   // Close ends the process behind the tile (Claude: `claude stop <job>`, which
   // keeps the conversation attachable). Two clicks, three seconds apart at
   // most -- a dialog would block the page, a single click is too easy from a
@@ -8473,7 +8473,7 @@ function select(id){
   document.getElementById('p-acts').innerHTML = here
     + '<div class="row"><span class="lbl">' + (here ? 'or ' : '') + verb + ' in</span><div class="seg">'
     + buttons.map(([t,l]) => '<button data-target="'+t+'" title="'
-        + (t==='vscode' ? 'open the folder in VS Code' : t==='reveal' ? 'bring forward the iTerm tab it is already in' : verb + ' in ' + l)
+        + (t==='vscode' ? 'open the folder in VS Code' : verb + ' in ' + l + ' (or bring forward the tab it is already in)')
         + '">'+l+'</button>').join('')
     + '</div></div>'
     + '<div class="row tail"><button class="plain" data-copy="1">copy command</button>'
@@ -8566,6 +8566,18 @@ async function copyCommand(s){
 }
 
 async function open_(id, target){
+  // A session running in one of the sheet's own ptys is already on screen:
+  // go to that tab. The server does the same for iTerm and Terminal tabs.
+  if(target !== 'vscode'){
+    for(const t of terms.values()){
+      if(t.alive && t.meta.session_id === id){
+        showSheet(true);
+        activate(t.id);
+        toast('already running here, in the terminal sheet');
+        return;
+      }
+    }
+  }
   try{
     const r = await fetch('/api/open', {
       method:'POST', headers:{'Content-Type':'application/json'},

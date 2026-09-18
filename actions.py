@@ -243,13 +243,17 @@ def open_session(session, target):
     cwd, moved = working_directory(session)
     where = " (worktree gone; using %s)" % cwd if moved else ""
 
-    if target == "reveal":
-        # The tab this session is already living in, if it has one. Falls
-        # through to opening a new window when it does not.
-        match = iterm_link.find(session)
-        if match and iterm_link.focus(match):
-            return True, "focused tab %s in iTerm" % match["tab"]
-        target = "iterm"
+    if target in ("iterm", "terminal", "reveal"):
+        # The tab this session is already living in, in either app, if it has
+        # one: that is brought forward instead of a second window onto the
+        # same session -- which for an interactive one could not even attach.
+        # Falls through to opening a new window when there is no such tab.
+        hit = iterm_link.find(session)
+        if hit and iterm_link.focus(hit):
+            return True, "already in %s, tab %s -- brought it forward" % (
+                iterm_link.LABEL[hit["app"]], hit["tab"])
+        if target == "reveal":
+            target = "iterm"
 
     if target == "vscode":
         binary = _vscode_bin()

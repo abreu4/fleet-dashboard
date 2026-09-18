@@ -1,28 +1,29 @@
-"""Find the iTerm2 tab a session is *already* running in, and bring it forward.
+"""Find the terminal tab a session is *already* running in, and bring it forward.
 
-The board's open-in-iTerm button has always opened a *new* window, even when
-the session it points at is a live agent sitting in a tab you already have.
-iTerm exposes each session's tty over AppleScript, and `ps` says which tty each
-agent process is attached to, so the two can be matched without asking iTerm
-for anything but a read.
+The board's open-in-iTerm and open-in-Terminal buttons used to open a *new*
+window every time, even when the session they point at is a live agent sitting
+in a tab you already have -- a second window that, for an interactive session,
+cannot even attach. iTerm and Terminal each expose the tty of every tab over
+AppleScript, and `ps` says which tty each process is on, so the session's pid
+leads straight to its tab without asking either app for anything but a read.
 
-This runs on a click, never on the snapshot loop: the inventory costs about
-780ms of Apple Events, which is four times a whole board rebuild.
+Matching is by pid, not by folder: two sessions in one repo are the rule on
+this machine, not the exception, and a folder match would bring forward
+whichever tab AppleScript listed first.
+
+This runs on a click, never on the snapshot loop: an inventory costs a few
+hundred milliseconds of Apple Events, several times a whole board rebuild.
+Only apps that are running are asked -- `tell application` would launch one
+that is not, and nobody clicking "iTerm" wants Terminal to open.
 """
 
-import os
-import re
 import subprocess
 
-# What a running session of each provider looks like in the process table.
-_PATTERNS = {
-    "claude": re.compile(r"(^|/)claude(\s|$)"),
-    "codex": re.compile(r"(^|/)codex(\s|$)"),
-    "antigravity": re.compile(r"(^|/)(agy|antigravity)(\s|$)"),
-}
-_NOT_SESSION = re.compile(r"--mcp|mcp-server|language-server|\.vscode|Helper")
-
-_INVENTORY = """
+# Each app's inventory returns one tab per line: window id, tab index, the
+# app's own handle for the tab (iTerm's session id; Terminal has none and
+# is addressed by tty), the tty, and the tab's name.
+_INVENTORY = {
+    "iterm": """
 tell application "iTerm"
   set out to ""
   repeat with w in windows
@@ -37,7 +38,64 @@ tell application "iTerm"
   end repeat
   return out
 end tell
-"""
+""",
+    "terminal": """
+tell application "Terminal"
+  set out to ""
+  repeat with w in windows
+    set ti to 0
+    repeat with t in tabs of w
+      set ti to ti + 1
+      set out to out & (id of w as text) & "\t" & (ti as text) & "\t" & ¬
+        "" & "\t" & (tty of t) & "\t" & (custom title of t) & linefeed
+    end repeat
+  end repeat
+  return out
+end tell
+""",
+}
+
+# Reading 3 done the only way it works: select session, tab, window, in that
+# order, then activate. Terminal's tab is addressed by its tty.
+_FOCUS = {
+    "iterm": """
+tell application "iTerm"
+  repeat with w in windows
+    repeat with t in tabs of w
+      repeat with s in sessions of t
+        if (id of s) is "%s" then
+          select s
+          select t
+          select w
+          activate
+          return "ok"
+        end if
+      end repeat
+    end repeat
+  end repeat
+  return "gone"
+end tell
+""",
+    "terminal": """
+tell application "Terminal"
+  repeat with w in windows
+    repeat with t in tabs of w
+      if (tty of t) is "%s" then
+        set selected of t to true
+        set index of w to 1
+        activate
+        return "ok"
+      end if
+    end repeat
+  end repeat
+  return "gone"
+end tell
+""",
+}
+
+# What each app's process is called in the process table.
+_PROCESS = {"iterm": "iTerm2", "terminal": "Terminal"}
+LABEL = {"iterm": "iTerm", "terminal": "Terminal"}
 
 
 def _osascript(source, timeout=8):
@@ -49,99 +107,76 @@ def _osascript(source, timeout=8):
     return proc.stdout if proc.returncode == 0 else None
 
 
-def inventory():
-    """Every open iTerm session: window id, tab index, session id, tty, name."""
-    out = _osascript(_INVENTORY)
+def _ps(columns):
+    try:
+        return subprocess.run(["ps", "-Ao", columns], capture_output=True,
+                              text=True, timeout=6).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def running_apps(ps_out=None):
+    """Which of the two terminal apps are open right now."""
+    names = {line.strip().rsplit("/", 1)[-1] for line in (ps_out or _ps("comm=")).splitlines()}
+    return [app for app, proc in _PROCESS.items() if proc in names]
+
+
+def inventory(app):
+    """Every open tab of one app: window id, tab index, handle, tty, name."""
+    out = _osascript(_INVENTORY[app])
     if not out:
         return []
     rows = []
     for line in out.splitlines():
         parts = line.split("\t")
         if len(parts) >= 5:
-            rows.append({"window": parts[0], "tab": parts[1], "session": parts[2],
-                         "tty": parts[3], "name": parts[4]})
+            rows.append({"app": app, "window": parts[0], "tab": parts[1],
+                         "session": parts[2], "tty": parts[3], "name": parts[4]})
     return rows
 
 
-def _agent_ttys():
-    """tty path -> list of (provider, pid) for agent processes on that tty."""
-    try:
-        out = subprocess.run(["ps", "-Ao", "pid=,tty=,args="], capture_output=True,
-                             text=True, timeout=6).stdout
-    except (OSError, subprocess.SubprocessError):
-        return {}
-    found = {}
-    for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) < 3:
-            continue
-        pid, tty, args = parts
-        if tty in ("??", "-") or _NOT_SESSION.search(args):
-            continue
-        head = args.split()[0]
-        for provider, pattern in _PATTERNS.items():
-            if pattern.search(head) or pattern.search(args.split(" ")[0]):
-                found.setdefault("/dev/" + tty, []).append((provider, int(pid)))
-                break
-    return found
-
-
-def _cwd(pid):
-    try:
-        proc = subprocess.run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
-                              capture_output=True, text=True, timeout=4)
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    for line in proc.stdout.splitlines():
-        if line.startswith("n/"):
-            return line[1:]
-    return ""
-
-
-def find(session):
-    """The open iTerm session running this dashboard session, if there is one."""
-    want_cwd = (session.get("cwd") or "").rstrip("/")
-    want_provider = session.get("provider")
-    if not want_cwd:
-        return None
-    by_tty = _agent_ttys()
-    if not by_tty:
-        return None
-    rows = inventory()
-    fallback = None
-    for row in rows:
-        for provider, pid in by_tty.get(row["tty"], []):
-            if provider != want_provider:
-                continue
-            if _cwd(pid).rstrip("/") == want_cwd:
-                return dict(row, pid=pid, provider=provider)
-            fallback = fallback or dict(row, pid=pid, provider=provider)
+def tty_of(pid, ps_out=None):
+    """The controlling tty of one process, as a /dev path, or None."""
+    for line in (ps_out or _ps("pid=,tty=")).splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0] == str(pid):
+            return None if parts[1] in ("??", "-") else "/dev/" + parts[1]
     return None
 
 
-def focus(match):
-    """Bring an existing tab forward. Reading 3 done the only way it works."""
-    source = (
-        'tell application "iTerm"\n'
-        '  repeat with w in windows\n'
-        '    repeat with t in tabs of w\n'
-        '      repeat with s in sessions of t\n'
-        '        if (id of s) is "%s" then\n'
-        '          select s\n'
-        '          select t\n'
-        '          select w\n'
-        '          activate\n'
-        '          return "ok"\n'
-        '        end if\n'
-        '      end repeat\n'
-        '    end repeat\n'
-        '  end repeat\n'
-        '  return "gone"\n'
-        'end tell\n' % match["session"].replace('"', "")
-    )
-    out = _osascript(source)
+def match(tty, rows):
+    """The tab on this tty among the inventoried rows, if any."""
+    for row in rows:
+        if row["tty"] == tty:
+            return row
+    return None
+
+
+def find(session):
+    """The open tab running this session's process, if there is one.
+
+    A session with no live pid is running nowhere, so there is nothing to
+    reveal. One whose pid is on a tty no app claims -- a daemon's background
+    job, or a pty the board itself opened -- is not in a window either.
+    """
+    try:
+        pid = int(session.get("pid") or 0)
+    except (TypeError, ValueError):
+        return None
+    if not pid:
+        return None
+    tty = tty_of(pid)
+    if not tty:
+        return None
+    for app in running_apps():
+        hit = match(tty, inventory(app))
+        if hit:
+            return dict(hit, pid=pid)
+    return None
+
+
+def focus(hit):
+    """Bring an existing tab forward."""
+    handle = hit["session"] if hit["app"] == "iterm" else hit["tty"]
+    out = _osascript(_FOCUS[hit["app"]] % handle.replace('"', ""))
     return bool(out) and out.strip() == "ok"
-
-
-def available():
-    return os.path.isdir("/Applications/iTerm.app")
