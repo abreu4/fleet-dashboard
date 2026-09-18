@@ -2,6 +2,8 @@
 
 **One screen for every coding-agent session on your Mac.**
 
+![The board in the default console theme: the HUD along the top, one lane per agent, one tile per session](docs/img/board-console.png)
+
 Claude Code, Codex and Antigravity sessions, grouped by agent and project, each
 with what it was asked to do and where it has got to — beside the machine's own
 vitals. It is built to sit fullscreen on a second screen and be read from a
@@ -31,6 +33,8 @@ by a model on demand.
 - **26 themes** — a plain console, paper, neutral… and then Portal, Skyrim,
   Doom, LCARS, Severance, Apollo Mission Control and more, each an instrument
   panel over the same numbers.
+
+  ![The same board as LCARS: the status line along the foot carries the stardate, warp (cpu), shields (memory) and life support (pressure)](docs/img/board-lcars.png)
 - **A music player** — YouTube Music in a floating panel, optional.
 
 ## Install (macOS)
