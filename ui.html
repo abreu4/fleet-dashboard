@@ -8214,11 +8214,15 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
    speed kept. Pick it up and throw it. Runs only while this is the world on
    screen, and only while the tab is visible; the step moves one composited
    layer and reads no layout. */
+const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in storage; set from settings
 (function(){
   const PORTAL = {x:12, w:42, h:150}, ROAM = 42, SIZE = 32;
   let cube = null, raf = 0, last = 0, x = 0, y = 0, vx = 0, vy = 0, spin = 0, held = null, taken = 0, wander = 0;
   const root = document.documentElement;
-  const on = () => root.dataset.theme === 'aperture' && !reducedMotion() && root.dataset.motion !== 'off';
+  // Settings can put it back in storage (fleet.cube = off); the theme and the
+  // motion switch keep their say.
+  const wanted = () => { try{ return localStorage.getItem(CUBE_KEY) !== 'off'; }catch(e){ return true; } };
+  const on = () => root.dataset.theme === 'aperture' && !reducedMotion() && root.dataset.motion !== 'off' && wanted();
   const bottom = () => innerHeight - taken;
   const portalY = () => bottom() / 2;
   const measure = () => { taken = parseFloat(getComputedStyle(root).getPropertyValue('--taken')) || 0; };
@@ -8298,6 +8302,7 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     else run();
   };
   document.addEventListener('fleet:theme', sync);
+  document.addEventListener('fleet:cube', sync);
   document.addEventListener('visibilitychange', run);
   // the sheet takes its share of the room; re-measure when it moves, not every frame
   setInterval(() => { if(cube) measure(); }, 1000);
@@ -9486,6 +9491,8 @@ function openSettings(){
       + '<section><h3>sound</h3><div data-k="snd"></div></section>'
       + '<section><h3>motion</h3>'
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="motion"> stop every animation (pulses, halos, rain, roulette)</label></div></section>'
+      + '<section data-k="cube-sec" hidden><h3>companion cube <span class="hint">it floats about the room and through the portals \u2014 or waits in storage</span></h3>'
+      +   '<div class="row"><label class="chk"><input type="checkbox" data-k="cube"> let the companion cube loose</label></div></section>'
       + '</div>';
     document.body.appendChild(settingsEl);
     const q = k => settingsEl.querySelector('[data-k="'+k+'"]');
@@ -9532,6 +9539,14 @@ function openSettings(){
       try{ localStorage.setItem(MOTION_KEY, q('motion').checked ? 'off' : 'on'); }catch(e){}
       applyMotion();
     };
+    // the cube: on the portal theme only
+    q('cube').onchange = () => {
+      try{ localStorage.setItem(CUBE_KEY, q('cube').checked ? 'on' : 'off'); }catch(e){}
+      document.dispatchEvent(new Event('fleet:cube'));
+    };
+    const fillCube = () => { q('cube-sec').hidden = document.documentElement.dataset.theme !== 'aperture'; };
+    document.addEventListener('fleet:theme', fillCube);
+    settingsEl.fillCube = fillCube;
     // the table: the six cloths, on the casino table only
     const fillFelt = () => {
       const F = window.fleetFelt, on = document.documentElement.dataset.theme === 'staunton' && F;
@@ -9546,6 +9561,7 @@ function openSettings(){
     settingsEl.fillFelt = fillFelt;
   }
   settingsEl.fillFelt();
+  settingsEl.fillCube();
   fillSettings();
   settingsEl.classList.add('on');
   settingsEl.querySelector('[data-k="close"]').focus();
@@ -9572,6 +9588,8 @@ function fillSettings(){
   q('tf-face').value = tf.face; q('tf-weight').value = String(tf.weight);
   q('tf-size').value = tf.size; q('tf-size-pct').textContent = tf.size + 'px';
   q('motion').checked = document.documentElement.dataset.motion === 'off';
+  let cubeOn = true; try{ cubeOn = localStorage.getItem(CUBE_KEY) !== 'off'; }catch(e){}
+  q('cube').checked = cubeOn;
 }
 function closeSettings(){ settingsEl?.classList.remove('on'); }
 document.addEventListener('keydown', e => {
