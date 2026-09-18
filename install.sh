@@ -8,6 +8,9 @@ RUNTIME="${FLEET_RUNTIME_DIR:-$HOME/.local/share/fleet-dashboard}"
 LABEL="com.tiago.fleet-dashboard"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 PORT="${1:-8787}"
+LOG="$HOME/Library/Logs/fleet-dashboard.log"
+# Set on the detached re-exec below: skip the copy and venv, only restart.
+RESTART_ONLY="${FLEET_RESTART_ONLY:-}"
 
 mkdir -p "$RUNTIME" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
@@ -17,10 +20,10 @@ mkdir -p "$RUNTIME" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 # has to be here, or the copy starts and dies on an ImportError; vendor/ holds
 # xterm, the fonts and the sound bank the page loads from /vendor/.
 FILES=(README.md actions.py aliases.py collectors.py dashboard.py fleet-name
-       fleet.command fleet-browser.plist fleet-browser.swift flush.py install.sh instance.py iterm_link.py metrics.py
+       fleet.command fleet-browser.plist fleet-browser.swift fleet-icon.swift flush.py install.sh instance.py iterm_link.py metrics.py
        music.py notes.py requirements.txt sunset.py terminal.py uninstall.sh
-       ui.html)
-if [[ "$SOURCE" != "$RUNTIME" ]]; then
+       ui.html usage.py)
+if [[ -z "$RESTART_ONLY" && "$SOURCE" != "$RUNTIME" ]]; then
   for file in "${FILES[@]}"; do
     cp -p "$SOURCE/$file" "$RUNTIME/$file"
   done
@@ -30,6 +33,8 @@ if [[ "$SOURCE" != "$RUNTIME" ]]; then
   rm -rf "$RUNTIME/__pycache__"
 fi
 
+VENV="$RUNTIME/.venv"
+if [[ -z "$RESTART_ONLY" ]]; then
 # ytmusicapi 1.12+ requires Python 3.10. Prefer Homebrew, but accept any modern
 # interpreter already installed on the machine.
 PYTHON=""
@@ -46,7 +51,6 @@ if [[ -z "$PYTHON" ]]; then
   exit 1
 fi
 
-VENV="$RUNTIME/.venv"
 if [[ -x "$VENV/bin/python" ]] && \
    ! "$VENV/bin/python" -c 'import sys; raise SystemExit(sys.version_info < (3, 10))'; then
   mv "$VENV" "$VENV.python-old.$(date +%Y%m%d%H%M%S)"
@@ -56,6 +60,7 @@ if [[ ! -x "$VENV/bin/python" ]]; then
 fi
 "$VENV/bin/python" -m pip install --quiet --disable-pip-version-check \
   -r "$RUNTIME/requirements.txt"
+fi
 PYTHON="$VENV/bin/python"
 
 cat > "$PLIST" <<PLISTEOF
@@ -82,11 +87,32 @@ cat > "$PLIST" <<PLISTEOF
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Interactive</string>
-  <key>StandardOutPath</key><string>$HOME/Library/Logs/fleet-dashboard.log</string>
-  <key>StandardErrorPath</key><string>$HOME/Library/Logs/fleet-dashboard.log</string>
+  <key>StandardOutPath</key><string>$LOG</string>
+  <key>StandardErrorPath</key><string>$LOG</string>
 </dict>
 </plist>
 PLISTEOF
+
+# The dashboard owns the board's embedded terminals: on SIGTERM it hangs up
+# every pty it spawned. Run from one of those terminals, the bootout below
+# kills this very shell -- and this script with it -- between "bootout" and
+# "bootstrap", leaving the plist written and the job unloaded: a dead board
+# that nothing restarts (2026-09-18, a Claude session took the board down
+# with itself this way). So from inside a board terminal the restart phase
+# re-executes in its own session, with no controlling terminal, and this
+# shell is told what is about to happen to it.
+if [[ -z "$RESTART_ONLY" && "${FLEET_TERMINAL:-}" == "1" ]]; then
+  echo "install.sh is running inside a board terminal; the restart will hang up this shell."
+  echo "Continuing detached -- the board is back when $LOG says 'installed $LABEL'."
+  FLEET_RESTART_ONLY=1 "$PYTHON" - /bin/bash "$RUNTIME/install.sh" "$PORT" <<'PYEOF' >>"$LOG" 2>&1
+import os, sys
+if os.fork():                       # the parent returns to the doomed shell at once
+    os._exit(0)
+os.setsid()                         # the child: a new session, no controlling tty
+os.execv(sys.argv[1], sys.argv[1:])
+PYEOF
+  exit 0
+fi
 
 # bootout is asynchronous: a bootstrap issued straight after it fails with
 # "Input/output error" while launchd is still tearing the old job down, and
@@ -118,6 +144,22 @@ if ! curl -sf -m 2 -o /dev/null "http://127.0.0.1:$PORT/api/state"; then
   exit 1
 fi
 
+# The app bundle, and a Desktop launcher pointing at it. A symlink, not a
+# copy: fleet.command rebuilds the bundle in place whenever its source
+# changes, and the Desktop icon must never go stale. Best effort -- a machine
+# without Xcode's command line tools still has the URL.
+APP="$RUNTIME/Fleet Dashboard.app"
+LAUNCHER="$HOME/Desktop/Fleet Dashboard.app"
+if "$RUNTIME/fleet.command" --build 2>/dev/null; then
+  if [[ -d "$HOME/Desktop" && ( -L "$LAUNCHER" || ! -e "$LAUNCHER" ) ]]; then
+    ln -sfn "$APP" "$LAUNCHER"
+  fi
+fi
+
 echo "installed $LABEL on port $PORT"
 echo "runtime:       $RUNTIME"
+if [[ -x "$APP/Contents/MacOS/FleetDashboard" ]]; then
+  echo "app:           $APP"
+  [[ -L "$LAUNCHER" ]] && echo "launcher:      $LAUNCHER"
+fi
 echo "open it with:  $RUNTIME/fleet.command   (or http://127.0.0.1:$PORT)"

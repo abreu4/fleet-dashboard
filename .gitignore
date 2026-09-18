@@ -5,6 +5,7 @@ __pycache__/
 .fleet-browser
 .fleet-browser.new
 .fleet-browser.app/
+Fleet Dashboard.app/
 
 # timestamped safety copies taken before hand-edits; git is the history now
 ui.html.bak.*

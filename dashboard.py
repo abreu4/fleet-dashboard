@@ -441,6 +441,11 @@ class Handler(BaseHTTPRequestHandler):
             LAST_POLL = time.time()
             self._send(SNAPSHOT.get(), "application/json")
             return
+        if path == "/api/ping":
+            # The app shell's watchdog: is anyone home? Not counted as a poll,
+            # so a shell left open does not keep an unwatched instance alive.
+            self._send(b'{"ok":true}', "application/json")
+            return
         if path == "/api/term/stream":
             # No Origin is normal on a same-origin GET, so this one leans on
             # Host + the custom-header token instead.
