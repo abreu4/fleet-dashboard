@@ -29,7 +29,7 @@ import time
 
 import actions
 
-MAX_TERMINALS = 6
+MAX_TERMINALS = 30
 # What a reattaching page gets replayed. 256KB of a 200-column screen is a few
 # hundred lines of scrollback, which is what a reload should feel like.
 REPLAY_BYTES = 256 * 1024
@@ -49,6 +49,10 @@ COALESCE_GRACE = 0.002
 # closed is exactly the thing that must NOT be hung up, and it is producing
 # output the whole time. Only a genuinely abandoned idle shell reaches this.
 IDLE_KILL_SECONDS = 2 * 60 * 60
+# A tab opened for a session is not stripped of it before its launch script
+# has had time to start the agent: the resume takes a moment to become a
+# child of the shell, and a Claude one a few seconds more to reach the roster.
+LINK_GRACE_SECONDS = 20
 DEFAULT_SHELL = os.environ.get("SHELL") or "/bin/zsh"
 
 # Sequences that ask the terminal a question. They matter because replay is not
@@ -77,6 +81,23 @@ def _set_winsize(fd, rows, cols):
         pass
 
 
+def tab_title(path, agent):
+    """The tab is named after the folder the way a prompt would show it: the
+    home directory is "~", a folder in it is "~/name", and only deeper ones
+    go by their last component. Naming home by its basename put the login
+    name on every tab opened from the + button. This is what a tab is called
+    while nothing but a shell runs in it; see Terminals.adopt for the rest."""
+    real = os.path.realpath(path).rstrip(os.sep) or os.sep
+    home = os.path.realpath(os.path.expanduser("~")).rstrip(os.sep)
+    if real == home:
+        name = "~"
+    elif real.startswith(home + os.sep) and real.count(os.sep) == home.count(os.sep) + 1:
+        name = "~/" + os.path.basename(real)
+    else:
+        name = os.path.basename(real) or "/"
+    return name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
+
+
 class Pty:
     """One pseudo-terminal, its output ring, and everyone watching it."""
 
@@ -84,6 +105,13 @@ class Pty:
         self.id = tid
         self.session_id = session_id
         self.title = title
+        # Where the tab's name comes from once the agent inside it exits (or
+        # never starts): the folder, the way a prompt would show it.
+        self.fallback = tab_title(cwd, "shell")
+        # The session it was opened to resume or attach to, if any. adopt()
+        # keeps that link as long as something is running in the tab, since
+        # `claude attach` is a different process from the session's own.
+        self.opened_for = session_id
         self.cwd = cwd
         self.rows, self.cols = rows, cols
         self.started = time.time()
@@ -211,21 +239,6 @@ class Pty:
 
 
 
-def tab_title(path, agent):
-    """The tab is named after the folder the way a prompt would show it: the
-    home directory is "~", a folder in it is "~/name", and only deeper ones
-    go by their last component. Naming home by its basename put the login
-    name on every tab opened from the + button."""
-    real = os.path.realpath(path).rstrip(os.sep) or os.sep
-    home = os.path.realpath(os.path.expanduser("~")).rstrip(os.sep)
-    if real == home:
-        name = "~"
-    elif real.startswith(home + os.sep) and real.count(os.sep) == home.count(os.sep) + 1:
-        name = "~/" + os.path.basename(real)
-    else:
-        name = os.path.basename(real) or "/"
-    return name if agent == "shell" else "%s · %s" % (name, {"antigravity": "agy"}.get(agent, agent))
-
 class Terminals:
     """Every open pty, and the fan-out to the pages watching them."""
 
@@ -279,6 +292,66 @@ class Terminals:
             self._ptys[tid] = term
         self._broadcast("open", term.meta())
         return term, ""
+
+    def adopt(self, sessions, parent_of):
+        """Name every terminal after the session running inside it.
+
+        A tab opened from the + button as a shell in ~ is called "~", and stayed
+        that way after the user typed `claude` into it -- while the board
+        listed the conversation under its own name. So once a snapshot, every
+        live pty looks for an agent under its shell: the collectors put a pid
+        on each session whose CLI is running (Claude from the roster, Codex and
+        agy from the process table), and `parent_of` says whose child that is.
+        The nearest one wins, since a Claude that runs `claude` in a tool call
+        is a descendant too. The tab takes that session's name -- the board's
+        name, so a rename reaches the tab -- and its id, so the tile's terminal
+        button finds this tab instead of opening a second one.
+
+        A tab opened *for* a session keeps that link while anything runs in
+        it: `claude attach` is a client, not the session's own process, so it
+        never matches by pid. A bare shell, opened for nothing or with its
+        agent gone, goes back to its folder name. Runs on the snapshot thread;
+        the writes are plain attributes, and only a change is broadcast.
+        """
+        with self._lock:
+            live = [p for p in self._ptys.values() if p.exited is None]
+        if not live:
+            return
+        by_id = {s.get("id"): s for s in sessions}
+        shells = {p.pid: p for p in live}
+        busy = set(parent_of.values())            # pids with a child
+        nearest = {}                              # tid -> (depth, session)
+        for session in sessions:
+            try:
+                pid = int(session.get("pid") or 0)
+            except (TypeError, ValueError):
+                continue
+            depth = 0
+            while pid and pid > 1 and depth < 32:
+                pid = parent_of.get(pid)
+                depth += 1
+                term = shells.get(pid)
+                if term is not None:
+                    if term.id not in nearest or depth < nearest[term.id][0]:
+                        nearest[term.id] = (depth, session)
+                    break
+        now = time.time()
+        for term in live:
+            hit = nearest.get(term.id)
+            if hit:
+                session = hit[1]
+            elif term.opened_for and (term.pid in busy or now - term.started < LINK_GRACE_SECONDS):
+                session = by_id.get(term.opened_for)
+                if session is None:               # off the board, still running
+                    continue
+            else:
+                session = None
+                term.opened_for = None            # a shell now; the next agent typed into it is adopted by pid
+            title = (session.get("name") or term.fallback) if session else term.fallback
+            sid = session.get("id") if session else None
+            if (title, sid) != (term.title, term.session_id):
+                term.title, term.session_id = title, sid
+                self._broadcast("meta", term.meta())
 
     def get(self, tid):
         return self._ptys.get(tid)

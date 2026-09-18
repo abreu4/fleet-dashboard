@@ -67,11 +67,20 @@ def _vscode_bin():
 def command_for(session, fell_back=False):
     """The shell line a terminal should land on, or '' for a plain shell."""
     del fell_back                      # ids resolve from any directory now
+    # A background Claude session is joined by its job id, whatever it is
+    # doing: `claude --resume` on one is refused by the CLI ("is running as a
+    # background session ... run `claude attach`") for as long as the process
+    # lives, and the roster lists it idle, done or blocked the whole time it
+    # waits for the next prompt. attach is a client, so running it is safe.
+    attach = attach_for(session)
+    if attach:
+        return attach
     kind = session.get("resume")
     sid = session.get("sessionId") or ""
     # Resuming a session that is mid-turn would start a second copy of it, so
-    # a live session only ever gets a shell in the right directory -- with the
-    # attach command waiting on the prompt (see suggest_for).
+    # a live session without a job id only ever gets a shell in the right
+    # directory -- with the resume command waiting on the prompt (see
+    # suggest_for).
     if session.get("state") == "running" or not sid:
         return ""
     form = _RESUME.get(kind or "")
@@ -79,9 +88,14 @@ def command_for(session, fell_back=False):
 
 
 def attach_for(session):
-    """`claude attach <job>` for a running session the roster knows, else ''."""
-    if session.get("state") != "running":
-        return ""
+    """`claude attach <job>` for a session the roster lists as a job, else ''.
+
+    The roster (`claude agents`) only lists live processes, and only a
+    background session carries an id, so a job id on the snapshot is the whole
+    test: the process is alive and attach is the one command that reaches it.
+    Its state is not consulted -- an idle or done job is still attachable, and
+    still refuses `--resume`.
+    """
     form = _ATTACH.get(session.get("provider") or "")
     job = session.get("jobId") or ""
     return (form % shlex.quote(job)) if form and job else ""
@@ -90,19 +104,17 @@ def attach_for(session):
 def suggest_for(session, fell_back=False):
     """The command to leave sitting ON the prompt, unrun.
 
-    command_for() refuses to start anything for a live session, because that
-    would be a second copy of it. A live Claude session still has exactly one
-    right move -- attach to it by its id -- and the others have theirs; having
-    to remember which of three CLIs spells it which way, and type it, is the
+    command_for() refuses to start anything for a live session it cannot
+    attach to, because that would be a second copy of it. Having to remember
+    which of three CLIs spells the resume which way, and type it, is the
     actual complaint. Offering it unexecuted keeps the safety property intact:
     the decision is still a keypress, made by someone who can see the screen.
+    (A background Claude session no longer lands here: attach is a client, so
+    command_for runs it outright.)
     """
     del fell_back
     if command_for(session):
         return ""                      # it is being run; nothing to suggest
-    attach = attach_for(session)
-    if attach:
-        return attach
     form = _RESUME.get(session.get("resume") or "")
     sid = session.get("sessionId") or ""
     if not form or not sid:

@@ -2330,33 +2330,37 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   .sheet{
     position:fixed; left:0; right:0; bottom:0; z-index:8; height:var(--sheet,46vh);
     background:var(--panel); border-top:1px solid var(--edge-hot);
-    box-shadow:0 -26px 50px -32px #000; display:flex; flex-direction:column;
+    box-shadow:0 -26px 50px -32px #000; display:flex; flex-direction:row;
     transform:translateY(101%); transition:transform .18s ease, height .12s ease;
   }
   .sheet.on{transform:none}
   .sheet .bar{
-    display:flex; align-items:stretch; gap:4px; padding:0 8px 0 0; min-height:29px;
+    display:flex; flex-direction:column; align-items:stretch; gap:0; padding:0; width:var(--barw,180px); flex:none;
     background:linear-gradient(180deg,var(--rail-a),var(--rail-b));
-    border-bottom:1px solid var(--edge);
+    border-right:1px solid var(--edge); position:relative;
   }
-  /* Tabs share the row and shrink together, each keeping its own ellipsis;
-     the controls on the right are squares with tooltips, like the HUD's, so
-     nothing in the bar is ever a word cut in half. */
-  .sheet .tabs{display:flex; gap:2px; overflow:hidden; flex:1 1 0; min-width:0; align-items:stretch}
+  /* The sidebar's edge is a handle: drag it to trade tab names for columns.
+     Double-click puts it back at 180px. */
+  .sheet .grip{position:absolute; top:0; bottom:0; right:-4px; width:8px; cursor:col-resize; z-index:2; touch-action:none}
+  .sheet .grip::after{content:""; position:absolute; top:0; bottom:0; left:3px; width:2px; background:var(--accent); opacity:0; transition:opacity .12s}
+  .sheet .grip:hover::after, .sheet .grip.drag::after{opacity:.8}
+  .sheet.resizing, .sheet.resizing .bar{transition:none}
+  /* Tabs are stacked vertically like a sidebar */
+  .sheet .tabs{display:flex; flex-direction:column; gap:0; overflow-y:auto; overflow-x:hidden; flex:1 1 0; min-height:0; align-items:stretch}
   .sheet .tab{
-    display:flex; align-items:center; gap:7px; flex:1 1 0; min-width:58px; max-width:230px; padding:0 8px 0 11px;
-    border-right:1px solid var(--edge); background:transparent; cursor:pointer;
+    display:flex; align-items:center; gap:7px; flex:none; min-width:0; max-width:none; padding:8px 11px;
+    border-bottom:1px solid var(--edge); background:transparent; cursor:pointer;
     font:11px/1 var(--mono); letter-spacing:.05em; color:var(--faint);
-    border-bottom:2px solid transparent; white-space:nowrap;
+    border-left:2px solid transparent; white-space:nowrap;
   }
-  .sheet .tab.sel{color:var(--accent); background:var(--cell); border-bottom-color:var(--accent)}
+  .sheet .tab.sel{color:var(--accent); background:var(--cell); border-left-color:var(--accent)}
   .sheet .tab{touch-action:none; user-select:none; transition:transform .12s ease}
   .sheet .tab.drag{opacity:.85; box-shadow:inset 0 0 0 1px var(--accent); cursor:grabbing; transition:none; position:relative; z-index:1}
   .sheet .tab.dead{color:var(--unknown); text-decoration:line-through}
   .sheet .tab .nm{overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 auto}
   .sheet .tab .x{opacity:.45; font-size:13px; line-height:1; flex:none}
   .sheet .tab .x:hover{opacity:1; color:var(--blocked)}
-  .sheet .bar .grp{display:flex; align-items:center; gap:4px; flex:none; padding-left:6px}
+  .sheet .bar .grp{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; flex:none; padding:8px; border-top:1px solid var(--edge)}
   .sheet .bar button{
     background:transparent; border:1px solid var(--edge); color:var(--dim); border-radius:4px;
     width:26px; height:22px; padding:0; cursor:pointer; font:14px/1 var(--mono);
@@ -2366,7 +2370,9 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   .sheet .bar button[aria-expanded="true"]{color:var(--accent); border-color:var(--edge-hot)}
   .sheet .bar button:disabled{opacity:.35; cursor:default}
   /* The + picker: a folder the board knows about (or one you type), and which
-     agent to start there. Hangs above the sheet, off the button that opens it. */
+     agent to start there. Hangs above the button that opens it, and opens
+     rightwards from it: the button sits in the sidebar at the left of the
+     window, so a right-anchored menu ran off the screen. */
   .newterm{
     position:fixed; z-index:9; display:none; flex-direction:column; gap:7px;
     width:min(380px, calc(100vw - 24px)); padding:9px 10px 10px;
@@ -4607,7 +4613,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    same figure. */
 :root[data-theme="hoarstone"]{--hud-inset:66px}
 :root[data-theme="hoarstone"] .ghud.stats{
-  left:50%; bottom:calc(24px + var(--taken,0px)); transform:translateX(-50%);
+  left:50%; bottom:24px; transform:translateX(-50%);
   display:flex; gap:30px; opacity:.92; filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));
 }
 :root[data-theme="hoarstone"] .ghud.stats .bar{position:relative; display:block; width:180px; height:14px; font-style:normal}
@@ -4922,14 +4928,14 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    umber text on it, and the tab names could not be read. */
 :root[data-theme="ochre"] .sheet{background:#f6e6c6; border-top:3px solid #2a231b}
 :root[data-theme="ochre"] .sheet .bar{
-  background:#2c2723; background-image:none; border-bottom:2px solid #1c1815;
+  background:#2c2723; background-image:none; border-right:2px solid #1c1815; border-bottom:none;
 }
 :root[data-theme="ochre"] .sheet .tab{
-  color:#cdb58c; border-right-color:#1c1815;
+  color:#cdb58c; border-bottom-color:#1c1815; border-right-color:transparent;
   font:700 11px/1 Rockwell, "Superclarendon", Georgia, serif; letter-spacing:.03em;
 }
 :root[data-theme="ochre"] .sheet .tab:hover{color:#fff1d2; background:#3a322b}
-:root[data-theme="ochre"] .sheet .tab.sel{color:#fff1d2; background:#4a3f36; border-bottom-color:var(--accent)}
+:root[data-theme="ochre"] .sheet .tab.sel{color:#fff1d2; background:#4a3f36; border-left-color:var(--accent); border-bottom-color:#1c1815;}
 :root[data-theme="ochre"] .sheet .tab.dead{color:#8a7a64}
 :root[data-theme="ochre"] .sheet .bar button{color:#f6e2b8; border-color:#6a5a4a; background:#3a322b}
 :root[data-theme="ochre"] .sheet .bar button:hover{color:#fff6e0; background:var(--accent); border-color:#2a231b}
@@ -6809,6 +6815,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
       <button id="term-size" title="cycle the sheet height" aria-label="sheet height">⇕</button>
       <button id="term-hide" title="hide the sheet — ⌘J or ctrl-` brings it back" aria-label="hide sheet">▁</button>
     </div>
+    <div class="grip" id="term-grip" title="drag to resize the sidebar — double-click to reset"></div>
   </div>
   <div class="body" id="term-body"><div class="empty" id="term-empty"></div></div>
 </section>
@@ -7723,8 +7730,10 @@ function select(id){
   if(targets.iterm) buttons.push(['iterm','iTerm']);
   buttons.push(['terminal','Terminal']);
   if(targets.vscode) buttons.push(['vscode','VS Code']);
-  // Three verbs, by id: a running Claude session is *attached* to, a session
-  // with an id that is not running is *resumed*, anything else gets a shell.
+  // Three verbs, by id: a Claude session the roster lists as a job is
+  // *attached* to (alive, whatever it is doing -- the CLI refuses --resume
+  // on it), a session with an id that is not running is *resumed*, anything
+  // else gets a shell.
   const verb = attachable(s) ? 'attach' : (s.resume && s.sessionId && s.state !== 'running') ? 'resume' : 'shell';
   // `reveal` looks for the iTerm tab this session is already living in and
   // brings that forward, rather than opening a second window onto it.
@@ -7774,8 +7783,9 @@ function select(id){
 }
 
 /* The line "copy command" hands over: always by the session's own id. A
-   running Claude session is joined with `attach` (it keeps running; ← in the
-   agent view or Ctrl+Z hands the terminal back). Any other id resumes it. */
+   background Claude session is joined with `attach` by its job id, idle or
+   busy (it keeps running; ← in the agent view or Ctrl+Z hands the terminal
+   back). Any other id resumes it. */
 function shellCommand(s){
   const cd = 'cd ' + (s.cwd || '~');
   if(attachable(s)) return cd + ' && claude attach ' + s.jobId;
@@ -7784,7 +7794,10 @@ function shellCommand(s){
   if(s.sessionId && s.resume === 'antigravity') return cd + ' && agy --conversation ' + s.sessionId;
   return cd;
 }
-const attachable = s => s.provider === 'claude' && !!s.jobId && s.state === 'running';
+// A job id only ever comes off the live roster, so having one is the test;
+// gating on state === 'running' sent every idle background session into
+// `claude --resume`, which the CLI refuses while the process is alive.
+const attachable = s => s.provider === 'claude' && !!s.jobId;
 
 function toast(msg){
   const el = document.getElementById('toast');
@@ -9985,6 +9998,11 @@ tick();
 const TERMCFG = window.FLEET_TERM || {enabled:false, token:'', iterm:false};
 const SHEET_STEPS = [34, 54, 88];        // vh; 54 shows ~30 rows at 1431x896
 const SHEET_KEY = 'fleet.sheet';
+const BARW_KEY = 'fleet.term.barw', BAR_DEFAULT = 180, BAR_MIN = 110, BAR_MAX = 520;   // the sidebar, px
+(() => {
+  let w = BAR_DEFAULT; try{ w = parseInt(localStorage.getItem(BARW_KEY)) || BAR_DEFAULT; }catch(e){}
+  document.documentElement.style.setProperty('--barw', Math.max(BAR_MIN, Math.min(BAR_MAX, w)) + 'px');
+})();
 const sheetEl = document.getElementById('sheet');
 const tabsEl = document.getElementById('term-tabs');
 const bodyEl = document.getElementById('term-body');
@@ -10276,25 +10294,30 @@ function setTabOrder(ids){ tabOrder = ids; try{ localStorage.setItem(ORDER_KEY, 
 /* The DOM stays put while a tab is dragged (moving the node would drop the
    pointer capture with it): the tab follows the pointer by transform, the
    others slide out of its way by transform, and the order is written and
-   the bar redrawn on release. */
+   the bar redrawn on release. The bar is a column, so the drag runs along
+   the Y axis; it reads the bar's direction at pick-up so a theme that lays
+   the tabs back out in a row keeps a working drag. */
 function dragTab(el, ev){
   if(ev.button || ev.target.dataset.close) return;
-  const x0 = ev.clientX; let dragging = false, tabs = [], rects = [], from = 0, to = 0;
+  const vert = getComputedStyle(tabsEl).flexDirection.startsWith('column');
+  const axis = vert ? 'clientY' : 'clientX', edge = vert ? 'top' : 'left', size = vert ? 'height' : 'width';
+  const slide = d => 'translate' + (vert ? 'Y' : 'X') + '(' + d + 'px)';
+  const p0 = ev[axis]; let dragging = false, tabs = [], rects = [], from = 0, to = 0;
   const move = e => {
     if(!dragging){
-      if(Math.abs(e.clientX - x0) < 6) return;
+      if(Math.abs(e[axis] - p0) < 6) return;
       dragging = true; el.classList.add('drag');
       try{ el.setPointerCapture(ev.pointerId); }catch(err){}
       tabs = [...tabsEl.querySelectorAll('.tab')]; rects = tabs.map(o => o.getBoundingClientRect()); from = tabs.indexOf(el);
     }
-    const dx = e.clientX - x0, me = rects[from], cx = me.left + me.width / 2 + dx;
-    el.style.transform = 'translateX(' + dx + 'px)';
+    const d = e[axis] - p0, me = rects[from], mid = me[edge] + me[size] / 2 + d;
+    el.style.transform = slide(d);
     // it lands after every other tab whose middle it has passed
-    to = tabs.filter((o, i) => o !== el && rects[i].left + rects[i].width / 2 < cx).length;
+    to = tabs.filter((o, i) => o !== el && rects[i][edge] + rects[i][size] / 2 < mid).length;
     tabs.forEach((o, i) => {
       if(o === el) return;
-      const shift = (i < from && i >= to) ? me.width : (i > from && i <= to) ? -me.width : 0;
-      o.style.transform = shift ? 'translateX(' + shift + 'px)' : '';
+      const shift = (i < from && i >= to) ? me[size] : (i > from && i <= to) ? -me[size] : 0;
+      o.style.transform = shift ? slide(shift) : '';
     });
   };
   const up = () => {
@@ -10470,6 +10493,14 @@ async function handleFrame(event, payload){
     activate(payload.id);
     return;
   }
+  if(event === 'meta'){
+    // A tab took the name of the session running inside it (or gave it back).
+    // The id travels too, so a tile's terminal button finds this tab. Never
+    // activates: a rename must not pull focus off the tab being typed in.
+    const t = terms.get(payload.id);
+    if(t){ Object.assign(t.meta, payload); t.alive = payload.alive !== false; drawTabs(); }
+    return;
+  }
   if(event === 'out'){
     const t = terms.get(payload.id);
     if(!t || !t.term) await loadXterm();
@@ -10625,10 +10656,13 @@ function newTermPicker(){
       q('dir').innerHTML = dirs.map(d => '<option value="'+esc(d)+'"'+(d===sel?' selected':'')+'>'+esc(tilde(d))+'</option>').join('');
       q('path').value = '';
       paint();
-      const r = btn.getBoundingClientRect();
-      el.style.bottom = (innerHeight - r.top + 8) + 'px';
-      el.style.right = Math.max(8, innerWidth - r.right) + 'px';
       el.classList.add('on'); btn.setAttribute('aria-expanded', 'true');
+      // Shown before it is placed, so its width can be read. Left edge on the
+      // button's, pulled back onto the screen when there is not room.
+      const r = btn.getBoundingClientRect(), w = el.offsetWidth || 380;
+      el.style.bottom = (innerHeight - r.top + 8) + 'px';
+      el.style.right = '';
+      el.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
       q('dir').focus();
     },
     hide(){ el.classList.remove('on'); btn.setAttribute('aria-expanded', 'false'); },
@@ -10687,6 +10721,40 @@ if(TERMCFG.enabled){
     try{ localStorage.setItem(SHEET_KEY, sheetStep); }catch(e){}
     applySheet();
   };
+  // The sidebar's width: dragged on its edge, kept per browser, bounded so
+  // it can neither vanish nor eat the terminal.
+  const grip = document.getElementById('term-grip');
+  const barWidth = w => {
+    const lim = Math.max(BAR_MIN, Math.min(BAR_MAX, Math.floor(innerWidth * .45)));
+    w = Math.max(BAR_MIN, Math.min(lim, Math.round(w)));
+    document.documentElement.style.setProperty('--barw', w + 'px');
+    return w;
+  };
+  let gripTick = 0;
+  grip.addEventListener('pointerdown', e => {
+    if(e.button !== 0) return;
+    e.preventDefault(); grip.setPointerCapture(e.pointerId);
+    grip.classList.add('drag'); sheetEl.classList.add('resizing');
+    const left = sheetEl.getBoundingClientRect().left;
+    const move = ev => {
+      barWidth(ev.clientX - left);
+      if(!gripTick) gripTick = setTimeout(() => { gripTick = 0; refit(); }, 60);
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.classList.remove('drag'); sheetEl.classList.remove('resizing');
+      try{ localStorage.setItem(BARW_KEY, parseInt(document.documentElement.style.getPropertyValue('--barw')) || BAR_DEFAULT); }catch(e){}
+      refit();
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up, {once:true});
+    grip.addEventListener('pointercancel', up, {once:true});
+  });
+  grip.addEventListener('dblclick', () => {
+    barWidth(BAR_DEFAULT);
+    try{ localStorage.removeItem(BARW_KEY); }catch(e){}
+    refit();
+  });
   addEventListener('resize', () => setTimeout(refit, 60));
   // ctrl-` the way a terminal drawer works everywhere else, and ⌘J the way
   // VS Code's does. Captured on the window so the browser never sees ⌘J.

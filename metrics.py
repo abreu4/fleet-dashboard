@@ -65,7 +65,22 @@ def process_table():
     rebuild interval, so every pass still gets its own reading.
     """
     return _cached("ps", 1.0, lambda: _sh(
-        "ps", "-Ao", "pid=,etime=,rss=,pcpu=,args=", timeout=6))
+        "ps", "-Ao", "pid=,etime=,rss=,pcpu=,ppid=,args=", timeout=6))
+
+
+def parents():
+    """pid -> parent pid, from the same listing. The terminal sheet walks
+    this to find which of its shells an agent process is running under."""
+    found = {}
+    for line in process_table().splitlines():
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            continue
+        try:
+            found[int(parts[0])] = int(parts[4])
+        except ValueError:
+            pass
+    return found
 
 
 # --------------------------------------------------------------------------
@@ -172,10 +187,10 @@ def processes():
     tally = {key: {"count": 0, "rssMb": 0.0, "cpu": 0.0}
              for key, _ in _AGENT_PATTERNS}
     for line in out.splitlines():
-        parts = line.split(None, 4)
-        if len(parts) < 5:
+        parts = line.split(None, 5)
+        if len(parts) < 6:
             continue
-        _, _etime, rss, pcpu, args = parts
+        _, _etime, rss, pcpu, _ppid, args = parts
         if _NOT_AGENT.search(args):
             continue
         for key, pattern in _AGENT_PATTERNS:

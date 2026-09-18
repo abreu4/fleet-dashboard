@@ -178,6 +178,14 @@ class Snapshot:
 
         self._index = {s["id"]: s for s in sessions}
 
+        # The terminal sheet names its tabs after what runs in them, from the
+        # same sessions and the same process table this pass just read.
+        if TERMINAL is not None:
+            try:
+                TERMINAL.adopt(sessions, metrics.parents())
+            except Exception as exc:
+                print("terminal adopt failed: %s: %s" % (type(exc).__name__, exc))
+
         tally = {}
         tokens = 0
         for session in sessions:

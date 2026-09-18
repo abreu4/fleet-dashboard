@@ -1227,10 +1227,10 @@ def live_processes(provider):
         return []
     found = []
     for line in out.splitlines():
-        parts = line.split(None, 4)
-        if len(parts) < 5:
+        parts = line.split(None, 5)
+        if len(parts) < 6:
             continue
-        pid, etime, _rss, _pcpu, args = parts
+        pid, etime, _rss, _pcpu, _ppid, args = parts
         if _NOT_SESSION.search(args) or not pattern.search(args):
             continue
         try:
