@@ -2655,15 +2655,27 @@ html.theme-swapping .bubble > .halo{ animation:none; }
     repeating-linear-gradient(0deg,  color-mix(in oklab, var(--accent) 16%, transparent) 0 1px, transparent 1px 320px),
     repeating-linear-gradient(90deg, color-mix(in oklab, var(--accent) 16%, transparent) 0 1px, transparent 1px 320px);
 }
+:root[data-theme="console"] .wrap::before,
 :root[data-theme="console"] .board::after{
   content:""; position:fixed; right:-120px; bottom:-120px; width:380px; height:380px;
   border-radius:50%; pointer-events:none; z-index:2; opacity:.26; mix-blend-mode:screen;
+}
+/* The scope: range rings, the bearing cross and the own-ship dot. This layer
+   holds still -- it used to share the element with the sweep and turned with
+   it, which is a scope with its crosshair going round. */
+:root[data-theme="console"] .wrap::before{
   background:
     radial-gradient(circle, rgba(56,226,208,.9) 0 2px, transparent 3px),
     repeating-radial-gradient(circle, transparent 0 46px, rgba(56,226,208,.55) 46px 47px),
     linear-gradient(rgba(56,226,208,.55), rgba(56,226,208,.55)) 50% 0/1px 100% no-repeat,
-    linear-gradient(rgba(56,226,208,.55), rgba(56,226,208,.55)) 0 50%/100% 1px no-repeat,
-    conic-gradient(from 0deg, rgba(56,226,208,.75) 0deg, rgba(56,226,208,.18) 40deg, transparent 90deg 360deg);
+    linear-gradient(rgba(56,226,208,.55), rgba(56,226,208,.55)) 0 50%/100% 1px no-repeat;
+}
+/* The beacon: only the sweep turns, a bright bearing line with its trail
+   fading behind it. Painted after the scope, so it crosses over the rings. */
+:root[data-theme="console"] .board::after{
+  opacity:.5;
+  background:
+    conic-gradient(from 0deg, rgba(56,226,208,.95) 0deg, rgba(56,226,208,.5) 1.5deg, rgba(56,226,208,.14) 40deg, transparent 90deg 360deg);
   animation:sweep 12s linear infinite;
 }
 @keyframes sweep{from{transform:rotate(0)} to{transform:rotate(360deg)}}
@@ -3741,6 +3753,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   box-shadow:inset 0 1px 0 rgba(244,241,228,.06), inset 0 0 0 1px rgba(234,179,8,.10);
 }
 :root[data-theme="staunton"] .panel{
+  background-color:var(--velvet, #4a0f1c);
   background-image:var(--grain);
   box-shadow:inset 1px 0 0 rgba(234,179,8,.22), -26px 0 60px -30px rgba(1,8,5,.95);
 }
@@ -3777,15 +3790,20 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    yellow rim and hub. It turns once every two and a half minutes, which is slow
    enough to never pull the eye off a tile and fast enough that you catch it
    moving if you look. Cropped by the corner, because the table is bigger than
-   the screen. */
+   the screen. It is set into the table, so it does not move when the sheet
+   rises (it rode --taken up over the CLAUDE rail at half height); the sheet
+   covers it. And it is under the padded rails and the cards (see PASS 9),
+   which are laid on the table over it: the rim used to run through the
+   agent's mark and chip on whichever rail was at the bottom. The hub sits
+   110px in and 100px up, clear of a short lane's wide rail. */
 :root[data-theme="staunton"] .wrap::before{
-  content:""; position:fixed; left:-104px; bottom:calc(-104px + var(--taken,0px));
+  content:""; position:fixed; left:-50px; bottom:-60px;
   width:320px; height:320px; border-radius:50%;
-  /* Above the lanes, not under them: at z-index 0 it was first in tree order
-     and every opaque lane panel painted over it, so it only ever showed in the
-     gaps. Screen blending lightens whatever it crosses, which is how an inlay
-     under a lamp reads, and leaves any text over it legible. */
-  pointer-events:none; z-index:2; opacity:.24; mix-blend-mode:screen;
+  /* Above the lane cloth, not under it: at z-index 0 it was first in tree
+     order and every opaque lane panel painted over it, so it only ever showed
+     in the gaps. Screen blending lightens whatever it crosses, which is how an
+     inlay under a lamp reads, and leaves any text over it legible. */
+  pointer-events:none; z-index:2; opacity:.26; mix-blend-mode:screen;
   background:
     radial-gradient(circle, var(--leaf) 0 7%, transparent 8%),
     radial-gradient(circle, transparent 19%, var(--leaf) 20% 22%, transparent 23%),
@@ -4486,9 +4504,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   background:repeating-conic-gradient(from 0deg, #2a231b 0 9deg, #e59b3f 9deg 18deg);
   -webkit-mask:radial-gradient(circle, transparent 0 61px, #000 62px 70px, transparent 71px);
           mask:radial-gradient(circle, transparent 0 61px, #000 62px 70px, transparent 71px);
-  animation:cp-ring 24s linear infinite;
 }
-@keyframes cp-ring{to{transform:rotate(360deg)}}
 /* 8. The toast is a kill-feed entry: cream pill, umber rule, a team band. */
 :root[data-theme="ochre"] .toast{
   background:#f6e2b8; color:#2a231b; border:2px solid #2a231b; border-left:9px solid var(--team-red);
@@ -4499,8 +4515,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="ochre"] .panel{border-top:7px solid var(--team-red); border-left:2px solid #2a231b}
 :root[data-theme="ochre"] .panel h2{color:#2a231b}
 @media (prefers-reduced-motion:reduce){
-  :root[data-theme="ochre"] .bubble[data-state="running"]::after,
-  :root[data-theme="ochre"] .board::before{animation:none}
+  :root[data-theme="ochre"] .bubble[data-state="running"]::after{animation:none}
 }
 
 /* ---------- CARDSTOCK -- Pokémon, with the things a Pokémon game has ------
@@ -5132,15 +5147,32 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   vertical-align:.5em; -webkit-text-stroke:0; text-shadow:none;
   box-shadow:2px 2px 0 rgba(41,39,34,.22); transform:rotate(-3deg);
 }
-/* Lanes and lanes' rails keep the split paint and the ceasefire stripe; the
-   projects keep their team plates. The point and its ring ride above the
-   terminal sheet instead of vanishing behind it. */
-:root[data-theme="ochre"] .board::after{
-  bottom:calc(14px + var(--taken, 0px)); transition:bottom .12s ease;
+/* The closed lanes keep the ceasefire stripe and the projects their team
+   plates. The control point is set into the floor at the corner of the map:
+   it does not move when the sheet rises (it rode --taken up over the tiles,
+   ring turning, which read as a wheel and not a point) and it is under the
+   lanes and the sheet -- what the board uncovers when it is collapsed. z -1
+   in .wrap paints it over the ground and under everything laid on it. */
+:root[data-theme="ochre"] .board::after, :root[data-theme="ochre"] .board::before{z-index:-1; transition:none}
+:root[data-theme="ochre"] .board::after{bottom:14px}
+:root[data-theme="ochre"] .board::before{bottom:-6px}
+/* The rails are HUD plaques -- charcoal, cream lettering, the agent's mark
+   on a class-emblem badge -- not a RED/BLU split with a stripe: paint that
+   said nothing. The team readings stay on the ceasefire bars below, where
+   RED against BLU is the cpu, the memory and the pressure. */
+:root[data-theme="ochre"] .rail{
+  color:#fff1d2; border-right:2px solid #1c1815;
+  background-color:#2c2723;
+  background-image:radial-gradient(circle at 2px 2px, rgba(255,241,210,.11) 1px, transparent 1.2px);
+  background-size:7px 7px;
+  box-shadow:inset 0 1px 0 rgba(255,241,210,.13), inset -1px 0 0 rgba(0,0,0,.35);
 }
-:root[data-theme="ochre"] .board::before{
-  bottom:calc(-6px + var(--taken, 0px)); transition:bottom .12s ease;
+:root[data-theme="ochre"] .rail svg{
+  box-sizing:content-box; width:15px; height:15px; padding:4px; border-radius:50%;
+  color:#2c2723; background:#fff1d2; box-shadow:0 0 0 2px #1c1815, 0 2px 0 2px rgba(0,0,0,.25);
 }
+:root[data-theme="ochre"] .rail .rcount{color:#fff1d2; font-family:var(--face-chrome); font-size:14px; letter-spacing:.02em}
+:root[data-theme="ochre"] .rail .vlabel{color:#e8d3a8}
 /* The terminal sheet is the console: a charcoal bar, cream tab names, the
    live tab in Mann Co orange. It was wearing the rail's RED/BLU gradient with
    umber text on it, and the tab names could not be read. */
@@ -5279,7 +5311,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    number in its pocket colour with the session's name under it. */
 :root[data-theme="staunton"] .wrap.spin::before{animation-duration:5s}
 :root[data-theme="staunton"] .ball{
-  position:fixed; left:56px; bottom:calc(56px + var(--taken,0px)); width:0; height:0; z-index:3; pointer-events:none;
+  position:fixed; left:110px; bottom:100px; width:0; height:0; z-index:3; pointer-events:none;
   animation:ball-run 2.8s cubic-bezier(.2,.7,.3,1) forwards;
 }
 :root[data-theme="staunton"] .ball i{
@@ -5327,17 +5359,36 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    -- the cloth's own printing: an empty lane says PLACE YOUR BETS in the
       table's yellow, spaced the way the felt is lettered;
    -- the wallpaper: the side panel is papered in the four suits, faintly. */
+/* The index: a rank and the suit, the way a card carries it in the corner --
+   and again in the far corner, upside down, which is what makes a card read
+   as a card from any side of the table. The suit is the state; the rank is
+   the card's place in the hand (ace high, then the court, then down the
+   pips; a fourteenth card is a second deck and counts on in figures). */
+@counter-style rank{system:fixed; symbols:"A" "K" "Q" "J" "10" "9" "8" "7" "6" "5" "4" "3" "2"; suffix:""}
+:root[data-theme="staunton"] .bubbles{counter-reset:hand}
+:root[data-theme="staunton"] .bubble{counter-increment:hand; --suit:"\2660"}
+:root[data-theme="staunton"] .bubble[data-state="running"]{--suit:"\2665"}
+:root[data-theme="staunton"] .bubble[data-state="done"]{--suit:"\2666"}
+:root[data-theme="staunton"] .bubble[data-state="waiting"]{--suit:"\2663"}
 :root[data-theme="staunton"] .bubble::after{
-  content:"\2660"; position:absolute; top:5px; right:8px; z-index:1; pointer-events:none;
-  font:600 11px/1 var(--mono); font-variant-emoji:text; color:var(--rib); opacity:.8; transition:opacity .12s;
+  content:counter(hand, rank) var(--suit); position:absolute; top:5px; right:8px; z-index:1; pointer-events:none;
+  font:600 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; color:var(--rib); opacity:.8; transition:opacity .12s;
 }
-:root[data-theme="staunton"] .bubble[data-state="running"]::after{content:"\2665"}
-:root[data-theme="staunton"] .bubble[data-state="done"]::after{content:"\2666"}
-:root[data-theme="staunton"] .bubble[data-state="waiting"]::after{content:"\2663"}
+:root[data-theme="staunton"] .bubble .foot{padding-right:26px}
+:root[data-theme="staunton"] .bubble .foot::before{
+  content:counter(hand, rank) var(--suit); position:absolute; right:0; top:50%; transform:translateY(-50%) rotate(180deg);
+  font:600 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; text-transform:none; color:var(--rib); opacity:.8; pointer-events:none;
+}
 :root[data-theme="staunton"] .bubble[data-state="idle"]::after,
-:root[data-theme="staunton"] .bubble[data-state="unknown"]::after{opacity:.32}
+:root[data-theme="staunton"] .bubble[data-state="unknown"]::after,
+:root[data-theme="staunton"] .bubble[data-state="idle"] .foot::before,
+:root[data-theme="staunton"] .bubble[data-state="unknown"] .foot::before{opacity:.32}
 :root[data-theme="staunton"] .bubble:hover::after, :root[data-theme="staunton"] .bubble.sel::after{opacity:0}
-:root[data-theme="staunton"] .bubble .nm{padding-right:14px}
+/* the far index gives way to the dealer button on the card in hand, and to
+   the one-line tiles of a collapsed board */
+:root[data-theme="staunton"] .bubble.sel .foot::before, :root[data-theme="staunton"] .board.compact .bubble .foot::before{display:none}
+:root[data-theme="staunton"] .bubble.sel .foot, :root[data-theme="staunton"] .board.compact .bubble .foot{padding-right:0}
+:root[data-theme="staunton"] .bubble .nm{padding-right:26px}
 :root[data-theme="staunton"] .bubble.sel .foot::after{
   content:"D"; margin-left:auto; flex:none; width:14px; height:14px; border-radius:50%;
   display:inline-flex; align-items:center; justify-content:center;
@@ -5371,7 +5422,155 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   margin:auto; text-align:center; color:rgba(234,179,8,.62); font-weight:600;
   letter-spacing:.34em; text-transform:uppercase; text-shadow:0 1px 0 rgba(1,8,5,.6);
 }
-:root[data-theme="staunton"] .panel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23f4f1e4' fill-opacity='.04'%3E%3Cpath transform='translate(10 10) scale(.8)' d='M8 1 C8 1 2 6.5 2 10.5 C2 12.5 3.5 14 5.5 14 C6.5 14 8 13 8 13 C8 13 9.5 14 10.5 14 C12.5 14 14 12.5 14 10.5 C14 6.5 8 1 8 1 Z M8 13 L6.5 16 L9.5 16 Z'/%3E%3Cpath transform='translate(58 10) scale(.8)' d='M8 14.5 C8 14.5 1.5 9.5 1.5 5.5 C1.5 3.3 3.2 1.8 5.2 1.8 C6.6 1.8 7.6 2.6 8 3.5 C8.4 2.6 9.4 1.8 10.8 1.8 C12.8 1.8 14.5 3.3 14.5 5.5 C14.5 9.5 8 14.5 8 14.5 Z'/%3E%3Cg transform='translate(34 58) scale(.8)'%3E%3Ccircle cx='8' cy='4.5' r='2.5'/%3E%3Ccircle cx='4.5' cy='9.5' r='2.5'/%3E%3Ccircle cx='11.5' cy='9.5' r='2.5'/%3E%3Cpath d='M8 10 L6 15 L10 15 Z'/%3E%3C/g%3E%3Cpath transform='translate(82 58) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3Cpath transform='translate(34 -14) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3C/g%3E%3C/svg%3E"), var(--grain); background-size:96px 96px, auto}
+:root[data-theme="staunton"] .panel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23f4f1e4' fill-opacity='.04'%3E%3Cpath transform='translate(10 10) scale(.8)' d='M8 1 C8 1 2 6.5 2 10.5 C2 12.5 3.5 14 5.5 14 C6.5 14 8 13 8 13 C8 13 9.5 14 10.5 14 C12.5 14 14 12.5 14 10.5 C14 6.5 8 1 8 1 Z M8 13 L6.5 16 L9.5 16 Z'/%3E%3Cpath transform='translate(58 10) scale(.8)' d='M8 14.5 C8 14.5 1.5 9.5 1.5 5.5 C1.5 3.3 3.2 1.8 5.2 1.8 C6.6 1.8 7.6 2.6 8 3.5 C8.4 2.6 9.4 1.8 10.8 1.8 C12.8 1.8 14.5 3.3 14.5 5.5 C14.5 9.5 8 14.5 8 14.5 Z'/%3E%3Cg transform='translate(34 58) scale(.8)'%3E%3Ccircle cx='8' cy='4.5' r='2.5'/%3E%3Ccircle cx='4.5' cy='9.5' r='2.5'/%3E%3Ccircle cx='11.5' cy='9.5' r='2.5'/%3E%3Cpath d='M8 10 L6 15 L10 15 Z'/%3E%3C/g%3E%3Cpath transform='translate(82 58) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3Cpath transform='translate(34 -14) scale(.8)' d='M8 2 L14 8 L8 14 L2 8 Z'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 40%, transparent 70%, rgba(0,0,0,.28)), var(--pile), var(--nap); background-size:96px 96px, auto, 360px 360px, 120px 120px}
+/* ==== PASS 9: CASINO ROYALE -- the card room ====
+   The table had its wheel, its chips and its pips. This pass is the rest of
+   the card room, everything still on a figure the board carries:
+   -- every session is a playing card now: its index in both corners (above),
+      a folded hand lying face down with the back showing, a hand dealt in
+      when it arrives, a card turned over when its state changes, and the
+      whole deck riffled when the wordmark is clicked;
+   -- the rails are the padded velvet rails of a card table, and a velvet
+      rope goes across a closed table; the side drawer and the sheet's bar
+      are lined in the same velvet;
+   -- an agent's chip on its rail is a stack now, as tall as its count;
+   -- the wheel has a red ball loose in it, ping-ponging off the frets and
+      the hub, under the cards like the wheel itself. */
+/* 1. Layering. The rails, the closed rails and the project cells are laid
+   on the table over the wheel (z 2 in .wrap): the wheel shows through the
+   cloth and the cells' glass, never over the agent's mark or under a card. */
+:root[data-theme="staunton"] .rail, :root[data-theme="staunton"] .hrail, :root[data-theme="staunton"] .project{position:relative; z-index:3}
+/* 2. The red ball. One element, one composited transform, on a precomputed
+   path (tmp: straight runs reflected off the fret ring at 146px and the hub
+   at 50px, nudged at every bounce so it never settles into a figure). It
+   lives in .wrap so it stacks between the wheel and the rails. */
+.redball{display:none}
+:root[data-theme="staunton"] .redball{
+  display:block; position:fixed; left:110px; bottom:100px; width:9px; height:9px; margin:0 0 -4.5px -4.5px;
+  border-radius:50%; z-index:2; pointer-events:none; opacity:.92; will-change:transform;
+  background:radial-gradient(circle at 34% 30%, #ffb3a6, #e0362a 48%, #7a100c 100%);
+  box-shadow:0 1px 3px rgba(0,0,0,.65), 0 0 7px rgba(224,54,42,.4);
+  animation:pong 52s linear infinite;
+}
+@keyframes pong{
+  0%{transform:translate(90px,-60px)}
+  3.33%{transform:translate(-24px,-140px)}
+  8.59%{transform:translate(-132px,52px)}
+  14.63%{transform:translate(119px,77px)}
+  20.37%{transform:translate(18px,-141px)}
+  22.82%{transform:translate(-25px,-48px)}
+  25.26%{transform:translate(-125px,-67px)}
+  27.52%{transform:translate(-54px,-5px)}
+  29.95%{transform:translate(-125px,67px)}
+  32.38%{transform:translate(-25px,48px)}
+  35.07%{transform:translate(47px,134px)}
+  37.56%{transform:translate(45px,30px)}
+  40.30%{transform:translate(136px,-39px)}
+  42.44%{transform:translate(48px,-25px)}
+  44.60%{transform:translate(108px,-93px)}
+  47.15%{transform:translate(8px,-53px)}
+  49.92%{transform:translate(-95px,-105px)}
+  52.15%{transform:translate(-48px,-25px)}
+  54.35%{transform:translate(-140px,-24px)}
+  60.47%{transform:translate(69px,124px)}
+  66.45%{transform:translate(66px,-126px)}
+  72.61%{transform:translate(-138px,32px)}
+  77.72%{transform:translate(50px,133px)}
+  83.85%{transform:translate(72px,-122px)}
+  89.21%{transform:translate(-136px,-39px)}
+  95.05%{transform:translate(31px,139px)}
+  100%{transform:translate(90px,-60px)}
+}
+/* 3. A folded hand lies face down: the card's back shows, a diamond lattice
+   in the cream the faces are printed in. The index stays, faint, because
+   the board still has to say what the card is. */
+:root[data-theme="staunton"] .bubble[data-state="idle"], :root[data-theme="staunton"] .bubble[data-state="unknown"]{
+  background-image:
+    repeating-linear-gradient(45deg, rgba(244,241,228,.05) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(-45deg, rgba(244,241,228,.05) 0 1px, transparent 1px 8px);
+}
+/* 4. The deal, the turn, the riffle. A card that arrives is dealt in from the
+   dealer's corner; a card whose state changed is turned over (a half turn and
+   back: the face is the same card, only its suit has changed); the wordmark
+   riffles the deck. Each is a transform on the tile alone. */
+:root[data-theme="staunton"] .bubble.dealt{animation:deal .6s cubic-bezier(.2,.8,.3,1) both}
+@keyframes deal{from{transform:translate(-80px,-56px) rotate(-10deg) scale(.9); opacity:0} 55%{opacity:1} to{transform:none; opacity:1}}
+:root[data-theme="staunton"] .bubble.turned{animation:turn .55s ease-in-out}
+@keyframes turn{0%{transform:perspective(700px) rotateY(0)} 50%{transform:perspective(700px) rotateY(88deg)} 100%{transform:perspective(700px) rotateY(0)}}
+:root[data-theme="staunton"] .board.shuffle .bubble{animation:riffle .5s ease-in-out both; animation-delay:calc(var(--i, 0) * 26ms)}
+@keyframes riffle{0%{transform:none} 35%{transform:translate(10px,-8px) rotate(3deg)} 70%{transform:translate(-6px,4px) rotate(-2deg)} 100%{transform:none}}
+:root[data-theme="staunton"] .brand b{cursor:pointer}
+:root[data-theme="staunton"] .bubble:hover{transform:translateY(-2px) rotate(-.5deg)}
+/* 5. Velvet. The pile and the nap are the cloth's own (so each felt's velvet
+   is cut from the same bolt), on a wine ground with the lamp catching the
+   rail's near edge -- a padded rail, which is what the rail of a card table
+   is. On the red cloths the rails go midnight blue instead, so they stay
+   rails and do not run into the table. */
+:root[data-theme="staunton"]{
+  --velvet:#4a0f1c; --velvet-lo:#2a0810;
+  /* the crush: a second, broader pile over the cloth's own, where the nap
+     has been pressed flat and catches the lamp */
+  --crush:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.02 .07' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0 .1 .6 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23c)' opacity='.13'/%3E%3C/svg%3E");
+}
+:root[data-theme="staunton"][data-felt="velvet"], :root[data-theme="staunton"][data-felt="burgundy"]{--velvet:#141c40; --velvet-lo:#0a0f26}
+:root[data-theme="staunton"] .rail{
+  background-color:var(--velvet);
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,.11), rgba(255,255,255,.03) 38%, transparent 68%, rgba(0,0,0,.30)),
+    var(--crush), var(--pile), var(--nap);
+  background-size:auto, 300px 300px, 360px 360px, 120px 120px;
+  border-right:1px solid rgba(0,0,0,.5); border-radius:6px 0 0 6px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045), inset -3px 0 5px -2px rgba(0,0,0,.45);
+}
+:root[data-theme="staunton"] .hrail{
+  background-color:var(--velvet);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.03) 38%, transparent 68%, rgba(0,0,0,.30)),
+    var(--crush), var(--pile), var(--nap);
+  background-size:auto, 300px 300px, 360px 360px, 120px 120px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045);
+}
+/* The velvet rope across a closed table: a sag of rope from post to post
+   along the top of the rail, with a brass ferrule at each end. The rope is
+   one path stretched to the rail's width; the ferrules are two fixed layers
+   so they never stretch with it. */
+:root[data-theme="staunton"] .lane.flat .hrail{
+  background-image:
+    linear-gradient(180deg, #e6c45c, #8c6a14),
+    linear-gradient(180deg, #e6c45c, #8c6a14),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 34' preserveAspectRatio='none'%3E%3Cpath d='M0 5 Q50 27 100 5' fill='none' stroke='%23160408' stroke-width='7' stroke-opacity='.5'/%3E%3Cpath d='M0 5 Q50 27 100 5' fill='none' stroke='%237d1c30' stroke-width='5'/%3E%3Cpath d='M0 4 Q50 25.5 100 4' fill='none' stroke='%23b8465e' stroke-width='1.6' stroke-opacity='.8'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.03) 38%, transparent 68%, rgba(0,0,0,.30)),
+    var(--crush), var(--pile), var(--nap);
+  background-position:9px 2px, right 9px top 2px, 14px 0, 0 0, 0 0, 0 0, 0 0;
+  background-size:6px 10px, 6px 10px, calc(100% - 28px) 100%, auto, 300px 300px, 360px 360px, 120px 120px;
+  background-repeat:no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat;
+}
+:root[data-theme="staunton"] .rail .rcount{box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--leaf)}
+/* 6. The stack. An agent's count on its rail is a stack of chips as tall as
+   the count: one, two, a few, a pile. */
+:root[data-theme="staunton"] .rail[data-n="2"] .rcount{
+  box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--leaf), 0 3px 0 rgba(1,8,5,.6), 0 4px 0 -1px var(--leaf);
+}
+:root[data-theme="staunton"] .rail[data-n="3"] .rcount, :root[data-theme="staunton"] .rail[data-n="4"] .rcount{
+  box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--leaf), 0 3px 0 rgba(1,8,5,.6), 0 4px 0 -1px var(--leaf), 0 5px 0 rgba(1,8,5,.6), 0 6px 0 -1px var(--leaf);
+}
+:root[data-theme="staunton"] .rail:not([data-n="1"]):not([data-n="2"]):not([data-n="3"]):not([data-n="4"]) .rcount{
+  box-shadow:inset 0 0 0 1px rgba(1,8,5,.45), 0 1px 0 rgba(1,8,5,.6), 0 2px 0 -1px var(--leaf), 0 3px 0 rgba(1,8,5,.6), 0 4px 0 -1px var(--leaf), 0 5px 0 rgba(1,8,5,.6), 0 6px 0 -1px var(--leaf), 0 7px 0 rgba(1,8,5,.6), 0 8px 0 -1px var(--leaf);
+}
+:root[data-theme="staunton"] .rail:not([data-n="1"]) .rcount{margin-bottom:6px}
+/* 7. The drawer and the sheet's bar, lined in the velvet, the suits still
+   pressed into it. */
+:root[data-theme="staunton"] .sheet .bar{
+  background-color:var(--velvet);
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,.09), rgba(255,255,255,.02) 40%, transparent 70%, rgba(0,0,0,.28)),
+    var(--crush), var(--pile), var(--nap);
+  background-size:auto, 300px 300px, 360px 360px, 120px 120px;
+}
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme="staunton"] .redball, :root[data-theme="staunton"] .bubble.dealt,
+  :root[data-theme="staunton"] .bubble.turned, :root[data-theme="staunton"] .board.shuffle .bubble{animation:none}
+}
 /* ==== PASS 7: HOTLINE MIAMI ====
    The wordmark was seventeen pixels of dim Phosphate, and the sun was a
    twelve-percent ghost behind the lanes. The things the game's title screen
@@ -5444,12 +5643,15 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    to say the tell was not there. Real ovals now, in from the walls, and
    they do the one thing portals do: when a session changes state, something
    goes in the blue one and comes out of the orange one. */
-/* 1. The portals: ovals set into the side walls, halfway up the room that
-   is left once the sheet has taken its share, with the rim glow and the
-   dark interior of the real thing. */
+/* 1. The portals: ovals set into the side walls, halfway up the screen,
+   with the rim glow and the dark interior of the real thing. Halfway up the
+   screen, not the room left over above the sheet: riding --taken pushed
+   them up over the CLAUDE rail at half height and over the wordmark at
+   full, and a portal on a wall does not move when furniture is put in
+   front of it. The sheet (z 8, outside .wrap) covers them as it rises. */
 :root[data-theme="aperture"] .wrap::before,
 :root[data-theme="aperture"] .wrap::after{
-  content:""; position:fixed; top:calc((100vh - var(--taken,0px)) / 2); transform:translateY(-50%);
+  content:""; position:fixed; top:50vh; transform:translateY(-50%);
   width:42px; height:150px; border-radius:50%; pointer-events:none; z-index:1; opacity:1;
   background:radial-gradient(ellipse at 50% 50%, #0b0f14 0 52%, var(--portal) 74%, transparent 76%);
   border:0;
@@ -5461,7 +5663,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    the blue portal, across the room in a shallow arc, squeezed again into
    the orange one. One shot per state change. */
 :root[data-theme="aperture"] .traveller{
-  position:fixed; left:33px; top:calc((100vh - var(--taken,0px)) / 2); width:14px; height:14px; margin:-7px 0 0 -7px;
+  position:fixed; left:33px; top:50vh; width:14px; height:14px; margin:-7px 0 0 -7px;
   border-radius:50%; background:var(--rib, var(--accent)); z-index:2; pointer-events:none;
   box-shadow:0 0 8px var(--rib, var(--accent));
   animation:portal-cross 1.15s cubic-bezier(.45,0,.55,1) forwards;
@@ -6379,10 +6581,18 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="lcars"] .ctl > button:hover, :root[data-theme="lcars"] button.ghost:hover{background:var(--lc-peach)}
 /* 1. THE TELL -- the elbow. A lane's rail is a column of the frame, bent at
-   the top into the row above, blocks of colour with black gaps between. */
+   the top into the row above, blocks of colour with black gaps between. The
+   column runs up through the bar (the black gap under the bar used to cut
+   it off, so the rail stopped short of the round corner and was clipped
+   by it), and the inside of the bend is a concave fillet, the way every
+   LCARS elbow turns. */
 :root[data-theme="lcars"] .lane{
-  background:#000; border:0; border-radius:34px 6px 6px 6px; overflow:hidden;
-  box-shadow:inset 0 8px 0 var(--lc-orange), inset 0 11px 0 #000;
+  border:0; border-radius:34px 6px 6px 6px; overflow:hidden; box-shadow:none;
+  background:
+    linear-gradient(var(--lc-orange), var(--lc-orange)) 0 0/40px 11px no-repeat,
+    radial-gradient(circle at 100% 100%, transparent 9.5px, var(--lc-orange) 10.2px) 40px 8px/10px 10px no-repeat,
+    linear-gradient(var(--lc-orange), var(--lc-orange)) 0 0/100% 8px no-repeat,
+    #000;
   padding-top:11px;
 }
 :root[data-theme="lcars"] .rail{
@@ -6391,7 +6601,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="lcars"] .rail .vlabel, :root[data-theme="lcars"] .rail .rcount{color:#000; font-family:var(--face-chrome); font-size:12px}
 :root[data-theme="lcars"] .rail svg{color:#000}
-:root[data-theme="lcars"] .lane.flat{border-radius:6px 6px 6px 6px; padding-top:0; box-shadow:none}
+:root[data-theme="lcars"] .lane.flat{border-radius:6px 6px 6px 6px; padding-top:0; box-shadow:none; background:#000}
 :root[data-theme="lcars"] .hrail{background:linear-gradient(90deg, var(--lc-lav) 0 32px, #000 32px 35px, #000 35px); color:var(--lc-peach)}
 :root[data-theme="lcars"] .hrail svg{color:#000; margin-left:2px}
 :root[data-theme="lcars"] .hrail .who{color:var(--lc-peach)} :root[data-theme="lcars"] .hrail .note{color:var(--lc-lav)}
@@ -6966,6 +7176,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     </div>
   </div>
   <div class="board" id="board"></div>
+  <i class="redball" aria-hidden="true"></i>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -7294,8 +7505,8 @@ const VOICE = {
   chequer:   {blocked:'stuck', waiting:'waiting', running:'speeding', idle:'idle', done:'act clear', unknown:'lost',
               blank:'no rings collected yet', quiet:'no one in this zone', offline:'GAME OVER'},
   /* team fortress 2 */
-  ochre:     {blocked:'pinned', waiting:'medic!', running:'capping', idle:'in spawn', done:'won', unknown:'spy?',
-              blank:'nothing in the loadout', quiet:'ceasefire'},
+  ochre:     {blocked:'pinned', waiting:'medic!', running:'capturing', idle:'in spawn', done:'won', unknown:'spy?',
+              blank:'nothing in the loadout', quiet:'ceasefire', empty:'waiting for players', offline:'CONNECTION LOST'},
   /* casino royale */
   staunton:  {blocked:'bust', waiting:'your bet', running:'in play', idle:'folded', done:'jackpot', unknown:'off table',
               blank:'no hands dealt yet', quiet:'the table is closed', empty:'place your bets'},
@@ -7995,7 +8206,7 @@ function boardMarkup(d){
         + '<span class="who">'+esc(SHORT[lane.key]||lane.label)+'</span>'
         + '<span class="note">'+esc(voice('quiet'))+'</span></div></div>';
     return '<div class="lane'+(weight < 4 ? ' short' : '')+'" style="flex:'+weight+' 1 0">'
-      + '<div class="rail">'+mark
+      + '<div class="rail" data-n="'+lane.count+'">'+mark
       + '<span class="rcount">'+lane.count+'</span>'
       + '<span class="vlabel">'+esc(SHORT[lane.key]||lane.label)+'</span></div>'
       + '<div class="projects">'+cells+'</div></div>';
@@ -8745,7 +8956,8 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
   const wanted = () => { try{ return localStorage.getItem(CUBE_KEY) !== 'off'; }catch(e){ return true; } };
   const on = () => root.dataset.theme === 'aperture' && !reducedMotion() && root.dataset.motion !== 'off' && wanted();
   const bottom = () => innerHeight - taken;
-  const portalY = () => bottom() / 2;
+  // the portals are set halfway up the wall; the sheet covers them as it rises
+  const portalY = () => innerHeight / 2;
   const measure = () => { taken = parseFloat(getComputedStyle(root).getPropertyValue('--taken')) || 0; };
   const flare = k => {
     const w = document.querySelector('.wrap'); if(!w) return;
@@ -8828,6 +9040,36 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
   // the sheet takes its share of the room; re-measure when it moves, not every frame
   setInterval(() => { if(cube) measure(); }, 1000);
   sync();
+})();
+
+/* ---- the deal, the turn, the riffle (casino) ---------------------------- */
+/* A card that arrives is dealt in; a card whose state changed is turned
+   over; the wordmark riffles the deck. Classes on the tiles, the stylesheet
+   moves them; a repaint that rebuilds a tile drops the class with it. */
+(function(){
+  const root = document.documentElement;
+  const on = () => root.dataset.theme === 'staunton' && !reducedMotion() && root.dataset.motion !== 'off';
+  const tileOf = id => board.querySelector('.bubble[data-id="'+CSS.escape(id)+'"]');
+  const once = (el, k) => { el.classList.add(k); el.addEventListener('animationend', () => el.classList.remove(k), {once:true}); };
+  document.addEventListener('fleet:paint', e => {
+    if(!on()) return;
+    const d = e.detail || {};
+    if(d.first) return;
+    (d.arrived || []).forEach(id => { const el = tileOf(id); if(el) once(el, 'dealt'); });
+  });
+  document.addEventListener('fleet:state', e => {
+    if(!on()) return;
+    const el = tileOf((e.detail || {}).id || ''); if(el) once(el, 'turned');
+  });
+  let riffleT = 0;
+  document.querySelector('.brand b')?.addEventListener('click', () => {
+    if(!on() || board.classList.contains('shuffle')) return;
+    const tiles = [...board.querySelectorAll('.bubble')];
+    tiles.forEach((el, i) => el.style.setProperty('--i', i));
+    board.classList.add('shuffle');
+    clearTimeout(riffleT);
+    riffleT = setTimeout(() => { board.classList.remove('shuffle'); tiles.forEach(el => el.style.removeProperty('--i')); }, 520 + tiles.length * 26);
+  });
 })();
 
 /* ---- the cloth (casino) ------------------------------------------------- */
@@ -9156,12 +9398,23 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
       },
       ARMS: ['running', 'idle', 'waiting', 'blocked', 'done', 'unknown'],
       LINES: {arrived: 'a marine enters', blocked: 'ouch', waiting: 'need a medkit', done: 'level clear', idle: 'idle', running: 'rip and tear'},
-      // the sprite as one box-shadow; the pupils first so they paint on top when they look aside
-      sprite(rows, dx){
+      // the sprite as one box-shadow; the pupils first so they paint on top
+      // when they look aside (dx) or up (dy). Shut, the eye is skin with a
+      // lid line where the pupils were.
+      sprite(rows, dx, dy, shut){
         const px = [], eyes = [];
         rows.forEach((r, y) => { for(let x = 0; x < r.length; x++){ const c = r[x]; if(c === '.') continue;
-          (c === 'P' ? eyes : px).push(((c === 'P' ? x + dx : x) * 3) + 'px ' + (y * 3) + 'px 0 0 ' + this.COL[c]); } });
+          if(shut && (c === 'E' || c === 'P')){ px.push((x * 3) + 'px ' + (y * 3) + 'px 0 0 ' + this.COL[y === 7 ? 'D' : 'S']); continue; }
+          (c === 'P' ? eyes : px).push(((c === 'P' ? x + dx : x) * 3) + 'px ' + ((c === 'P' ? y + dy : y) * 3) + 'px 0 0 ' + this.COL[c]); } });
         return eyes.concat(px).join(',');
+      },
+      // The face is drawn off a mood (from the readings) and a glance and a
+      // blink (from their own clock): only when something in that changes.
+      face(h){
+        const mood = h._mood || 'ok', dx = mood === 'ok' ? h._dx | 0 : 0, dy = mood === 'ok' ? h._dy | 0 : 0, shut = !!h._shut;
+        const key = mood + dx + dy + (shut ? 's' : '');
+        if(h._face === key) return;
+        h._face = key; h.querySelector('.face b').style.boxShadow = this.sprite(this.FACE[mood], dx, dy, shut);
       },
       hud(){
         const h = el('i', 'ghud bar');
@@ -9172,7 +9425,24 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
           + '<span class="armor"><b>—<small>%</small></b><em>armor <u>· pressure headroom</u></em></span>'
           + '<span class="keys"><i><span class="b" title="a session finished"></span><span class="y" title="a session waiting on you"></span><span class="r" title="a session stuck"></span></i><em>keys</em></span>'
           + '<span class="ammo"><i><span class="c1"></span><u>bull · claude</u><span class="c2"></span><u>shel · agy</u><span class="c3"></span><u>rckt · codex</u><span class="c4"></span><u>cell · all</u></i></span>';
-        h._look = 0; h._grin = 0; h._face = '';
+        h._grin = 0; h._face = ''; h._mood = 'ok'; h._dx = 0; h._dy = 0; h._shut = false;
+        // The marine looks about the way the game has him do it: a glance in
+        // a random direction, held a random while (mostly straight ahead,
+        // sometimes aside, now and then up), not a metronome. And he blinks,
+        // which the game never gave him -- every few seconds, twice sometimes.
+        let lookAt = 0, blinkAt = performance.now() + 2500, openAt = 0;
+        timers.push(setInterval(() => {
+          if(reducedMotion() || root.dataset.motion === 'off') return;
+          const t = performance.now();
+          if(t >= lookAt){
+            const r = Math.random();
+            h._dx = r < .42 ? 0 : r < .68 ? -1 : r < .94 ? 1 : 0; h._dy = r >= .94 ? -1 : 0;
+            lookAt = t + 500 + Math.random() * 2600;
+          }
+          if(!h._shut && t >= blinkAt){ h._shut = true; openAt = t + 130; blinkAt = t + (Math.random() < .18 ? 300 : 2200 + Math.random() * 5000); }
+          else if(h._shut && t >= openAt) h._shut = false;
+          this.face(h);
+        }, 100));
         return h;
       },
       paintHud(h, diff){
@@ -9189,13 +9459,11 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
         [['c1', per.claude], ['c2', per.antigravity], ['c3', per.codex], ['c4', total]].forEach(([k, n]) => {
           const s = h.querySelector('.ammo .' + k), v = n + '/' + total; if(s.textContent !== v) s.textContent = v;
         });
-        // the face
+        // the face: the mood is the readings'; the glance and the blink are its own
         if(diff && diff.changed && diff.changed.some(c => c.to === 'done' || (c.from === 'running' && c.to === 'idle'))) h._grin = Date.now() + 3500;
         const hurt = rootNum('--n-blocked') > 0 || rootNum('--g-pres') > 85;
-        const mood = hurt ? 'hurt' : Date.now() < h._grin ? 'grin' : 'ok';
-        if(mood === 'ok' && !diff) h._look = (h._look + 1) % 4;      // every reading, it looks about: centre, left, centre, right
-        const dx = mood === 'ok' ? [0, -1, 0, 1][h._look] : 0, key = mood + dx;
-        if(h._face !== key){ h._face = key; h.querySelector('.face b').style.boxShadow = this.sprite(this.FACE[mood], dx); }
+        h._mood = hurt ? 'hurt' : Date.now() < h._grin ? 'grin' : 'ok';
+        this.face(h);
       },
       make(){
         const n = el('div', 'band inter');
