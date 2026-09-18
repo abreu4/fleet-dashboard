@@ -30,6 +30,7 @@ import subprocess
 import time
 
 import metrics
+import usage
 
 HOME = os.path.expanduser("~")
 CLAUDE_DIR = os.path.join(HOME, ".claude")
@@ -561,7 +562,16 @@ def collect_claude(transcripts):
                             "label": "%s #%s" % (label, child.get("id", "")),
                             "href": child["href"]})
 
-        entry = transcripts.read(transcripts.path_for(session_id, cwd))
+        path = transcripts.path_for(session_id, cwd)
+        entry = transcripts.read(path)
+        # The job file stamps `tokens` once, when the job ends; while it runs
+        # the number there is whatever the last run left. The transcript has
+        # every request's usage as it lands, so the live count comes from
+        # there and the job's figure is only a fallback for a session whose
+        # transcript cannot be found.
+        use = usage.LEDGER.session(path, "claude")
+        if use:
+            tokens = use["out"]
         nxt = ""
         handle = agent.get("name") or "unnamed"
         name = handle
@@ -626,6 +636,7 @@ def collect_claude(transcripts):
             "next": clip(nxt or "", 220),
             "links": links,
             "tokens": tokens,
+            "usage": use,
             "turns": turns,
             "cwd": cwd,
             "sessionId": session_id,
@@ -1034,6 +1045,9 @@ def collect_codex(transcripts=None):
         brief = flatten(first or title or "")
         latest = flatten(preview or "")
         entry = transcripts.read(rollout)
+        use = usage.LEDGER.session(rollout, "codex") if rollout else None
+        if use:
+            tokens = use["out"]
         if entry:
             # SQLite's updated_at has lagged behind an actively appended
             # rollout in several Codex releases. The transcript is the better
@@ -1064,6 +1078,7 @@ def collect_codex(transcripts=None):
             "next": "",
             "links": [],
             "tokens": tokens or None,
+            "usage": use,
             "turns": entry.get("turns", 0) if entry else 0,
             "cwd": cwd or HOME,
             "sessionId": tid,

@@ -29,12 +29,17 @@ import collectors
 import metrics
 import notes
 import music
+import usage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # A rebuild costs about 90ms once the Claude roster is off the hot path
 # (see collectors.claude_agents), so the board can afford to move at walking
-# pace. HISTORY_SAMPLES is written as a duration: the trace covers a quarter
-# of an hour whatever the refresh is set to.
+# pace. The tok/min trace is not sampled here: it is drawn from the usage
+# ledger's minute buckets, which come from the transcripts' own timestamps
+# and so survive a restart of this process. The host trace is: cpu, gpu,
+# memory and the agents' footprint have no file to be read back from, so
+# they are kept as a ring of light samples. HISTORY_SAMPLES is written as a
+# duration: the ring covers a quarter of an hour whatever the refresh is.
 REFRESH_SECONDS = 2.0
 HISTORY_SAMPLES = max(60, int(900 / REFRESH_SECONDS))
 
@@ -83,8 +88,8 @@ class Snapshot:
         self._transcripts = collectors.Transcripts()
         self._codex_transcripts = collectors.CodexTranscripts()
         self._payload = None
+        self._history = []          # ring of host samples, for the host trace
         self._index = {}            # session id -> session, for /api/open
-        self._history = []          # ring of light samples, for the sparklines
         self._ready = threading.Event()
 
     def start(self):
@@ -105,7 +110,7 @@ class Snapshot:
     def get(self):
         if self._payload is None:
             self._ready.wait(timeout=25)
-        return self._payload or b'{"total":0,"tally":{},"lanes":[],"history":[]}'
+        return self._payload or b'{"total":0,"tally":{},"lanes":[]}'
 
     def session(self, session_id):
         return self._index.get(session_id)
@@ -115,6 +120,14 @@ class Snapshot:
 
     def _build(self):
         started = time.time()
+        # The ledger tails every transcript touched in the last thirty hours,
+        # roster or not, so the day's total counts sessions that have already
+        # finished and gone; the collectors then read their own session's
+        # numbers off the same records.
+        try:
+            usage.LEDGER.scan()
+        except Exception as exc:
+            print("usage ledger failed: %s: %s" % (type(exc).__name__, exc))
         sessions = []
         for collect in (
             lambda: collectors.collect_claude(self._transcripts),
@@ -149,6 +162,22 @@ class Snapshot:
                 if (now_ms - updated) / 1000 > STALE_RUNNING_SECONDS:
                     session["state"] = "idle"
                     session["stale"] = True
+
+        # What got finished today, counted before a flush can hide it: a done
+        # tile waved off the board still happened. The MRs are the links the
+        # jobs themselves reported, deduplicated by URL.
+        midnight = usage.local_midnight_ms()
+        try:
+            jobs = usage.finished(midnight)
+        except Exception:
+            jobs = {"count": 0, "mrs": 0, "ids": []}
+        # Sessions on the roster that ended today and are not jobs (a Codex
+        # thread, an interactive Claude session) add to the jobs' own count.
+        job_ids = set(jobs["ids"])
+        extra = [s for s in sessions
+                 if s.get("state") == "done" and (s.get("updated") or 0) >= midnight
+                 and not (s.get("jobId") in job_ids)]
+        done = {"today": jobs["count"] + len(extra), "mrs": jobs["mrs"], "since": midnight}
 
         # The chosen names go on last, over whatever the collectors read, so a
         # rename survives the collector changing its mind about a session.
@@ -196,15 +225,27 @@ class Snapshot:
             host = metrics.snapshot()
         except Exception:
             host = {}
+        try:
+            fleet_usage = usage.LEDGER.summary()
+        except Exception as exc:
+            print("usage summary failed: %s: %s" % (type(exc).__name__, exc))
+            fleet_usage = None
 
         self._history.append({
             "t": int(time.time() * 1000),
             "cpu": host.get("cpu", {}).get("pct", 0),
+            "gpu": host.get("gpu", {}).get("pct"),
             "mem": host.get("memory", {}).get("pct", 0),
             "rss": host.get("agentRssMb", 0),
-            "live": tally.get("running", 0) + tally.get("blocked", 0),
         })
         del self._history[:-HISTORY_SAMPLES]
+
+        # The fullest context on the board: the session nearest a compaction.
+        fullest = max((s for s in sessions if (s.get("usage") or {}).get("ctxMax")),
+                      key=lambda s: s["usage"]["ctxPct"], default=None)
+        context = ({"id": fullest["id"], "name": fullest["name"],
+                    "pct": fullest["usage"]["ctxPct"], "used": fullest["usage"]["ctx"],
+                    "max": fullest["usage"]["ctxMax"]} if fullest else None)
 
         return json.dumps({
             "generatedAt": int(time.time() * 1000),
@@ -212,6 +253,9 @@ class Snapshot:
             "total": len(sessions),
             "tally": tally,
             "tokens": tokens,
+            "usage": fleet_usage,
+            "context": context,
+            "done": done,
             "lanes": lanes,
             "host": host,
             "history": self._history,

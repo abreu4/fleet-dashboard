@@ -171,6 +171,21 @@
               overflow:hidden; font:clamp(10px,1.25vh,12px)/1.5 var(--mono);
               letter-spacing:.09em; color:var(--faint); text-transform:uppercase}
   .trace svg{flex:1; width:100%; min-height:0}
+  #trace-cap{cursor:pointer}
+  #trace-cap:hover{color:var(--dim)}
+  /* Optional panels. The essential three -- gauges, tok/min, readout -- are
+     what the MacBook fits; anything else is switched on in settings and laid
+     out only when the row has room for it beside them (fitPanels). Hidden
+     must win over whatever a world does to .trace's display. */
+  .hud > .opt[hidden]{display:none !important}
+  /* The top caption carries the provider swatches when the bars stack. */
+  .trace .cap .by span{margin-left:8px}
+  .gauge.link{cursor:pointer}
+  .gauge.link:hover .lab{color:var(--dim)}
+  /* A tile's context fill: quiet until it matters, then the warning colour,
+     then the blocked one -- the same two steps as the gauge up top. */
+  .bubble .foot .ctx[data-hot="1"]{color:var(--warn)}
+  .bubble .foot .ctx[data-hot="2"]{color:var(--blocked); font-weight:600}
 
   /* Six readings as a 3x2 of small stats, each figure centred over its own
      word. As a two-column list the words sat on the left edge and the numbers
@@ -190,6 +205,9 @@
   .readout dd{margin:0; text-align:center; color:var(--dim); white-space:nowrap; max-width:100%;
               overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
   .readout dd b{color:var(--ink); font-weight:600; font-size:1.1em}
+  /* The one cell that points at a session -- the longest wait -- opens it. */
+  .readout > div.link{cursor:pointer}
+  .readout > div.link:hover dt{color:var(--dim)}
 
   /* Dense, so a chip given the whole row (see fitHud) leaves no hole beside
      the one before it. */
@@ -323,6 +341,9 @@
   .settings input[type=range]{flex:1; min-width:0; accent-color:var(--accent); cursor:pointer}
   .settings .pct{flex:0 0 40px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
   .settings label.chk{display:flex; align-items:center; gap:7px; cursor:pointer}
+  .settings label.chk .nm{white-space:nowrap}
+  .settings label.chk .hint{text-transform:none; color:var(--faint)}
+  .settings .row > i.hint{margin-left:auto; font-style:normal; color:var(--warn); white-space:nowrap}
   .settings select{
     flex:1; min-width:0; padding:3px 6px; border-radius:5px;
     background:var(--cell); color:var(--ink); border:1px solid var(--edge);
@@ -6693,10 +6714,15 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
       <div class="tally" id="tally"></div>
     </div>
     <div class="gauges" id="gauges"></div>
-    <div class="trace">
-      <div class="cap"><span>trace 15m</span></div>
+    <div class="trace" id="tok">
+      <div class="cap"><span id="trace-cap" title="output tokens per minute, one bar a minute — click to change the span">tok/min · last 1h</span><span class="by" id="trace-by"></span></div>
       <svg id="trace" preserveAspectRatio="none" viewBox="0 0 1000 100"></svg>
       <div class="cap" id="trace-legend"></div>
+    </div>
+    <div class="trace opt" id="host" hidden>
+      <div class="cap"><span id="host-cap" title="the machine under the fleet: cpu and gpu busy, memory used, and the agents’ own footprint — one sample every two seconds over the last quarter hour">host · last 15m</span></div>
+      <svg id="host-trace" preserveAspectRatio="none" viewBox="0 0 1000 100"></svg>
+      <div class="cap" id="host-legend"></div>
     </div>
     <dl class="readout" id="readout"></dl>
     <div class="ctl">
@@ -7171,31 +7197,75 @@ function gauge(label, pct, value, colour){
    (the trace reads computed colours) -- for readings that mostly had not
    moved. Same markup, same numbers, and the arcs still snap to a reading
    (see .arc in the stylesheet for why they must). */
-const HUD = {arcs:null, vals:null, dds:null, cells:null, tally:'', vars:{}};
+const HUD = {arcs:null, vals:null, tiles:null, dds:null, cells:null, titles:null, tally:'', vars:{}};
+/* Output tokens, the way they read on a tile: 42k, 1.2M. Never "0k". */
+const fmtTok = n => n==null ? '—' : n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1)+'M'
+  : n >= 1e4 ? Math.round(n/1e3)+'k' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(Math.round(n));
+const hhmm = ms => ms ? new Date(ms).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false}) : '—';
+/* "2h10m", "48m", "under a minute": how long until a moment. */
+function until(ms){
+  const s = Math.max(0, (ms - Date.now())/1000);
+  if(s < 60) return 'under a minute';
+  const h = Math.floor(s/3600), m = Math.round(s%3600/60);
+  return h ? h+'h'+(m ? String(m).padStart(2,'0')+'m' : '') : m+'m';
+}
+
+/* The six readings, and why these six. The board is glanced at from a metre
+   away while something else has your attention, so it answers five questions
+   in order and nothing else: who needs me (the tally, top left), how hard is
+   the fleet working (tok/min), what is it costing me (the 5-hour window),
+   what is about to go wrong (context fill, memory pressure), and what got
+   done (today's score). Every reading names its window in its label or its
+   title -- "5m", "5h", "today" -- because a number without one is a guess.
+   The host's other vitals (cpu, disk, swap, uptime) are still measured and
+   still published as CSS variables for the worlds that draw them; they left
+   the HUD because none of them changes what you do next. Their trace is
+   back as an optional panel (see PANELS) for a screen with the room. */
 function drawHud(d){
   const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = h.power||{};
+  const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, ctx = d.context, done = d.done||{};
   const active = (d.tally.running||0)+(d.tally.blocked||0);
   const fleetPct = d.total ? 100*active/d.total : 0;
   const ramPct = mem.total ? 100*(h.agentRssMb*1048576)/mem.total : 0;
-  const ram = h.agentRssMb>=1024 ? (h.agentRssMb/1024).toFixed(1)+'G'
-                                 : Math.round(h.agentRssMb||0)+'M';   // 4 chars max
+  const ratePct = rate.peakPerMin ? 100*(rate.perMin||0)/rate.peakPerMin : 0;
+  const ctxPct = ctx ? ctx.pct : 0;
+  const donePct = (done.today||0) ? 100*done.today/(done.today+active) : 0;
+  const by = today.byProvider||{};
+  const split = Object.keys(by).length > 1
+    ? ' — ' + Object.entries(by).map(([k,v]) => k+' '+fmtTok(v)).join(', ') : '';
   const specs = [
-    ['cpu', cpu.pct, Math.round(cpu.pct??0)+'%', 'var(--accent)'],
-    ['mem', mem.pct, Math.round(mem.pct??0)+'%', (mem.pct>85?'var(--blocked)':'var(--idle)')],
-    ['ram', ramPct, ram, 'var(--warn)'],
-    ['live', fleetPct, active+'/'+d.total, 'var(--good)'],
-    ['pres', h.pressurePct, (h.pressurePct==null ? '\u2014' : h.pressurePct+'%'),
-            ((h.pressurePct??0) > 85 ? 'var(--blocked)'
-             : (h.pressurePct??0) > 70 ? 'var(--warn)' : 'var(--good)')],
-    ['disk', h.disk?.pct, Math.round(h.disk?.freeGb??0)+'G',
-            ((h.disk?.pct??0) > 90 ? 'var(--blocked)' : 'var(--idle)')],
+    ['live', fleetPct, active+'/'+d.total, 'var(--good)',
+      active+' of '+d.total+' sessions are working right now (running or blocked on you).'],
+    ['tok/min · 5m', ratePct, fmtTok(rate.perMin), 'var(--accent)',
+      'Output tokens the whole fleet is writing per minute, averaged over the last '+(rate.minutes||5)+' whole minutes.'
+      + (rate.peakPerMin ? '\nArc: against today’s busiest minute, '+fmtTok(rate.peakPerMin)+'/min at '+hhmm(rate.peakAt)+'.' : '')],
+    ['5h window', win ? win.elapsedPct : 0, win ? fmtTok(win.out) : '—', 'var(--warn)',
+      win ? 'Est. output tokens in the open 5-hour Claude usage window: opened '+hhmm(win.start)+', resets '+hhmm(win.end)+' ('+until(win.end)+' left).'
+          + '\nArc: how much of the window has elapsed.'
+          + '\nCounts Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here.'
+          : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
+    ['max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
+      (ctxPct > 85 ? 'var(--blocked)' : ctxPct > 70 ? 'var(--warn)' : 'var(--idle)'),
+      ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.\nClick to open it.'
+          : 'No session has reported its context size yet.'],
+    ['mem pressure', h.pressurePct, (h.pressurePct==null ? '—' : h.pressurePct+'%'),
+      ((h.pressurePct??0) > 85 ? 'var(--blocked)' : (h.pressurePct??0) > 70 ? 'var(--warn)' : 'var(--good)'),
+      'macOS memory pressure: the share of memory that cannot be reclaimed. Above 70% the machine starts swapping; above 85% agents stall.'
+      + '\nMemory '+Math.round(mem.pct||0)+'% used, agents hold '+(h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M')+' of it.'],
+    ['done today', donePct, String(done.today||0), 'var(--done)',
+      (done.today||0)+' session'+(done.today===1?'':'s')+' reached done since midnight'
+      + (done.mrs ? ', opening '+done.mrs+' merge request'+(done.mrs===1?'':'s') : '')+'.'
+      + '\nArc: finished against still going.'],
   ];
   const g = document.getElementById('gauges');
   if(!HUD.arcs || g.children.length !== specs.length){
-    g.innerHTML = specs.map(sp => gauge(...sp)).join('');
+    g.innerHTML = specs.map(sp => gauge(...sp.slice(0,4))).join('');
+    HUD.tiles = [...g.children]; HUD.titles = specs.map(() => '');
+    HUD.tiles.forEach((el, i) => { el.dataset.k = ['live','rate','window','context','pressure','done'][i]; });
     HUD.arcs = [...g.querySelectorAll('.arc')]; HUD.vals = [...g.querySelectorAll('.val')];
-  }else specs.forEach(([, pct, value, colour], i) => {
-    const arc = HUD.arcs[i], val = HUD.vals[i];
+  }
+  specs.forEach(([, pct, value, colour, title], i) => {
+    const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i];
     const dash = Math.max(0, Math.min(100, pct||0)).toFixed(1)+' 100';
     if(arc.getAttribute('stroke-dasharray') !== dash) arc.setAttribute('stroke-dasharray', dash);
     if(arc.getAttribute('stroke') !== colour){
@@ -7203,55 +7273,99 @@ function drawHud(d){
       arc.style.filter = 'drop-shadow(0 0 calc(var(--glow)*5px) '+colour+')';
     }
     if(val.textContent !== value) val.textContent = value;
+    if(HUD.titles[i] !== title){ HUD.titles[i] = title; el.title = title; }
   });
+  HUD.tiles[3].classList.toggle('link', !!ctx);
+  HUD.tiles[3].dataset.id = ctx ? ctx.id : '';
 
-  // The same six readings, as custom properties on the root, so a world can
-  // draw its own instruments off them in pure CSS -- Skyrim's three bars,
-  // Minecraft's hearts and XP, a Game Boy HP bar -- without a theme ever
-  // touching the script. Whole numbers, 0..100; counts are integers so a
-  // CSS counter can print them. Written only when they change: an inline
-  // property on the root invalidates everything that reads it.
+  // The readings as custom properties on the root, so a world can draw its
+  // own instruments off them in pure CSS -- Skyrim's three bars, Minecraft's
+  // hearts, a Game Boy HP bar -- without a theme ever touching the script.
+  // Whole numbers, 0..100; counts are integers so a CSS counter can print
+  // them. The host vitals stay published whether or not the HUD shows them.
+  // Written only when they change: an inline property on the root
+  // invalidates everything that reads it.
   const rs = document.documentElement.style, whole = v => String(Math.round(Math.max(0, Math.min(100, v||0))));
   const put = (k, v) => { if(HUD.vars[k] !== v){ HUD.vars[k] = v; rs.setProperty(k, v); } };
   put('--g-cpu',  whole(cpu.pct));
+  put('--g-gpu',  whole(h.gpu?.pct));
   put('--g-mem',  whole(mem.pct));
   put('--g-ram',  whole(ramPct));
   put('--g-live', whole(fleetPct));
   put('--g-pres', whole(h.pressurePct));
   put('--g-disk', whole(h.disk?.pct));
   put('--g-batt', whole(pw.pct != null ? pw.pct : 100));
+  put('--g-rate', whole(ratePct));          // tok/min against today's peak
+  put('--g-window', whole(win ? win.elapsedPct : 0));
+  put('--g-ctx',  whole(ctxPct));           // the fullest context
   put('--n-active', String(active|0));
   put('--n-total',  String(d.total|0));
+  put('--n-done-today', String(done.today|0));
+  put('--n-tok-min', String(rate.perMin|0));
   // ...and the tally itself, one integer per state, for the same reason.
   STATES.forEach(k => put('--n-' + k, String(d.tally[k]|0)));
   // The tiles repaint only when they change; an instrument drawn off these
   // numbers wants to follow them every second, like the gauges do.
   document.dispatchEvent(new CustomEvent('fleet:hud'));
 
-  const tk = d.tokens >= 1e6 ? (d.tokens/1e6).toFixed(1)+'M' : Math.round((d.tokens||0)/1000)+'k';
-  // On the wall it runs plugged in, so this line is usually a quiet "100% AC".
-  // It earns its row on the day the cable is out: unplugged and low turns red.
-  const onBat = pw.source !== 'AC';
-  const power = pw.pct==null ? '—'
-    : '<b'+(onBat && pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '
-      + (pw.charging ? 'chg' : onBat ? 'batt' : 'AC');
-  const cell = (k, v) => '<div><dt>'+k+'</dt><dd>'+v+'</dd></div>';
+  // The wall runs plugged in, so a power cell read "100% AC" all day. Now the
+  // battery only takes a cell on the day the cable is out; otherwise the slot
+  // holds swap, which is the number behind the pressure gauge on a 16G machine.
+  // A full disk outranks swap the same way.
+  const onBat = pw.source !== 'AC' && pw.pct != null;
+  const power = '<b'+(pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '+(pw.charging ? 'chg' : 'batt');
+  const cores = cpu.cores || 1, load = cpu.load1;
+  const gb = b => (b/1073741824).toFixed(b >= 10*1073741824 ? 0 : 1);
+  const swapG = (sw.usedMb||0)/1024;
+  const diskFull = (h.disk?.pct??0) > 90;
+  // The longest anything has been waiting on you. A blocked or waiting
+  // session's last write is the moment it asked, the same age its tile shows.
+  let oldest = null, waiting = 0;
+  d.lanes.forEach(l => l.projects.forEach(p => p.sessions.forEach(s2 => {
+    if(s2.state !== 'blocked' && s2.state !== 'waiting') return;
+    waiting++;
+    if(s2.updated && (!oldest || s2.updated < oldest.updated)) oldest = s2;
+  })));
+  const waitMin = oldest ? (Date.now() - oldest.updated)/60000 : 0;
+  const waitTone = waitMin >= 15 ? ' style="color:var(--blocked)"' : waitMin >= 5 ? ' style="color:var(--warn)"' : '';
+  const cell = (k, v, t, id) => '<div'+(id ? ' class="link" data-id="'+esc(id)+'"' : '')+' title="'+esc(t)+'"><dt>'+k+'</dt><dd>'+v+'</dd></div>';
   const cells = [
-    ['load',   '<b>'+(cpu.load1??'—')+'</b>'],
-    ['procs',  '<b>'+(h.agentProcs??'—')+'</b> '+(h.agentCpu??0)+'%'],
-    ['swap',   '<b>'+Math.round(sw.usedMb||0)+'</b>M'],
-    ['power',  power],
-    ['tokens', '<b>'+tk+'</b>'],
-    ['uptime', '<b>'+dur(h.uptime)+'</b>'],
+    ['load 1m', '<b'+(load > cores ? ' style="color:var(--warn)"' : '')+'>'+(load??'—')+'</b>/'+cores,
+      'Load average over the last minute: '+(load??'?')+' processes wanting a turn on '+cores+' cores. Under '+cores+' is comfortable; over it, they queue.'
+      + '\nCPU busy '+Math.round(cpu.pct||0)+'%'+(h.gpu?.pct != null ? ', GPU '+Math.round(h.gpu.pct)+'%' : '')+'.'],
+    ['agents', '<b>'+(h.agentProcs??'—')+'</b> '+Math.round(h.agentCpu??0)+'%',
+      (h.agentProcs??0)+' agent processes (claude, codex, agy) using '+Math.round(h.agentCpu??0)+'% CPU between them, out of '+(cores*100)+'% available.'],
+    onBat
+      ? ['power', power, 'On battery at '+pw.pct+'%'+(pw.charging ? ', charging' : '')+'. Swap '+swapG.toFixed(1)+'G.']
+      : diskFull
+      ? ['disk', '<b style="color:var(--blocked)">'+Math.round(h.disk.pct)+'%</b> full', 'The data volume is '+Math.round(h.disk.pct)+'% full, '+h.disk.freeGb+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.']
+      : ['swap', '<b>'+swapG.toFixed(1)+'</b>G',
+         'Swap in use. Memory '+(mem.total ? gb(mem.used)+' of '+gb(mem.total)+'G' : '?')+' used, agents hold '
+         + (h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M')+' of it; disk '+(h.disk?.freeGb??'?')+'G free.'],
+    ['waiting', oldest ? '<b'+waitTone+'>'+age(oldest.updated)+'</b>'+(waiting > 1 ? ' ×'+waiting : '') : '<b>—</b>',
+      oldest ? 'Longest a session has been waiting on you: '+oldest.name+', '+age(oldest.updated)+'. '
+             + (waiting === 1 ? 'It is the only one.' : waiting+' sessions are waiting.')+'\nClick to open it.'
+             : 'Nothing is waiting on you.',
+      oldest ? oldest.id : ''],
+    ['out today', '<b>'+fmtTok(today.out)+'</b>',
+      'Output tokens written by every agent since midnight'+(today.sessions ? ', across '+today.sessions+' sessions and '+num(today.requests)+' requests' : '')+'.'+split
+      + '\nInput was '+fmtTok((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0))+', '+(today.cacheRead && today.in!=null ? Math.round(100*today.cacheRead/((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0)))+'% of it from cache' : 'mostly cache')+'.'],
+    win ? ['resets', '<b>'+hhmm(win.end)+'</b>', 'The open 5-hour Claude window closes at '+hhmm(win.end)+', in '+until(win.end)+'. The first message after that opens the next one.']
+        : ['window', '<b>—</b> open', 'No 5-hour Claude window is open right now.'],
   ];
   const ro = document.getElementById('readout');
   let moved = false;
   if(!HUD.dds || ro.children.length !== cells.length){
-    ro.innerHTML = cells.map(([k, v]) => cell(k, v)).join('');
-    HUD.dds = [...ro.querySelectorAll('dd')]; HUD.cells = cells.map(c => c[1]);
+    ro.innerHTML = cells.map(([k, v, t, id]) => cell(k, v, t, id)).join('');
+    HUD.dds = [...ro.querySelectorAll('dd')]; HUD.cells = cells.map(c => c[0]+'|'+c[1]+'|'+c[2]+'|'+(c[3]||''));
     moved = true;
-  }else cells.forEach(([, v], i) => {
-    if(HUD.cells[i] !== v){ HUD.cells[i] = v; HUD.dds[i].innerHTML = v; moved = true; }
+  }else cells.forEach(([k, v, t, id], i) => {
+    const key = k+'|'+v+'|'+t+'|'+(id||'');
+    if(HUD.cells[i] !== key){
+      HUD.cells[i] = key; const box = HUD.dds[i].parentElement;
+      box.title = t; box.firstChild.textContent = k; HUD.dds[i].innerHTML = v; moved = true;
+      box.classList.toggle('link', !!id); box.dataset.id = id || '';
+    }
   });
 
   const tally = STATES.filter(s=>d.tally[s])
@@ -7261,8 +7375,19 @@ function drawHud(d){
   const tallyKey = tally + '|' + document.documentElement.dataset.theme;
   if(tallyKey !== HUD.tally){ HUD.tally = tallyKey; document.getElementById('tally').innerHTML = tally; moved = true; }
   if(moved) fitHud();
-  drawTrace(d.history||[]);
+  drawTrace(d.usage);
+  drawHost(d.history);
 }
+// The context gauge and the waiting cell are the readings that point at a
+// session: open it.
+document.getElementById('gauges').addEventListener('click', e => {
+  const tile = e.target.closest('.gauge'); if(!tile || !tile.dataset.id) return;
+  select(tile.dataset.id);
+});
+document.getElementById('readout').addEventListener('click', e => {
+  const box = e.target.closest('.readout > div'); if(!box || !box.dataset.id) return;
+  select(box.dataset.id);
+});
 /* A word that does not fit its box shrinks a little before it ellipsizes.
    The tally's chips and the readout's cells are fixed boxes, and a world's
    own words for the states ("mission complete", "aspiration met", "rip and
@@ -7282,7 +7407,7 @@ function shrinkToFit(el, floor){
   return false;
 }
 function fitHud(){
-  const els = [...document.querySelectorAll('.chip .lb, .readout dd, .readout dt')];
+  const els = [...document.querySelectorAll('.chip .lb, .readout dd, .readout dt, .gauge .lab')];
   els.forEach(el => { el.style.letterSpacing = ''; el.style.fontSize = ''; el.parentElement.classList.remove('wide'); });
   // One layout for the lot; only what overflows pays for the steps.
   els.filter(el => el.scrollWidth > el.clientWidth).forEach(el => {
@@ -7297,16 +7422,64 @@ function fitHud(){
     if(el.scrollWidth > el.clientWidth) shrinkToFit(el, 8.5);
   });
 }
-addEventListener('resize', fitHud);
+/* Optional HUD panels. The three the row always carries -- the gauges, the
+   tok/min trace and the readout -- are what the MacBook fits at 1440 wide,
+   and they are the essential set: nothing added since may squeeze them.
+   Everything else is a panel here, off unless switched on in settings (per
+   browser, so the wall's kiosk and a desk browser each keep their own
+   answer) and, even then, laid out only when the row has room for it with
+   the essentials still at least their flex basis wide -- the width they get
+   on the MacBook. In priority order: the first that does not fit is hidden,
+   and so is everything after it. A panel that is on but has no room says so
+   in settings rather than silently not appearing. */
+const PANELS = [
+  {key:'host', label:'host trace',
+   hint:'cpu and gpu busy, memory used and the agents\u2019 footprint, one sample every two seconds over the last quarter hour'},
+];
+const PANEL_KEY = k => 'fleet.hud.' + k;
+function panelOn(key){ try{ return localStorage.getItem(PANEL_KEY(key)) === 'on'; }catch(e){ return false; } }
+function fitPanels(){
+  const hud = document.querySelector('.hud');
+  const essentials = ['tok', 'readout'].map(id => document.getElementById(id));
+  const floors = essentials.map(el => parseFloat(getComputedStyle(el).flexBasis) || 0);
+  PANELS.forEach(p => { document.getElementById(p.key).hidden = true; p.shown = false; });
+  let room = true;
+  PANELS.forEach(p => {
+    if(!room || !panelOn(p.key)) return;
+    const el = document.getElementById(p.key);
+    el.hidden = false;
+    // A hidden essential (the readout below 1120 wide) has no width to keep;
+    // a panel the stylesheet itself hides at this width (every trace below
+    // 700) has none to claim.
+    const fits = el.offsetWidth > 0 && hud.scrollWidth <= hud.clientWidth
+      && essentials.every((e, i) => !e.offsetWidth || e.offsetWidth >= floors[i] - .5);
+    if(fits) p.shown = true;
+    else { el.hidden = true; room = false; }
+  });
+  settingsEl?.fillPanels?.();
+}
+function refitHud(){ fitPanels(); fitHud(); if(latest) drawHost(latest.history); }
+addEventListener('resize', refitHud);
 if(document.fonts && document.fonts.addEventListener)
-  document.fonts.addEventListener('loadingdone', fitHud);
+  document.fonts.addEventListener('loadingdone', refitHud);
+document.addEventListener('fleet:theme', refitHud);
 
-/* The trace's four colours come from computed style, and asking for computed
-   style right after the HUD has been touched forces a synchronous style pass
-   over the document. They only change with the theme or a tint, so they are
-   read once per (theme, tint) and kept; and the chart itself is only redrawn
-   when the history has a new sample in it or the colours moved. */
-const TRACE = {key:'', colours:null, stamp:''};
+/* The trace: output tokens per minute, one bar a minute, with the number of
+   sessions writing in that minute as a line over it. It used to plot cpu,
+   memory and the agents' RSS off a two-second ring -- readings that told you
+   the machine was fine and nothing about the work. This is the work: a
+   burst of bars is a wave of agents answering, a flat stretch is you
+   reading, and the last bar is always short because the minute is not over.
+   Three spans, cycled by clicking the caption; the choice is remembered.
+
+   The colours come from computed style, and asking for computed style right
+   after the HUD has been touched forces a synchronous style pass over the
+   document. They only change with the theme or a tint, so they are read once
+   per (theme, tint) and kept; the chart is only redrawn when a minute has
+   moved or the colours did. */
+const TRACE_SPANS = [15, 60, 360];
+const TRACE = {key:'', colours:null, stamp:'', span:60};
+try{ const s = +localStorage.getItem('fleet.traceSpan'); if(TRACE_SPANS.includes(s)) TRACE.span = s; }catch(e){}
 function traceColours(){
   const theme = document.documentElement.dataset.theme;
   const key = theme + '|' + JSON.stringify(tints()[theme] || {});
@@ -7314,30 +7487,117 @@ function traceColours(){
     const cs = getComputedStyle(document.documentElement);
     const pick = n2 => cs.getPropertyValue(n2).trim() || '#888';
     TRACE.key = key;
-    TRACE.colours = {cpu:pick('--accent'), mem:pick('--idle'), ram:pick('--warn'), grid:pick('--edge')};
+    TRACE.colours = {tok:pick('--accent'), live:pick('--good'), win:pick('--warn'), grid:pick('--edge'),
+                     idle:pick('--idle'), dim:pick('--dim')};
   }
   return TRACE.colours;
 }
-function drawTrace(hist){
-  const svg = document.getElementById('trace');
-  if(hist.length < 2){ svg.innerHTML=''; TRACE.stamp = ''; return; }
-  const {cpu:cCpu, mem:cMem, ram:cRam, grid} = traceColours();
-  const tail = hist[hist.length-1];
-  const stamp = TRACE.key + '|' + hist.length + '|' + (tail.t || 0) + '|' + (tail.cpu|0) + '|' + (tail.mem|0) + '|' + (tail.rss|0);
+const spanWord = m => m < 60 ? m+'m' : (m/60)+'h';
+function drawTrace(u){
+  const svg = document.getElementById('trace'), cap = document.getElementById('trace-cap');
+  const tr = (u||{}).trace;
+  if(!tr || !tr.out || tr.out.length < 2){
+    svg.innerHTML=''; TRACE.stamp = '';
+    document.getElementById('trace-legend').innerHTML = '<span>no usage yet</span>';
+    return;
+  }
+  const {tok:cTok, live:cLive, win:cWin, grid, idle:cIdle, dim:cDim} = traceColours();
+  const n = Math.min(TRACE.span, tr.out.length);
+  const out = tr.out.slice(-n), live = tr.sessions.slice(-n);
+  const from = tr.from + (tr.out.length - n) * tr.step;
+  // With more than one agent writing, each bar stacks by provider: Claude in
+  // the accent as always, the others in quieter inks. One writer, plain bars.
+  const inks = {claude:cTok, codex:cDim, antigravity:cIdle};
+  const by = tr.by ? Object.keys(tr.by).map(k => [k, tr.by[k].slice(-n), inks[k] || cIdle]) : null;
+  const stamp = TRACE.key+'|'+n+'|'+from+'|'+out[n-1]+'|'+out[n-2]+'|'+live[n-1]+'|'+((u.window||{}).start||0)
+              + '|' + (by ? by.map(([k, a]) => k+':'+a[n-1]+':'+a[n-2]).join() : '');
   if(stamp === TRACE.stamp) return;
   TRACE.stamp = stamp;
-  // A 250–470px chart cannot display hundreds of distinct x positions. Bound
-  // the SVG work so a long-running dashboard remains as cheap as a fresh one.
+  const W = 1000, H = 100, bw = W/n, gap = n > 90 ? 0 : Math.min(2.5, bw*0.22);
+  // The line is scaled to at least four sessions, so one agent starting
+  // and stopping is a low ripple rather than a wall.
+  const top = Math.max(...out, 1), most = Math.max(...live, 4);
+  const y = (v, t) => H - Math.min(1, v/t) * H * 0.92;
+  let rules = '';
+  for(const frac of [0.25, 0.5, 0.75]){
+    const yy = (H - frac*H*0.92).toFixed(1);
+    rules += '<line x1="0" y1="'+yy+'" x2="'+W+'" y2="'+yy+'" stroke="'+grid+'"'
+           + ' stroke-width="1" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"/>';
+  }
+  let bars = '';
+  const bar = (i, base, v, ink) => {
+    const hh = H - y(v, top);
+    return '<rect x="'+(i*bw+gap/2).toFixed(1)+'" y="'+(H-base-hh).toFixed(1)+'" width="'+Math.max(0.6, bw-gap).toFixed(1)
+         + '" height="'+hh.toFixed(1)+'" fill="'+ink+'" opacity="'+(i === n-1 ? '.35' : '.75')+'"/>';
+  };
+  out.forEach((v, i) => {
+    if(!v) return;
+    if(!by){ bars += bar(i, 0, v, cTok); return; }
+    let base = 0;
+    by.forEach(([, a, ink]) => {
+      if(!a[i]) return;
+      bars += bar(i, base, a[i], ink); base += H - y(a[i], top);
+    });
+  });
+  document.getElementById('trace-by').innerHTML = by
+    ? by.map(([k, , ink]) => '<span style="color:'+ink+'">\u25ae '+k+'</span>').join('') : '';
+  const pts = live.map((v, i) => ((i+.5)*bw).toFixed(1)+','+y(v, most).toFixed(1)).join(' ');
+  const line = '<polyline points="'+pts+'" fill="none" stroke="'+cLive+'" stroke-width="1.3" opacity=".7"'
+    + ' vector-effect="non-scaling-stroke" stroke-linejoin="round"/>';
+  // Where the open 5-hour window began, when that moment is on the chart.
+  let mark = '';
+  const ws = (u.window||{}).start;
+  if(ws && ws >= from){
+    const x = ((ws - from)/tr.step*bw).toFixed(1);
+    mark = '<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+H+'" stroke="'+cWin+'" stroke-width="1.2"'
+         + ' stroke-dasharray="4 4" vector-effect="non-scaling-stroke" opacity=".8"/>';
+  }
+  svg.innerHTML = rules + bars + line + mark;
+
+  const settled = out[n-2] || 0, writing = live[n-1] || live[n-2] || 0;
+  cap.textContent = 'tok/min · last '+spanWord(TRACE.span);
+  document.getElementById('trace-legend').innerHTML =
+      '<span style="color:'+cTok+'" title="the last whole minute">last min '+fmtTok(settled)+'</span>'
+    + '<span style="color:'+cTok+'" title="the busiest minute in view">peak '+fmtTok(top)+'</span>'
+    + '<span style="color:'+cLive+'">'+writing+' writing</span>';
+}
+document.getElementById('trace-cap').addEventListener('click', () => {
+  TRACE.span = TRACE_SPANS[(TRACE_SPANS.indexOf(TRACE.span)+1) % TRACE_SPANS.length];
+  try{ localStorage.setItem('fleet.traceSpan', String(TRACE.span)); }catch(e){}
+  TRACE.stamp = '';
+  if(latest) drawTrace(latest.usage);
+});
+
+/* The host trace: the machine under the fleet, off the server's ring of
+   two-second samples -- cpu busy as a filled area, gpu, memory and the
+   agents' resident set as lines, the last against its own high-water mark.
+   This is the chart the tok/min bars replaced; it is back as an optional
+   panel (see PANELS) because on a screen with the room it is still the
+   quickest way to see a build pegging the cores or a fleet eating the RAM.
+   Drawn only while the panel is laid out, and only when a sample landed. */
+const HOST = {stamp:''};
+function drawHost(hist){
+  const panel = document.getElementById('host');
+  if(panel.hidden) return;
+  const svg = document.getElementById('host-trace'), legend = document.getElementById('host-legend');
+  hist = hist || [];
+  if(hist.length < 2){ svg.innerHTML = ''; HOST.stamp = ''; legend.innerHTML = '<span>sampling\u2026</span>'; return; }
+  const {tok:cCpu, live:cGpu, idle:cMem, win:cRam, grid} = traceColours();
+  const tail = hist[hist.length-1];
+  const stamp = TRACE.key+'|'+hist.length+'|'+(tail.t||0)+'|'+(tail.cpu|0)+'|'+(tail.gpu|0)+'|'+(tail.mem|0)+'|'+(tail.rss|0);
+  if(stamp === HOST.stamp) return;
+  HOST.stamp = stamp;
+  // A 250-470px chart cannot show hundreds of distinct x positions; bound
+  // the SVG work so a long-running board stays as cheap as a fresh one.
   const limit = 140;
   if(hist.length > limit){
     const step = (hist.length - 1) / (limit - 1);
     hist = Array.from({length:limit}, (_, i) => hist[Math.round(i * step)]);
   }
   const W = 1000, H = 100, n = hist.length, x = i => i*W/(n-1);
-
-  const y = (v, top) => H - Math.min(1, v/Math.max(top,1)) * H * 0.92;
+  const y = (v, top) => H - Math.min(1, (v||0)/Math.max(top, 1)) * H * 0.92;
   const series = (get, top, colour, fill) => {
-    const pts = hist.map((s,i) => x(i).toFixed(1)+','+y(get(s), top).toFixed(1));
+    const pts = hist.map((s2, i) => x(i).toFixed(1)+','+y(get(s2), top).toFixed(1));
     const last = hist[hist.length-1];
     return (fill ? '<polygon points="0,'+H+' '+pts.join(' ')+' '+W+','+H+'" fill="'+colour+'" opacity=".11"/>' : '')
       + '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+colour+'" stroke-width="1.7"'
@@ -7345,7 +7605,8 @@ function drawTrace(hist){
       + '<circle cx="'+W+'" cy="'+y(get(last), top).toFixed(1)+'" r="2.4" fill="'+colour+'"'
       + ' vector-effect="non-scaling-stroke"/>';
   };
-  const maxRss = Math.max(...hist.map(s=>s.rss||0), 1);
+  const maxRss = Math.max(...hist.map(s2 => s2.rss||0), 1);
+  const hasGpu = hist.some(s2 => s2.gpu != null);
   let rules = '';
   for(const frac of [0.25, 0.5, 0.75]){
     const yy = (H - frac*H*0.92).toFixed(1);
@@ -7353,16 +7614,16 @@ function drawTrace(hist){
            + ' stroke-width="1" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"/>';
   }
   svg.innerHTML = rules
-    + series(s=>s.cpu, 100, cCpu, true)
-    + series(s=>s.mem, 100, cMem, false)
-    + series(s=>s.rss, maxRss, cRam, false);
-
-  const now = hist[hist.length-1];
-  const gb = (now.rss||0) >= 1024 ? ((now.rss||0)/1024).toFixed(1)+'G' : Math.round(now.rss||0)+'M';
-  document.getElementById('trace-legend').innerHTML =
-      '<span style="color:'+cCpu+'">cpu '+Math.round(now.cpu||0)+'%</span>'
-    + '<span style="color:'+cMem+'">mem '+Math.round(now.mem||0)+'%</span>'
-    + '<span style="color:'+cRam+'">ram '+gb+'</span>';
+    + series(s2 => s2.cpu, 100, cCpu, true)
+    + (hasGpu ? series(s2 => s2.gpu, 100, cGpu, false) : '')
+    + series(s2 => s2.mem, 100, cMem, false)
+    + series(s2 => s2.rss, maxRss, cRam, false);
+  const gb = (tail.rss||0) >= 1024 ? ((tail.rss||0)/1024).toFixed(1)+'G' : Math.round(tail.rss||0)+'M';
+  legend.innerHTML =
+      '<span style="color:'+cCpu+'">cpu '+Math.round(tail.cpu||0)+'%</span>'
+    + (hasGpu ? '<span style="color:'+cGpu+'">gpu '+Math.round(tail.gpu||0)+'%</span>' : '')
+    + '<span style="color:'+cMem+'">mem '+Math.round(tail.mem||0)+'%</span>'
+    + '<span style="color:'+cRam+'" title="resident memory of every agent process, against the most it reached in view">ram '+gb+'</span>';
 }
 
 /* ---------------- board ---------------- */
@@ -7451,9 +7712,9 @@ function afterPaint(diff){
    (cheap) and the DOM is only replaced when it differs, or when the theme,
    the collapse or the tile scale changed under it (fit() reads those). */
 let boardHTML = '', boardBones = '', boardKey = '';
-const AGES = new Map();                      // session id -> the age its tile shows
+const AGES = new Map(), TOKS = new Map(), CTXS = new Map();                      // session id -> the age its tile shows
 function paintBoard(d){
-  AGES.clear();
+  AGES.clear(); TOKS.clear(); CTXS.clear();
   const html = boardMarkup(d);
   const key = document.documentElement.dataset.theme + '|' + compact + '|' + TILE_SCALE;
   if(html === boardHTML && key === boardKey) return;
@@ -7461,12 +7722,22 @@ function paintBoard(d){
   // age in seconds, so on a busy board the markup differs every five seconds
   // by nothing but those digits. When that is all that moved, write the
   // digits into the tiles that are already there.
-  const bones = html.replace(/<span class="age">[^<]*<\/span>/g, '<span class="age"></span>');
+  const bones = html.replace(/<span class="age">[^<]*<\/span>/g, '<span class="age"></span>')
+                    .replace(/<span class="tok"[^>]*>[^<]*<\/span>/g, '<span class="tok"></span>')
+                    .replace(/<span class="ctx"[^>]*>[^<]*<\/span>/g, '<span class="ctx"></span>');
   if(key === boardKey && bones === boardBones){
     boardHTML = html;
     board.querySelectorAll('.bubble').forEach(el => {
-      const a = el.querySelector('.age'), v = AGES.get(el.dataset.id) || '';
+      const id = el.dataset.id;
+      const a = el.querySelector('.age'), v = AGES.get(id) || '';
       if(a && a.textContent !== v) a.textContent = v;
+      const t = el.querySelector('.tok'), tv = TOKS.get(id) || '';
+      if(t && t.textContent !== tv) t.textContent = tv;
+      const c = el.querySelector('.ctx'), cv = CTXS.get(id);
+      if(c && cv){
+        if(c.textContent !== cv.text) c.textContent = cv.text;
+        if(c.dataset.hot !== cv.hot) c.dataset.hot = cv.hot;
+      }
     });
     return;
   }
@@ -7530,7 +7801,18 @@ function tile(s){
   // of replacing the board (see there).
   const when = s.updated ? age(s.updated) : '';
   if(when) AGES.set(s.id, when);
+  // What the session has written and how full its context is move with
+  // every request, so they are written into the tile the way the age is
+  // (see paintBoard) rather than costing the board a repaint each time.
+  const u = s.usage || {};
+  const tok = s.tokens ? fmtTok(s.tokens) : '';
+  const ctxPct = u.ctxMax ? Math.round(u.ctxPct) : null;
+  const hot = ctxPct == null ? '' : ctxPct >= 85 ? '2' : ctxPct >= 70 ? '1' : '0';
+  if(tok) TOKS.set(s.id, tok);
+  if(ctxPct != null) CTXS.set(s.id, {text: 'ctx '+ctxPct+'%', hot});
   const rest = [when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
+                tok ? '<span class="tok" title="output tokens this session">'+tok+'</span>' : '',
+                ctxPct != null ? '<span class="ctx" data-hot="'+hot+'" title="context in use: '+fmtTok(u.ctx)+' of '+fmtTok(u.ctxMax)+'">ctx '+ctxPct+'%</span>' : '',
                 where ? '<span>'+esc(shortPlace(where))+'</span>' : ''].filter(Boolean).join('');
   // A block that has sat unanswered escalates: a little louder after eight
   // minutes, an outline after thirty. Amplitude and area, never rate.
@@ -7687,8 +7969,8 @@ function find(id){
       for(const s of p.sessions) if(s.id === id) return s;
   return null;
 }
-function stat(k, v){
-  return '<div class="stat"><div class="k">'+k+'</div><div class="v" title="'+esc(String(v))+'">'
+function stat(k, v, title){
+  return '<div class="stat"><div class="k">'+k+'</div><div class="v" title="'+esc(title || String(v))+'">'
     + esc(String(v))+'</div></div>';
 }
 
@@ -7716,13 +7998,25 @@ function select(id){
   document.getElementById('p-sub').textContent =
     [s.provider, handle, s.project, s.place, s.kind].filter(Boolean).join(' · ');
 
+  const u = s.usage || {};
+  const inAll = (u.in||0) + (u.cacheRead||0) + (u.cacheWrite||0);
+  const cached = inAll ? Math.round(100*(u.cacheRead||0)/inAll) : 0;
+  // "opus · xhigh": the family and the effort are what you compare across
+  // tiles; the exact id (version, 1M marker) is in the hover.
+  const family = (u.model || '').replace(/\[.*$/, '').replace(/^claude-/, '').split('-')[0];
+  const model = family ? family + (u.effort ? ' \u00b7 ' + u.effort : '') : '';
   document.getElementById('p-stats').innerHTML =
       stat('state', voice(s.state))
     + stat('up', s.started ? age(s.started) : '—')
     + stat('quiet', s.updated ? age(s.updated) : '—')
     + stat('turns', s.turns ? num(s.turns) : '—')
-    + stat('tokens', s.tokens ? (s.tokens>=1e6 ? (s.tokens/1e6).toFixed(1)+'M'
-                               : Math.round(s.tokens/1000)+'k') : '—')
+    + stat('written', s.tokens ? fmtTok(s.tokens) : '—',
+           s.tokens ? num(s.tokens)+' output tokens this session'+(u.requests ? ', over '+num(u.requests)+' requests' : '') : 'no usage recorded')
+    + stat('read', inAll ? fmtTok(inAll) : '—',
+           inAll ? num(inAll)+' input tokens, '+cached+'% of them from cache' : 'no usage recorded')
+    + stat('context', u.ctxMax ? Math.round(u.ctxPct)+'%' : '—',
+           u.ctxMax ? num(u.ctx)+' of '+num(u.ctxMax)+' tokens in the context right now' : 'this agent does not report its context')
+    + stat('model', model || '—', u.model ? u.model + (u.effort ? ', effort ' + u.effort : '') : '')
     + stat('where', (s.place||'').replace(/^worktree: /,'') || s.project || '—');
 
   const targets = (latest && latest.targets) || {};
@@ -8009,7 +8303,7 @@ function setTheme(name){
     applyTint(name);
     themePicker.value = name;
     try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
-    if(latest) drawTrace(latest.history || []);   // the trace is drawn, not styled
+    if(latest) drawTrace(latest.usage);   // the trace is drawn, not styled
     if(latest){ boardSig = ''; render(latest); }  // marks and voice are per-theme too
     if(moved && retintTerms) retintTerms();       // open shells follow the theme
     if(moved) document.dispatchEvent(new CustomEvent('fleet:theme', {detail:{theme:name}}));
@@ -9482,6 +9776,9 @@ function openSettings(){
       +   '<div class="picks" data-k="picks"></div></section>'
       + '<section><h3>tiles <span class="hint">how large the board draws them</span></h3>'
       +   '<div class="row"><span>scale</span><input type="range" min="100" max="200" step="5" data-k="scale"><b class="pct" data-k="scale-pct"></b></div></section>'
+      + '<section><h3>metrics <span class="hint">more panels on the HUD, in this browser only \u2014 each is drawn when the row has room for it beside the gauges, the tok/min trace and the readout, and folds away when it has not</span></h3>'
+      +   PANELS.map(p => '<div class="row"><label class="chk"><input type="checkbox" data-k="panel-'+p.key+'"> <span class="nm">'+esc(p.label)+'</span> <span class="hint">\u2014 '+esc(p.hint)+'</span></label><i class="hint" data-k="panel-'+p.key+'-note"></i></div>').join('')
+      + '</section>'
       + '<section data-k="felt-sec" hidden><h3>table <span class="hint">the cloth on the casino table \u2014 the outside bets printed on a closed rail lay it too</span></h3>'
       +   '<div class="picks" data-k="felt"></div></section>'
       + '<section><h3>terminal <span class="hint">the face the sheet\u2019s shells use \u2014 applies to open ones as you change it</span></h3>'
@@ -9524,6 +9821,19 @@ function openSettings(){
       try{ localStorage.setItem(SCALE_KEY, TILE_SCALE); }catch(e){}
       fit();
     };
+    // metrics: the optional HUD panels
+    PANELS.forEach(p => {
+      q('panel-'+p.key).onchange = () => {
+        try{ localStorage.setItem(PANEL_KEY(p.key), q('panel-'+p.key).checked ? 'on' : 'off'); }catch(e){}
+        refitHud();
+      };
+    });
+    // ...and, beside each, whether the row had room for it at this width
+    const fillPanels = () => PANELS.forEach(p => {
+      q('panel-'+p.key).checked = panelOn(p.key);
+      q('panel-'+p.key+'-note').textContent = panelOn(p.key) && !p.shown ? 'no room at this width' : '';
+    });
+    settingsEl.fillPanels = fillPanels;
     // terminal face
     q('tf-face').innerHTML = Object.keys(TERM_FACES).map(k =>
       '<option value="'+k+'">'+esc(TERM_FACES[k].label)+'</option>').join('');
@@ -9584,6 +9894,7 @@ function fillSettings(){
     : '<span class="none">nothing counted yet \u2014 picks from the menu land here</span>';
   q('scale').value = Math.round(TILE_SCALE * 100);
   q('scale-pct').textContent = Math.round(TILE_SCALE * 100) + '%';
+  settingsEl.fillPanels();
   const tf = termFont();
   q('tf-face').value = tf.face; q('tf-weight').value = String(tf.weight);
   q('tf-size').value = tf.size; q('tf-size-pct').textContent = tf.size + 'px';

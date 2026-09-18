@@ -172,6 +172,22 @@ def pressure():
     return _cached("pressure", 15, read)
 
 
+def gpu():
+    """GPU busy share, off the accelerator's own counters.
+
+    Apple Silicon publishes "Device Utilization %" in the IOAccelerator
+    registry entry, readable by anyone; no `powermetrics`, no root. One
+    `ioreg` costs about 25ms. None when the machine has nothing that
+    answers (a VM, an unfamiliar GPU), and the trace leaves that line out.
+    """
+    def read():
+        raw = _sh("ioreg", "-r", "-d", "1", "-c", "IOAccelerator",
+                  "-k", "PerformanceStatistics")
+        match = re.search(r'"Device Utilization %"=(\d+)', raw)
+        return {"pct": int(match.group(1))} if match else {"pct": None}
+    return _cached("gpu", 1.0, read)
+
+
 _AGENT_PATTERNS = (
     ("claude", re.compile(r"(^|/)claude(\s|$)|/share/claude/versions/|claude bg-")),
     ("codex", re.compile(r"/codex(\s|$)|(^|/)codex\s")),
@@ -229,6 +245,7 @@ def snapshot():
     procs = processes()
     return {
         "cpu": cpu(),
+        "gpu": gpu(),
         "memory": memory(),
         "swap": swap(),
         "disk": disk(),
