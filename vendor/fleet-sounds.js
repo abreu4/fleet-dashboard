@@ -456,24 +456,17 @@
    * sounds tap / tile / switch / alert / done as layer arrays. */
 
   var PACKS = {
-    /* Mission Control (Apollo): the Quindar tones -- the 2525 Hz beep that
-     * opened every CAPCOM transmission and the 2475 Hz one that closed it --
-     * are the taps; alert is the caution-and-warning warble, done is
-     * RECOVERY's three falling notes between a Quindar pair. Bone dry: this
-     * is a headset, not a room. `poll` and `nogo` are the room's own cues,
-     * played by the poll only for a listener who turned the clicks on. */
-    houston: {
-      drive: { type: 'soft', k: 1.2 },
-      tap:    [S('sine', 2525, { a: 0.002, d: 0.055, g: 0.16, hard: true }), click({ hp: 3200, d: 0.004, g: 0.12 })],
-      tile:   [S('sine', 2525, { a: 0.002, d: 0.08, g: 0.18, hard: true }), at(0.13, S('sine', 2475, { a: 0.002, d: 0.08, g: 0.15, hard: true }))],
-      switch: [S('sine', 2525, { a: 0.002, d: 0.12, g: 0.18, hard: true }), at(0.2, S('sine', 2475, { a: 0.002, d: 0.12, g: 0.15, hard: true })), at(0.2, thump({ g: 0.3 }))],
-      poll:   [S('sine', 2525, { a: 0.002, d: 0.04, g: 0.1, hard: true })],
-      nogo:   seq([1000, 1500, 1000, 1500], 0.09, function (f) { return S('square', f, { a: 0.002, d: 0.08, g: 0.1, hard: true, lp: 3200 }); }),
-      alert:  seq([1000, 1500, 1000, 1500], 0.09, function (f) { return S('square', f, { a: 0.002, d: 0.08, g: 0.14, hard: true, lp: 3200 }); })
-              .concat([at(0.4, S('sine', 2475, { a: 0.002, d: 0.08, g: 0.14, hard: true }))]),
-      done:   [S('sine', 2525, { a: 0.002, d: 0.07, g: 0.16, hard: true })]
-              .concat(seq([880, 659.3, 440], 0.11, function (f) { return at(0.1, S('sine', f, { a: 0.003, d: 0.1, g: 0.2, hard: true })); }))
-              .concat([at(0.5, S('sine', 2475, { a: 0.002, d: 0.07, g: 0.14, hard: true }))])
+    /* The intranet: the PC speaker. Every tap is the same dull click, a tile
+     * is the system beep, switching is the beep twice, alert is the error
+     * beep -- one flat square wave, no room, no ring -- and done is the beep
+     * with a second one a tone up, which is as festive as it gets. */
+    intranet: {
+      drive: { type: 'soft', k: 1.1 },
+      tap:    [click({ hp: 2200, d: 0.008, g: 0.35 }), S('square', 1000, { a: 0.001, d: 0.02, g: 0.06, hard: true, lp: 3000 })],
+      tile:   [S('square', 800, { a: 0.001, d: 0.09, g: 0.12, hard: true, lp: 2400 })],
+      switch: [S('square', 800, { a: 0.001, d: 0.06, g: 0.12, hard: true, lp: 2400 }), at(0.1, S('square', 800, { a: 0.001, d: 0.06, g: 0.12, hard: true, lp: 2400 }))],
+      alert:  [S('square', 440, { a: 0.001, d: 0.28, g: 0.16, hard: true, lp: 2000 })],
+      done:   [S('square', 800, { a: 0.001, d: 0.09, g: 0.12, hard: true, lp: 2400 }), at(0.13, S('square', 1000, { a: 0.001, d: 0.14, g: 0.12, hard: true, lp: 2400 }))]
     },
     /* The farm (Stardew Valley): a wooden marimba for the taps, a villager's
      * "hey!" -- two plucked notes -- for alert, and the harvest chime, a

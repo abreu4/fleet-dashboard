@@ -31,7 +31,7 @@ by a model on demand.
   responses, the files it read above, the files it changed below, your prompts
   as rings. Lazy — read only when you open it.
 - **26 themes** — a plain console, paper, neutral… and then Portal, Skyrim,
-  Doom, LCARS, Severance, Apollo Mission Control and more, each an instrument
+  Doom, LCARS, Severance, a corporate intranet and more, each an instrument
   panel over the same numbers.
 
   ![The same board as LCARS: the status line along the foot carries the stardate, warp (cpu), shields (memory) and life support (pressure)](docs/img/board-lcars.png)
@@ -72,7 +72,7 @@ board, or let it detach itself (it does, when it notices).
 | `⌘T` · `⌘W` · `⌘[` `⌘]` | new shell · close tab · cycle tabs |
 | click a tile | the drawer: brief, next step, tokens, model, open in iTerm / Terminal / VS Code |
 | click a project header | minimise it |
-| `?theme=lcars` · `?collapse=1` · `#<session-id>` | one-load overrides and deep links (theme keys are the codenames in `ui.html`: `console`, `aperture`, `e1m1`, `houston`…) |
+| `?theme=lcars` · `?collapse=1` · `#<session-id>` | one-load overrides and deep links (theme keys are the codenames in `ui.html`: `console`, `aperture`, `e1m1`, `intranet`…) |
 
 Two small helpers for the sessions themselves:
 

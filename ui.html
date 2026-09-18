@@ -115,7 +115,7 @@
   .wrap{position:relative; z-index:1; height:calc(100% - var(--taken,0px) - var(--hud-inset,0px));
        display:flex; flex-direction:column; transition:height .12s ease}
   /* A world with an instrument that stays on (Skyrim's bars, Minecraft's
-     hearts, Apollo's FLIGHT lamp) sets --hud-inset to its height, and the
+     hearts, the intranet's status bar) sets --hud-inset to its height, and the
      board ends above it instead of running on under it. */
 
   /* ===================== HUD ===================== */
@@ -704,8 +704,14 @@
     justify-content:center; font-size:13px; line-height:1;
   }
   .player .screen{width:200px; height:200px; flex:none; background:#000;
-                  border-right:1px solid var(--edge)}
+                  border-right:1px solid var(--edge); position:relative}
   .player .screen iframe{width:200px; height:200px; border:0; display:block}
+  /* The sleeve. The song is the point, so the screen shows the cover art
+     over the player rather than the video (or its "unavailable" card). */
+  .player .screen .art{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none}
+  .player .screen .art[hidden]{display:none}
+  /* The scout's player: real, off screen, never played (see scoutQueue). */
+  #ytscout{position:fixed; left:-40px; top:-40px; width:1px; height:1px; opacity:0; pointer-events:none}
   .player .side{flex:1; min-width:0; display:flex; flex-direction:column; padding:10px 11px}
   .player .np{font:600 13px/1.35 var(--mono); color:var(--ink);
               display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
@@ -3715,15 +3721,38 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="staunton"] .lane::after{display:none}
 :root[data-theme="staunton"] .project{background:color-mix(in srgb, var(--cell) 42%, transparent)}
-/* A session is a card dealt onto the cloth: a plain face, a printed hairline
-   a few pixels in from the edge, its suit in the corner where a card carries
-   its index (see the pips, below), and a shadow onto the pile. */
+/* A session is a card dealt onto the cloth: a real one, cream stock with a
+   faint linen, a printed frame a few pixels in from the edge, its index in
+   the corners (see the pips, below), and a shadow onto the pile. The deck is
+   printed in one ink per suit, --pip: the state's hue, deep enough to print
+   on cream (measured on #f4f1e4: hearts 4.6:1, diamonds 4.2:1, spades 5.4:1,
+   clubs 4.4:1; the folded suits 5:1 and 5.6:1). */
 :root[data-theme="staunton"] .bubble{
-  background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 1px, transparent 1px 2px);
-  box-shadow:inset 0 1px 0 rgba(244,241,228,.09), inset 0 -1px 0 rgba(1,8,5,.35),
-             0 2px 6px -1px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.03);
+  --pip:#5c6660; background-color:#f4f1e4; border-color:#d8d2bd;
+  background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.018) 0 1px, transparent 1px 2px);
+  box-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 rgba(1,8,5,.12), 0 2px 6px -1px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.03);
 }
-:root[data-theme="staunton"] .bubble:not([data-stale="2"]){outline:1px solid rgba(234,179,8,.13); outline-offset:-4px}
+:root[data-theme="staunton"] .bubble[data-state="running"]{--pip:#137a48}
+:root[data-theme="staunton"] .bubble[data-state="done"]{--pip:#96660a}
+:root[data-theme="staunton"] .bubble[data-state="blocked"]{--pip:#b3261e}
+:root[data-theme="staunton"] .bubble[data-state="waiting"]{--pip:#a84f16}
+:root[data-theme="staunton"] .bubble[data-state="idle"]{--pip:#4a6a80}
+:root[data-theme="staunton"] .bubble:not([data-stale="2"]){outline:1px solid color-mix(in srgb, var(--pip) 40%, transparent); outline-offset:-4px}
+/* Ink on cream: the tokens are for the dark table, so the face names its own. */
+:root[data-theme="staunton"] .bubble .nm, :root[data-theme="staunton"] .bubble .gist.said, :root[data-theme="staunton"] .bubble .gist.said::before{color:#1b1a16}
+:root[data-theme="staunton"] .bubble .gist{color:#3d3a32}
+:root[data-theme="staunton"] .bubble .gist.none{color:#8a8578}
+:root[data-theme="staunton"] .bubble .foot{color:#6b675c}
+:root[data-theme="staunton"] .bubble .foot .st{color:var(--pip); font-weight:700}
+:root[data-theme="staunton"] .bubble .foot .dot{background:var(--pip)}
+:root[data-theme="staunton"] .bubble .foot .ctx[data-hot="1"]{color:#96660a}
+:root[data-theme="staunton"] .bubble .foot .ctx[data-hot="2"]{color:#b3261e}
+:root[data-theme="staunton"] .bubble .x{color:#8a8578}
+:root[data-theme="staunton"] .bubble[data-state="idle"] .nm{color:#5a574d}
+:root[data-theme="staunton"] .bubble[data-state="idle"] .gist{color:#7a766a}
+:root[data-theme="staunton"] .bubble[data-state="idle"]:hover .nm, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .nm{color:#1b1a16}
+:root[data-theme="staunton"] .bubble[data-state="idle"]:hover .gist, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .gist{color:#3d3a32}
+:root[data-theme="staunton"] .bubble[data-state="idle"]:hover, :root[data-theme="staunton"] .bubble[data-state="idle"].sel{background-color:#fbf9f0}
 :root[data-theme="staunton"] .bubble:hover{
   box-shadow:inset 0 1px 0 rgba(244,241,228,.14),
              0 0 0 1px rgba(234,179,8,.55),
@@ -5371,24 +5400,20 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .bubble[data-state="done"]{--suit:"\2666"}
 :root[data-theme="staunton"] .bubble[data-state="waiting"]{--suit:"\2663"}
 :root[data-theme="staunton"] .bubble::after{
-  content:counter(hand, rank) var(--suit); position:absolute; top:5px; right:8px; z-index:1; pointer-events:none;
-  font:600 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; color:var(--rib); opacity:.8; transition:opacity .12s;
+  content:counter(hand, rank) var(--suit); position:absolute; top:6px; left:9px; z-index:1; pointer-events:none;
+  font:700 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; color:var(--pip);
 }
 :root[data-theme="staunton"] .bubble .foot{padding-right:26px}
 :root[data-theme="staunton"] .bubble .foot::before{
   content:counter(hand, rank) var(--suit); position:absolute; right:0; top:50%; transform:translateY(-50%) rotate(180deg);
-  font:600 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; text-transform:none; color:var(--rib); opacity:.8; pointer-events:none;
+  font:700 11px/1 var(--mono); font-variant-emoji:text; letter-spacing:.02em; text-transform:none; color:var(--pip); pointer-events:none;
 }
-:root[data-theme="staunton"] .bubble[data-state="idle"]::after,
-:root[data-theme="staunton"] .bubble[data-state="unknown"]::after,
-:root[data-theme="staunton"] .bubble[data-state="idle"] .foot::before,
-:root[data-theme="staunton"] .bubble[data-state="unknown"] .foot::before{opacity:.32}
-:root[data-theme="staunton"] .bubble:hover::after, :root[data-theme="staunton"] .bubble.sel::after{opacity:0}
 /* the far index gives way to the dealer button on the card in hand, and to
    the one-line tiles of a collapsed board */
 :root[data-theme="staunton"] .bubble.sel .foot::before, :root[data-theme="staunton"] .board.compact .bubble .foot::before{display:none}
 :root[data-theme="staunton"] .bubble.sel .foot, :root[data-theme="staunton"] .board.compact .bubble .foot{padding-right:0}
-:root[data-theme="staunton"] .bubble .nm{padding-right:26px}
+:root[data-theme="staunton"] .bubble{padding-left:9px}
+:root[data-theme="staunton"] .bubble .nm{padding-left:25px}
 :root[data-theme="staunton"] .bubble.sel .foot::after{
   content:"D"; margin-left:auto; flex:none; width:14px; height:14px; border-radius:50%;
   display:inline-flex; align-items:center; justify-content:center;
@@ -5481,22 +5506,56 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   95.05%{transform:translate(31px,139px)}
   100%{transform:translate(90px,-60px)}
 }
-/* 3. A folded hand lies face down: the card's back shows, a diamond lattice
-   in the cream the faces are printed in. The index stays, faint, because
-   the board still has to say what the card is. */
-:root[data-theme="staunton"] .bubble[data-state="idle"], :root[data-theme="staunton"] .bubble[data-state="unknown"]{
-  background-image:
-    repeating-linear-gradient(45deg, rgba(244,241,228,.05) 0 1px, transparent 1px 8px),
-    repeating-linear-gradient(-45deg, rgba(244,241,228,.05) 0 1px, transparent 1px 8px);
+/* 3. The back. The rib's ::before is the card's back: a cream margin round a
+   wine field with a gold lattice and the house spade in the middle, laid over
+   the whole face and kept clear (opacity 0) while the card is up. A folded
+   hand -- idle, or off the table -- lies face down: the tile turns a half
+   turn on its Y axis (the `rotate` property, so the deal and the riffle,
+   which are `transform`, still compose with it) and the back comes on at the
+   edge-on moment, .22s into the .45s turn. Everything on the face -- the
+   name, the line, the foot, both indices -- is under the back, and the back
+   is symmetrical, so the mirrored face never shows. Point at a folded card
+   and it lifts to a peek, the way you look at a hole card; the card in
+   hand (the drawer) is up, and a collapsed board is a list, so it deals
+   face up too. Perspective sits on the hand, one vanishing point per
+   project, the way a hand on a table reads from a seat. */
+:root[data-theme="staunton"] .bubbles{perspective:1100px}
+:root[data-theme="staunton"] .bubble{transition:background .12s, border-color .12s, transform .12s, box-shadow .12s, rotate .45s ease-in-out}
+:root[data-theme="staunton"] .bubble::before{
+  content:"\2660"; inset:0; width:auto; z-index:5; opacity:0; border-radius:inherit; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:center; font:700 22px/1 var(--face-chrome); font-variant-emoji:text; color:rgba(234,179,8,.6);
+  border:5px solid #f4f1e4;
+  background:
+    repeating-linear-gradient(45deg, rgba(234,179,8,.16) 0 1px, transparent 1px 7px) padding-box,
+    repeating-linear-gradient(-45deg, rgba(234,179,8,.16) 0 1px, transparent 1px 7px) padding-box,
+    linear-gradient(180deg, #7d1c30, #560f20) padding-box;
+  box-shadow:inset 0 0 0 1px rgba(234,179,8,.6), inset 0 0 0 2px rgba(0,0,0,.3);
+  animation:none; transition:opacity 0s linear .22s;
 }
+:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(:hover):not(.sel){rotate:y 180deg; outline-color:transparent}
+:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(:hover):not(.sel)::before{opacity:1}
 /* 4. The deal, the turn, the riffle. A card that arrives is dealt in from the
-   dealer's corner; a card whose state changed is turned over (a half turn and
-   back: the face is the same card, only its suit has changed); the wordmark
-   riffles the deck. Each is a transform on the tile alone. */
+   dealer's corner (face down if it arrives folded, since the deal composes
+   with the fold); a card whose state changed is turned over -- a full turn,
+   so the back shows on the way round and the face comes back with its new
+   suit; a card that folds turns down onto its back and one that unfolds
+   turns up off it; the wordmark riffles the deck. The tile's animations are
+   on `rotate` or `transform`, the back's on its opacity, stepped at the
+   edge-on moment so the face is never seen from behind. */
 :root[data-theme="staunton"] .bubble.dealt{animation:deal .6s cubic-bezier(.2,.8,.3,1) both}
 @keyframes deal{from{transform:translate(-80px,-56px) rotate(-10deg) scale(.9); opacity:0} 55%{opacity:1} to{transform:none; opacity:1}}
-:root[data-theme="staunton"] .bubble.turned{animation:turn .55s ease-in-out}
-@keyframes turn{0%{transform:perspective(700px) rotateY(0)} 50%{transform:perspective(700px) rotateY(88deg)} 100%{transform:perspective(700px) rotateY(0)}}
+:root[data-theme="staunton"] .bubble.turned{animation:card-turn .7s ease-in-out}
+:root[data-theme="staunton"] .bubble.turned::before{animation:back-flash .75s linear}
+:root[data-theme="staunton"] .bubble.fold{animation:card-fold .5s ease-in-out}
+:root[data-theme="staunton"] .bubble.fold::before{animation:back-in .55s linear}
+:root[data-theme="staunton"] .bubble.unfold{animation:card-unfold .5s ease-in-out}
+:root[data-theme="staunton"] .bubble.unfold::before{animation:back-out .55s linear}
+@keyframes card-turn{from{rotate:y 0deg} to{rotate:y 360deg}}
+@keyframes card-fold{from{rotate:y 0deg} to{rotate:y 180deg}}
+@keyframes card-unfold{from{rotate:y 180deg} to{rotate:y 360deg}}
+@keyframes back-flash{0%,24.9%{opacity:0} 25%,74.9%{opacity:1} 75%,100%{opacity:0}}
+@keyframes back-in{0%,49.9%{opacity:0} 50%,100%{opacity:1}}
+@keyframes back-out{0%,49.9%{opacity:1} 50%,100%{opacity:0}}
 :root[data-theme="staunton"] .board.shuffle .bubble{animation:riffle .5s ease-in-out both; animation-delay:calc(var(--i, 0) * 26ms)}
 @keyframes riffle{0%{transform:none} 35%{transform:translate(10px,-8px) rotate(3deg)} 70%{transform:translate(-6px,4px) rotate(-2deg)} 100%{transform:none}}
 :root[data-theme="staunton"] .brand b{cursor:pointer}
@@ -5569,7 +5628,11 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 @media (prefers-reduced-motion:reduce){
   :root[data-theme="staunton"] .redball, :root[data-theme="staunton"] .bubble.dealt,
-  :root[data-theme="staunton"] .bubble.turned, :root[data-theme="staunton"] .board.shuffle .bubble{animation:none}
+  :root[data-theme="staunton"] .bubble.turned, :root[data-theme="staunton"] .bubble.fold, :root[data-theme="staunton"] .bubble.unfold,
+  :root[data-theme="staunton"] .bubble.turned::before, :root[data-theme="staunton"] .bubble.fold::before, :root[data-theme="staunton"] .bubble.unfold::before,
+  :root[data-theme="staunton"] .board.shuffle .bubble{animation:none}
+  :root[data-theme="staunton"] .bubble{transition:none}
+  :root[data-theme="staunton"] .bubble::before{transition:none}
 }
 /* ==== PASS 7: HOTLINE MIAMI ====
    The wordmark was seventeen pixels of dim Phosphate, and the sun was a
@@ -5766,170 +5829,182 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* ==== PASS 7: HOLLOW KNIGHT ====
    The lantern. The void is not empty, it is unmapped: move the pointer over
    the board and a lumafly's worth of light goes with it, and inside that
-   light is the map -- rooms, passages, a bench -- in the cartographer's
-   quill line. It only ever shows in the void between the panels; the panels
-   themselves stay night. Pointer-driven, so a board nobody is touching
-   costs nothing at all. */
+   light is the map, in the cartographer's quill line. One tile of it, 640
+   square, drawn to run on across its own edges (the shaft leaves the top
+   where the well enters the bottom, the road and a tunnel leave the right
+   at the height they come in on the left): a dozen rooms outlined with a
+   wobble and washed with hatching, ledges inside them, tunnels drawn as
+   two walls with dead ends and side chambers, the paths Cornifer only
+   heard about dashed, and his pins -- benches, stag stations, grub jars,
+   a hot spring, geo, the marker -- with his compass in the one corner
+   nothing was built in. It only ever shows in the void between the panels;
+   the panels themselves stay night. Pointer-driven, so a board nobody is
+   touching costs nothing at all. */
 :root[data-theme="chitin"] .lantern{
   position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0; transition:opacity .6s ease;
   --mx:-999px; --my:-999px;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M48 70q30-12 62-4t54 10q10 40-6 72t-58 16q-40-6-52-38t0-56z'/%3E%3Cpath d='M118 160v34q40 6 62-18t8-46'/%3E%3Cpath d='M236 44q56-10 96 18t10 74q-28 34-74 22t-46-60q0-32 14-54z'/%3E%3Cpath d='M164 100h58'/%3E%3Cpath d='M60 236q22-24 58-18t44 40q0 46-40 62t-62-12q-18-38 0-72z'/%3E%3Cpath d='M228 210q44-14 90 6t18 52q-30 24-78 14t-42-46q2-16 12-26z'/%3E%3Cpath d='M162 266h64'/%3E%3Cpath d='M160 350q40-22 88-12t54 30q-22 26-76 22t-66-40z'/%3E%3Cpath d='M300 296v40'/%3E%3Cpath d='M110 328q14 12 24 30'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1' stroke-dasharray='2 5' stroke-linecap='round'%3E%3Cpath d='M74 110q40 40 96 30t70-50'/%3E%3Cpath d='M112 300q60-20 100-40t90-24'/%3E%3C/g%3E%3Cg fill='%23eceaf0'%3E%3Cpath d='M256 228h20v2h-20zM258 231h16v2h-16zM259 234h2v6h-2zM271 234h2v6h-2z'/%3E%3Ccircle cx='86' cy='96' r='2'/%3E%3Ccircle cx='308' cy='88' r='2'/%3E%3Ccircle cx='96' cy='268' r='2'/%3E%3Ccircle cx='230' cy='368' r='2'/%3E%3C/g%3E%3C/svg%3E") 0 0/420px 420px repeat;
-  -webkit-mask-image:radial-gradient(circle 190px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
-  mask-image:radial-gradient(circle 190px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'%3E%3Cdefs%3E%3Cpattern id='h' width='7' height='7' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'%3E%3Cpath d='M0 0v7' stroke='%23eceaf0' stroke-width='.7'/%3E%3C/pattern%3E%3C/defs%3E%3Cg fill='url(%23h)' fill-opacity='.16' stroke='%23eceaf0' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M42 62q34-24 78-18t62 14q22 12 36 34t-2 44q-10 30-44 42t-70 4q-38-4-56-30t-10-58q2-20 6-32z'/%3E%3Cpath d='M304 0v26q-14 30-10 74t-6 88q-2 26 8 46v36h30v-36q12-22 8-50t2-84q4-44-8-74V0z'/%3E%3Cpath d='M352 58q40-14 78-10t40 18q22-14 56-6t46 20q16 22 4 44t-34 30q-30 6-52-6q-26 16-64 12t-58-20q-18-20-12-44t-4-38z'/%3E%3Cpath d='M64 250q30-18 66-12t60 26q12 24 4 54t-30 42q-36 10-70-4t-40-52q-2-30 10-54z'/%3E%3Cpath d='M382 224q44-12 92-6t70 30q8 30-6 58t-46 34q-16 2-30-2v18h-22v-22q-22-6-36-24t-8-52q-14-18-14-34z'/%3E%3Cpath d='M46 448q40-14 84-6t76 30q14 30 2 62t-42 50q-42 14-84 0t-52-52q-6-36 16-84z'/%3E%3Cpath d='M262 476q22-10 48-6t34 22q4 22-10 38t-40 12q-28-2-38-20t6-46z'/%3E%3Cpath d='M300 556q18-8 42-4t26 22q-2 22-20 30t-40 0q-18-8-16-24t8-24z'/%3E%3Cpath d='M426 438q46-14 96-6t74 34q6 30-14 56t-58 30q-60 4-96-20t-30-60q4-22 28-34z'/%3E%3Cpath d='M228 160q14-6 28 0t2 20q-4 12-18 12t-16-12q-4-14 4-20z'/%3E%3Cpath d='M228 420q18-6 34 2t2 24q-6 14-22 12t-18-14q-4-16 4-24z'/%3E%3Cpath d='M556 350q16-6 30 2t4 22q-6 12-20 12t-18-12q-4-16 4-24z'/%3E%3Cpath d='M304 612q0-8 6-12h12q6 4 6 12v28h-24z'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1' stroke-linecap='round'%3E%3Cpath d='M0 396h84M0 408h84'/%3E%3Cpath d='M180 344q40 14 76 42M170 356q38 14 74 44'/%3E%3Cpath d='M330 236h56M330 248h50'/%3E%3Cpath d='M222 110h80M222 122h80'/%3E%3Cpath d='M334 100h20M334 112h20'/%3E%3Cpath d='M518 158v66M530 158v66'/%3E%3Cpath d='M540 328q40 30 54 70M528 336q38 30 52 66'/%3E%3Cpath d='M594 470h46M594 482h46'/%3E%3Cpath d='M0 470h48M0 482h48'/%3E%3Cpath d='M118 378v70M130 378v70'/%3E%3Cpath d='M208 526h56M208 538h54'/%3E%3Cpath d='M344 520h84M344 532h84'/%3E%3Cpath d='M84 396q20 4 40 2M84 408q20 4 40 2'/%3E%3Cpath d='M132 190v60M144 190v60'/%3E%3Cpath d='M254 176h34M254 188h34'/%3E%3Cpath d='M336 150q30 6 44 30M336 162q26 6 38 26'/%3E%3Cpath d='M164 456q30-30 50-70M176 462q28-30 48-68'/%3E%3Cpath d='M560 360h40M560 372h40'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='1' stroke-linecap='round'%3E%3Cpath d='M0 396q80 6 160 0t160 0t160 0t160 0M0 408q80 6 160 0t160 0t160 0t160 0'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='.9' stroke-linecap='round' stroke-opacity='.85'%3E%3Cpath d='M70 110h44M96 140h50M150 84h36M120 166h30'/%3E%3Cpath d='M390 84h40M450 108h56M540 92h38M410 128h30'/%3E%3Cpath d='M90 300h36M120 326h50'/%3E%3Cpath d='M410 262h44M470 292h50M400 310h30'/%3E%3Cpath d='M70 500h40M100 540h60M160 560h30M60 570h30'/%3E%3Cpath d='M280 508h30M320 590h26'/%3E%3Cpath d='M460 480h40M510 512h56M450 540h40'/%3E%3Cpath d='M306 60h20M312 110h20M306 160h20M312 210h20'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='.9' stroke-dasharray='2 5' stroke-linecap='round'%3E%3Cpath d='M232 150q46 30 60 84M584 120q30 30 40 70M360 340q-40 40-60 110M470 410q40-20 90-8M170 600q60 10 110 -6'/%3E%3C/g%3E%3Cg fill='%23eceaf0'%3E%3Cpath d='M96 352h20v2H96zM98 355h16v2H98zM99 358h2v6h-2zM111 358h2v6h-2z'/%3E%3Cpath d='M486 556h20v2h-20zM488 559h16v2h-16zM489 562h2v6h-2zM501 562h2v6h-2z'/%3E%3Ccircle cx='558' cy='132' r='5' fill='none' stroke='%23eceaf0' stroke-width='1.1'/%3E%3Ccircle cx='558' cy='132' r='1.6'/%3E%3Ccircle cx='178' cy='90' r='5' fill='none' stroke='%23eceaf0' stroke-width='1.1'/%3E%3Ccircle cx='178' cy='90' r='1.6'/%3E%3Cpath d='M446 268h9v2h-9zM445 271h11v9q0 2-2 2h-7q-2 0-2-2z' fill='none' stroke='%23eceaf0' stroke-width='1'/%3E%3Ccircle cx='448.5' cy='276' r='.9'/%3E%3Ccircle cx='452.5' cy='276' r='.9'/%3E%3Cpath d='M76 522h9v2h-9zM75 525h11v9q0 2-2 2h-7q-2 0-2-2z' fill='none' stroke='%23eceaf0' stroke-width='1'/%3E%3Ccircle cx='78.5' cy='530' r='.9'/%3E%3Ccircle cx='82.5' cy='530' r='.9'/%3E%3Cpath d='M282 550q3-3 6 0t6 0t6 0M282 556q3-3 6 0t6 0t6 0' fill='none' stroke='%23eceaf0' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M136 296l3-4 3 4-3 4zM484 78l3-4 3 4-3 4zM236 596l3-4 3 4-3 4zM520 258l3-4 3 4-3 4z'/%3E%3Cpath d='M410 486l4-9 4 9-4 3z' fill-opacity='.9'/%3E%3Ccircle cx='98' cy='480' r='1.4'/%3E%3Ccircle cx='586' cy='500' r='1.4'/%3E%3Ccircle cx='330' cy='90' r='1.4'/%3E%3Ccircle cx='216' cy='600' r='1.4'/%3E%3C/g%3E%3Cg fill='none' stroke='%23eceaf0' stroke-width='.9' stroke-opacity='.7'%3E%3Ccircle cx='612' cy='28' r='12'/%3E%3Cpath d='M612 16v24M600 28h24M612 18l3 8-3 2-3-2z'/%3E%3C/g%3E%3C/svg%3E") 0 0/512px 512px repeat;
+  -webkit-mask-image:radial-gradient(circle 230px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
+  mask-image:radial-gradient(circle 230px at var(--mx) var(--my), #000 0, rgba(0,0,0,.55) 45%, transparent 100%);
 }
 :root[data-theme="chitin"] .lantern.lit{opacity:.5}
 
 
 /* ============================================================================
-   HOUSTON  --  Mission Operations Control Room, Building 30, 1969
-   The material is the Philco-Ford console: painted grey-green steel bays with
-   a bevel on the top edge, legend plates in a condensed gothic, and rows of
-   square push-button indicator lamps -- white legends on grey when dark, and
-   a coloured glow through frosted plastic when lit. Behind the HUD is the
-   front wall: rear-projected plotboards in blue-black with the ground track
-   drawn in phosphor. Nothing on the consoles emits except the lamps, so the
-   glow multiplier is low and the lamps carry all of it.
-
-   Why the room fits this board: MOCR *was* a fleet console. Every station
-   read one thing off telemetry and answered the Flight Director's poll with
-   a lit word -- GO or NO GO -- and that is exactly what a session tile is.
-
-   The personality is procedural calm. The stakes are enormous and nobody
-   raises their voice: everything is one lit word, every line on the loop
-   opens with who is called and who is calling, amber is the only colour
-   that asks for a human, and when the alarm lights the room does not shout,
-   it polls. Nothing here is decorative motion; every animation is a lamp.
-
-   Colour roles are the lamp legend colours of the real consoles: green for
-   GO, red for NO GO, amber for STANDBY (the one that wants you), the blue
-   lamp for HOLD, and a plain white lamp for a station that is finished.
-   Measured on --tile #3d453f: --faint 4.6:1, --dim 8.3:1, --ink 11.9:1;
-   the amber STANDBY word 7.9:1, the red NO GO word 4.9:1.
+   INTRANET  --  the corporate intranet, 2004
+   This is where Apollo was. Mission Control came out clean, blocky and out of
+   tune, so rather than tune it, it was pushed the rest of the way: this is
+   the board with the soul taken out on purpose, the ugly theme. The material
+   is the internal tool nobody chose: a light grey page, white boxes with a
+   one-pixel #c0c0c0 border on every one of them, Verdana at eleven pixels,
+   bold black headings on grey bars, links in navy that underline when you
+   point at them, the buttons the browser draws when nobody styles them, and
+   a status bar along the foot that says Ready. Nothing is rounded, nothing
+   casts a shadow, nothing glows, nothing moves. The only colour is the three
+   a spreadsheet uses for OK, Warning and Error, and the state of a session
+   is a bordered cell in that colour, which is how a spreadsheet says it.
+   Measured on --tile #fff: --faint #666 5.7:1, --dim #333 12.6:1, --ink 21:1;
+   green #008000 5.1:1, red #cc0000 5.9:1, orange #b35c00 4.6:1.
    ========================================================================== */
-:root[data-theme="houston"]{
-  color-scheme:dark;
-  --void:#1f2422; --panel:#2b312d; --cell:#333a35; --tile:#3d453f; --tile-hi:#4a534c;
-  --edge:#566159; --edge-hot:#a9d6f5;
-  --ink:#f1efe6; --dim:#c9c7bb; --faint:#a0a69f;
-  --accent:#a9d6f5;                                    /* plotboard phosphor */
-  --blocked:#ff5a4a; --running:#6fe08a; --idle:#7db6e8; --done:#f3e7b5; --unknown:#8f978f;
-  --good:#6fe08a; --warn:#ffb638; --waiting:#ffb638;
-  --glow:.55; --sigil:"\25A3";                         /* one lit indicator */
-  --scan:rgba(169,214,245,.018); --halo:rgba(169,214,245,.10);
-  /* Painted steel: a faint horizontal brush and a little tooth, no colour. */
-  --grain:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
-  --hud-a:#0d1829; --hud-b:#071020; --rail-a:#2f3733; --rail-b:#252b28;
+:root[data-theme="intranet"]{
+  color-scheme:light;
+  --void:#e4e4e4; --panel:#f0f0f0; --cell:#f8f8f8; --tile:#ffffff; --tile-hi:#f4f4f4;
+  --edge:#c0c0c0; --edge-hot:#808080;
+  --ink:#000000; --dim:#333333; --faint:#666666;
+  --accent:#000080;                                    /* navy: the link colour */
+  --blocked:#cc0000; --running:#008000; --idle:#6e6e6e; --done:#0000cc; --unknown:#8f8f8f;
+  --good:#008000; --warn:#b35c00; --waiting:#b35c00;
+  --glow:0; --sigil:"\2122";                           /* FLEET(tm) */
+  --scan:transparent; --halo:transparent;
+  --grain:none;
+  --hud-a:#f0f0f0; --hud-b:#f0f0f0; --rail-a:#e6e6e6; --rail-b:#e6e6e6;
+  --shade:transparent; --shade-deep:rgba(0,0,0,.12);
+  --hud-inset:22px;                                    /* the status bar */
 }
-:root[data-theme="houston"]{
-  --face-data:   ui-monospace, "SF Mono", Menlo, monospace;
-  --face-prose:  -apple-system, system-ui, "Helvetica Neue", sans-serif;
-  --face-chrome: "Futura", "Avenir Next Condensed", "Avenir Next", "Helvetica Neue", sans-serif;
-  --face-code:   ui-monospace, "SF Mono", Menlo, monospace;
-  --fs-chrome:.98; --fs-data:1; --fs-prose:1; --tr-chrome:1.3;
+:root[data-theme="intranet"]{
+  --face-data:   Verdana, Tahoma, "DejaVu Sans", sans-serif;
+  --face-prose:  Verdana, Tahoma, "DejaVu Sans", sans-serif;
+  --face-chrome: Verdana, Tahoma, "DejaVu Sans", sans-serif;
+  --face-code:   "Courier New", Courier, monospace;
+  --fs-chrome:1; --fs-data:1; --fs-prose:1; --tr-chrome:0;
 }
-/* Legend plates are set in capitals, everywhere a legend would be. */
-:root[data-theme="houston"] .brand b, :root[data-theme="houston"] .rail .vlabel,
-:root[data-theme="houston"] .hrail .who, :root[data-theme="houston"] .project > header,
-:root[data-theme="houston"] .gauge .lab, :root[data-theme="houston"] .trace .cap,
-:root[data-theme="houston"] .panel section h3, :root[data-theme="houston"] .stat .k,
-:root[data-theme="houston"] .bubble .nm, :root[data-theme="houston"] .bubble .foot .st,
-:root[data-theme="houston"] .acts button, :root[data-theme="houston"] button.ghost{text-transform:uppercase}
-:root[data-theme="houston"] .bubble .nm{font-family:var(--face-chrome); letter-spacing:.07em; font-weight:600}
-:root[data-theme="houston"] .bubble .foot .st{letter-spacing:.12em; font-weight:700}
+/* Nothing is in capitals and nothing is spaced out: it is all just typed. */
+:root[data-theme="intranet"] .brand b, :root[data-theme="intranet"] .rail .vlabel,
+:root[data-theme="intranet"] .hrail .who, :root[data-theme="intranet"] .project > header,
+:root[data-theme="intranet"] .gauge .lab, :root[data-theme="intranet"] .trace .cap,
+:root[data-theme="intranet"] .panel section h3, :root[data-theme="intranet"] .stat .k,
+:root[data-theme="intranet"] .chip, :root[data-theme="intranet"] .readout dt,
+:root[data-theme="intranet"] .bubble .foot, :root[data-theme="intranet"] .bubble .x.armed,
+:root[data-theme="intranet"] .acts button, :root[data-theme="intranet"] button.ghost,
+:root[data-theme="intranet"] .ctl select, :root[data-theme="intranet"] .empty,
+:root[data-theme="intranet"] .panel .sub{text-transform:none; letter-spacing:0}
+:root[data-theme="intranet"] .project > header, :root[data-theme="intranet"] .panel section h3,
+:root[data-theme="intranet"] .rail .vlabel, :root[data-theme="intranet"] .hrail .who{font-weight:bold; color:#000}
+/* No atmosphere. No vignette. The selection colour is the operating system's. */
+:root[data-theme="intranet"] body::before, :root[data-theme="intranet"] .wrap::after{display:none}
+/* No masthead rule and no registration ticks in the lane corners: ornament
+   is the one thing this page has none of. */
+:root[data-theme="intranet"] .brand > div:first-child::after, :root[data-theme="intranet"] .lane::after{display:none}
+:root[data-theme="intranet"] ::selection{background:#0078d7; color:#fff}
 
-/* THE FRONT WALL. The HUD is the plotboard: blue-black glass, a faint
-   latitude/longitude grid and the ground track drawn as one phosphor sine,
-   under an aluminium rail. */
-:root[data-theme="houston"] .hud{
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='120' viewBox='0 0 720 120'%3E%3Cg stroke='%23a9d6f5' stroke-opacity='.10' stroke-width='1' fill='none'%3E%3Cpath d='M0 20h720M0 60h720M0 100h720M60 0v120M180 0v120M300 0v120M420 0v120M540 0v120M660 0v120'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(180deg, var(--hud-a), var(--hud-b));
-  background-size:720px 100%, auto; background-position:center, 0 0;
-  border-bottom:3px solid #b9beb7;
-  box-shadow:inset 0 -1px 0 rgba(255,255,255,.18), 0 2px 0 #6f766f, 0 6px 18px -12px rgba(0,0,0,.9);
+/* THE HEADER. A grey band with a rule under it and the wordmark in navy. */
+:root[data-theme="intranet"] .hud{background:#f0f0f0; border-bottom:1px solid #a0a0a0; box-shadow:none}
+:root[data-theme="intranet"] .brand b{color:#000080; font-weight:bold; text-shadow:none}
+:root[data-theme="intranet"] .brand b::after{color:#666; font-size:9px; vertical-align:super; opacity:1; margin-left:1px}
+/* EGG: point at the wordmark and it tells you where you are. */
+:root[data-theme="intranet"] .brand:hover b::after{
+  content:"You are here: Home > Dashboard"; font-family:var(--face-chrome); font-size:9px; font-weight:normal;
+  vertical-align:baseline; margin-left:8px; color:#666;
 }
-:root[data-theme="houston"] .brand b{color:#f1efe6; letter-spacing:.22em; text-shadow:0 1px 0 rgba(0,0,0,.6)}
-:root[data-theme="houston"] .brand b::after{color:var(--accent); opacity:.9}
-/* EGG: point at the wordmark and the plate reads the room's call sign. */
-:root[data-theme="houston"] .brand:hover b::after{
-  content:"HOUSTON"; font-family:var(--face-chrome); font-size:11px; letter-spacing:.24em; opacity:1;
+:root[data-theme="intranet"] .brand span{color:#333}
+:root[data-theme="intranet"] .gauge, :root[data-theme="intranet"] .trace, :root[data-theme="intranet"] .readout,
+:root[data-theme="intranet"] .stat, :root[data-theme="intranet"] .chip{border-radius:0; background:#fff; border-color:#c0c0c0; box-shadow:none}
+:root[data-theme="intranet"] .readout > div{border-radius:0; background:transparent}
+:root[data-theme="intranet"] .gauge .val, :root[data-theme="intranet"] .readout dd b, :root[data-theme="intranet"] .stat .v{color:#000; font-weight:bold}
+:root[data-theme="intranet"] .gauge .lab, :root[data-theme="intranet"] .readout dt, :root[data-theme="intranet"] .trace .cap,
+:root[data-theme="intranet"] .stat .k, :root[data-theme="intranet"] .readout dd{color:#666}
+:root[data-theme="intranet"] .track{stroke:#e0e0e0}
+:root[data-theme="intranet"] .chip{color:#333}
+:root[data-theme="intranet"] .chip .n{color:#000}
+/* The trace is a spreadsheet chart: grey gridlines on white. */
+:root[data-theme="intranet"] .trace{
+  background-image:linear-gradient(#e8e8e8 1px, transparent 1px), linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+  background-size:100% 16px, 40px 100%;
 }
-:root[data-theme="houston"] .rail .vlabel, :root[data-theme="houston"] .hrail .who{color:#d8d6ca; letter-spacing:.14em}
-:root[data-theme="houston"] .rail .rcount{color:var(--accent)}
+/* Every status dot is a legend swatch: a square with a black hairline. */
+:root[data-theme="intranet"] .dot{border-radius:0; box-shadow:none; outline:1px solid #000; outline-offset:-1px}
 
-/* THE BAYS. A lane is one console bay: bevelled top edge, a shadow line
-   under it, squared corners because steel does not round. */
-:root[data-theme="houston"] .lane{
-  border-radius:3px; border-left-color:#6a746c;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), inset 1px 0 0 rgba(255,255,255,.04);
+/* THE BUTTONS. The ones the browser draws when nobody styles them, down to
+   the dotted focus rectangle. */
+:root[data-theme="intranet"] button.ghost, :root[data-theme="intranet"] .acts button, :root[data-theme="intranet"] .ctl select{
+  border-radius:0; background:#e1e1e1; border:1px solid #adadad; color:#000; box-shadow:none;
+  backdrop-filter:none; -webkit-backdrop-filter:none;
 }
-/* Row plates: the black legend plate screwed to the top of each bay. */
-:root[data-theme="houston"] .project > header{
-  color:#e8e6da; letter-spacing:.14em;
-  background-image:var(--grain), linear-gradient(180deg, #2b3230, #1e2422);
-  border-bottom:1px solid #0f1412;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
-}
-:root[data-theme="houston"] .project > header .ct{color:var(--accent); opacity:.9}
+:root[data-theme="intranet"] button.ghost::before{display:none}
+:root[data-theme="intranet"] button.ghost:hover, :root[data-theme="intranet"] .acts button:hover{background:#e5f1fb; border-color:#0078d7; color:#000; box-shadow:none}
+:root[data-theme="intranet"] button.ghost:active{transform:none; background:#cce4f7; border-color:#005499}
+:root[data-theme="intranet"] button.ghost.lit{background:#cce4f7; border-color:#005499; color:#000; box-shadow:none}
+:root[data-theme="intranet"] button.ghost:focus-visible{outline:1px dotted #000; outline-offset:-4px}
 
-/* THE MODULES. A tile is one console module: painted face, top bevel, and
-   the name on its legend plate. */
-:root[data-theme="houston"] .bubble{
-  border-radius:3px;
-  background-image:var(--grain), linear-gradient(180deg, rgba(255,255,255,.035), transparent 40%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.35);
-}
-:root[data-theme="houston"] .bubble:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(169,214,245,.55), 0 8px 18px -12px rgba(0,0,0,.9)}
-:root[data-theme="houston"] .bubble.sel{box-shadow:0 0 0 2px var(--accent)}
+/* THE PAGE. Boxes in boxes, every one of them bordered, none of them rounded. */
+:root[data-theme="intranet"] .lane{border-radius:0; background:#f0f0f0; border-color:#c0c0c0; box-shadow:none}
+:root[data-theme="intranet"] .rail{background:#e6e6e6; border-right:1px solid #c0c0c0}
+:root[data-theme="intranet"] .hrail{background:#e6e6e6}
+:root[data-theme="intranet"] .rail svg, :root[data-theme="intranet"] .hrail svg{color:#000080; filter:none; opacity:1}
+:root[data-theme="intranet"] .rail .rcount{color:#000}
+:root[data-theme="intranet"] .hrail .note{color:#666}
+:root[data-theme="intranet"] .project{border-radius:0; background:#fff; border-color:#c0c0c0}
+:root[data-theme="intranet"] .project > header{background:#e6e6e6; border-bottom:1px solid #c0c0c0; color:#000}
+:root[data-theme="intranet"] .project > header:hover{color:#000080; text-decoration:underline}
+:root[data-theme="intranet"] .project > header .ct, :root[data-theme="intranet"] .project > header .caret{color:#666}
+:root[data-theme="intranet"] .empty{color:#666}
 
-/* 1. THE TELL -- the indicator lamp. Every status dot is a square push-button
-   lamp: frosted plastic over a bulb, a dark bezel, a highlight on the top
-   edge. Lit, it glows in its legend colour and throws light onto the plate.
-   The colour comes off --rib, which the tile already sets to its state token,
-   so a state this rule never heard of still lights the lamp correctly. */
-:root[data-theme="houston"] .bubble .foot .dot{
-  width:13px; height:13px; border-radius:2px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.35), transparent 45%),
-    color-mix(in srgb, var(--rib) 82%, #fff);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08), 0 0 9px color-mix(in srgb, var(--rib) 70%, transparent);
+/* THE ROWS. A session is a white box with a border. Its name is a link:
+   navy, bold, underlined when you point at it. Nothing lifts, nothing
+   breathes, nothing pulses; a row that needs you is filled the pale yellow
+   or the pale red a form uses, and that is all the alarm there is. */
+:root[data-theme="intranet"] .bubble{border-radius:0; border:1px solid #c0c0c0; background:#fff; box-shadow:none; transition:none}
+:root[data-theme="intranet"] .bubble:hover{background:#f4f4f4; border-color:#808080; transform:none; box-shadow:none}
+:root[data-theme="intranet"] .bubble.sel{border-color:#000080; box-shadow:inset 0 0 0 1px #000080}
+:root[data-theme="intranet"] .bubble::before{box-shadow:none}
+:root[data-theme="intranet"] .bubble > .halo{display:none}
+:root[data-theme="intranet"] .bubble[data-state="running"]{background-color:#fff}
+:root[data-theme="intranet"] .bubble[data-state="blocked"]{background-color:#fde9e9; border-color:#c0c0c0}
+:root[data-theme="intranet"] .bubble[data-state="waiting"]{background-color:#ffffcc}
+:root[data-theme="intranet"] .bubble[data-state="blocked"][data-stale="2"]{outline-color:#cc0000}
+:root[data-theme="intranet"] .bubble .nm{color:#000080; font-weight:bold}
+:root[data-theme="intranet"] .bubble:hover .nm{text-decoration:underline}
+:root[data-theme="intranet"] .bubble .gist{color:#333}
+:root[data-theme="intranet"] .bubble .gist.none{color:#666}
+:root[data-theme="intranet"] .bubble .gist.said, :root[data-theme="intranet"] .bubble .gist.said::before{color:#000}
+:root[data-theme="intranet"] .bubble .foot{color:#666}
+/* 1. THE TELL -- the status is a cell. Bold, bordered, filled grey, in its
+   colour: a spreadsheet's conditional format. The colour comes off --rib,
+   which the tile already sets to its state token. */
+:root[data-theme="intranet"] .bubble .foot .st{
+  padding:0 4px; border:1px solid #c0c0c0; background:#f0f0f0; color:var(--rib); font-weight:bold; line-height:1.3;
 }
-/* A station with nothing to report has its lamp dark: grey plastic, no glow. */
-:root[data-theme="houston"] .bubble[data-state="unknown"] .foot .dot{
-  background:linear-gradient(180deg, rgba(255,255,255,.18), transparent 45%), #5a635c; box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);
-}
-/* NO GO flashes the way MASTER ALARM did: hard on/off at 1 Hz, on the lamp
-   alone -- the word beside it stays lit and readable. */
-:root[data-theme="houston"] .bubble[data-state="blocked"] .foot .dot{animation:mocr-alarm 1s steps(1,end) infinite}
-@keyframes mocr-alarm{0%,100%{filter:none} 50%{filter:brightness(.45) saturate(.6)}}
-/* Waiting is the amber STANDBY lamp, and amber is the room's colour for a
-   thing that wants a human. */
-:root[data-theme="houston"] .bubble[data-state="waiting"] .foot{color:var(--waiting)}
+:root[data-theme="intranet"] .bubble .foot .ctx[data-hot="1"]{color:#b35c00}
+:root[data-theme="intranet"] .bubble .foot .ctx[data-hot="2"]{color:#cc0000}
+:root[data-theme="intranet"] .bubble .x{border-radius:0; color:#666}
+:root[data-theme="intranet"] .bubble .x:hover{color:#cc0000; background:#f0f0f0}
+:root[data-theme="intranet"] .bubble .x.armed{background:#cc0000; color:#fff}
 
-/* THE RECORDERS. Gauges and traces are strip-chart channels: plotboard
-   grids, phosphor pen. */
-:root[data-theme="houston"] .trace{
-  background-color:#0b1524;
-  background-image:linear-gradient(rgba(169,214,245,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(169,214,245,.06) 1px, transparent 1px);
-  background-size:100% 8px, 20px 100%;
-  border-color:#3d4a5c;
-}
-:root[data-theme="houston"] .gauge, :root[data-theme="houston"] .readout, :root[data-theme="houston"] .stat{
-  background-image:var(--grain); box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
-}
-:root[data-theme="houston"] .gauge .val, :root[data-theme="houston"] .readout dd b, :root[data-theme="houston"] .chip .n{color:var(--accent)}
-
-/* Chrome. */
-:root[data-theme="houston"] .panel{background-image:var(--grain); box-shadow:inset 1px 0 0 rgba(255,255,255,.08), -26px 0 60px -30px rgba(0,0,0,.95)}
-:root[data-theme="houston"] .toast{background:#2b312d; border-color:#b9beb7; color:var(--ink)}
-:root[data-theme="houston"] .scrim{background:rgba(14,18,16,.72)}
-:root[data-theme="houston"] .acts button:hover, :root[data-theme="houston"] button.ghost:hover{background:#4a534c; box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(169,214,245,.45)}
-@media (prefers-reduced-motion:reduce){
-  :root[data-theme="houston"] .bubble[data-state="blocked"] .foot .dot{animation:none}
-}
+/* Chrome. The drawer is a white page, the toast is a tooltip, and the
+   scrollbars are the fat grey ones. */
+:root[data-theme="intranet"] .panel{background:#fff; background-image:none; border-left:1px solid #c0c0c0; box-shadow:none}
+:root[data-theme="intranet"] .panel h2{color:#000080; font-weight:bold}
+:root[data-theme="intranet"] .panel .sub{color:#666}
+:root[data-theme="intranet"] .panel section h3{border-bottom:1px solid #c0c0c0; padding-bottom:2px}
+:root[data-theme="intranet"] .panel section p{color:#333}
+:root[data-theme="intranet"] .stat{background:#f8f8f8}
+:root[data-theme="intranet"] .toast{background:#ffffe1; border:1px solid #000; border-radius:0; color:#000; box-shadow:none}
+:root[data-theme="intranet"] .scrim{background:rgba(0,0,0,.25)}
+:root[data-theme="intranet"] .sheet{box-shadow:none; border-top:1px solid #a0a0a0}
+:root[data-theme="intranet"] .player, :root[data-theme="intranet"] .crate{border-radius:0; box-shadow:none; border:1px solid #808080; background:#f0f0f0}
+:root[data-theme="intranet"] .board, :root[data-theme="intranet"] .projects, :root[data-theme="intranet"] .bubbles,
+:root[data-theme="intranet"] .panel, :root[data-theme="intranet"] .crate .rows{scrollbar-width:auto; scrollbar-color:#c1c1c1 #f1f1f1}
 
 /* ============================================================================
    LUMON  --  Macrodata Refinement, the severed floor
@@ -6982,134 +7057,57 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   clip-path:polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); transform:rotate(3deg);
 }
 
-/* ---- HOUSTON: the front wall and the poll ------------------------------------
-   The room seen from the back. The plotboard on the front wall tracks every
-   session at work by how long since Houston last heard from it; the Flight
-   Director's poll runs along the consoles under it, one station per number
-   the host or the fleet already reports. What each thing reads is in the
-   world at the end of the band script. */
-:root[data-theme="houston"] .mocr{
-  left:18px; right:18px; bottom:calc(16px + var(--taken,0px));
-  color:var(--ink); font:12px/1.4 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase;
+/* ---- INTRANET: the status bar and the status page ---------------------------
+   Always on, the status bar along the foot of the window, the one that says
+   Ready: sunken cells for the overall state, the head count, the cpu, the
+   memory pressure and when the page was last refreshed. Collapse the board
+   for the status page: three web parts -- System status, one row per figure
+   with its value and an OK, a Warning or an Error; Active sessions, one row
+   per session at work with when it last reported; Recent activity, the last
+   few things that happened, each with a timestamp. What each thing reads is
+   in the world at the end of the band script. */
+:root[data-theme="intranet"] .ghud.statusbar{
+  left:0; right:0; bottom:var(--taken,0px); height:22px; display:flex; align-items:stretch; padding:0 2px 1px;
+  background:#f0f0f0; border-top:1px solid #a0a0a0; font:11px/19px var(--face-chrome); color:#000; font-style:normal;
 }
-/* THE WALL. Blue-black glass under an aluminium rail. The script draws the
-   grid and the ground track; the far side of the Moon is the shaded end. */
-:root[data-theme="houston"] .mocr .wall{
-  position:relative; height:clamp(150px, 26vh, 240px); margin-bottom:10px; overflow:hidden;
-  background:linear-gradient(180deg, #0f1a2c, #091223); border:1px solid #3d4a5c; border-radius:3px;
-  box-shadow:inset 0 1px 0 rgba(169,214,245,.16), 0 2px 0 #6f766f, 0 10px 24px -14px rgba(0,0,0,.9);
+:root[data-theme="intranet"] .ghud.statusbar > span{
+  margin:1px 0 0 2px; padding:0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  box-shadow:inset 1px 1px 0 #a0a0a0, inset -1px -1px 0 #fff;
 }
-:root[data-theme="houston"] .mocr .wall svg{position:absolute; inset:0; width:100%; height:100%}
-:root[data-theme="houston"] .mocr .wall .mark{position:absolute; top:6px; font-size:9px; letter-spacing:.18em; color:var(--faint); white-space:nowrap}
-:root[data-theme="houston"] .mocr .wall .mark.aos{left:8px; color:var(--accent)}
-:root[data-theme="houston"] .mocr .wall .mark.los{margin-left:6px; color:var(--waiting)}
-:root[data-theme="houston"] .mocr .wall .mark.end{right:8px}
-:root[data-theme="houston"] .mocr .wall .none{
-  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); text-align:center; font-size:10px; color:#8f978f;
+:root[data-theme="intranet"] .ghud.statusbar > span.msg{flex:1}
+:root[data-theme="intranet"] .ghud.statusbar b{font-weight:bold}
+:root[data-theme="intranet"] .ghud.statusbar[data-s="warn"] .msg b{color:#b35c00}
+:root[data-theme="intranet"] .ghud.statusbar[data-s="error"] .msg b{color:#cc0000}
+/* THE STATUS PAGE. Three web parts side by side: a grey title bar with the
+   name in bold, a table under it, a line of small print at the foot. */
+:root[data-theme="intranet"] .band.webparts{
+  left:8px; right:8px; bottom:calc(30px + var(--taken,0px)); font:11px/1.4 var(--face-chrome); color:#000;
 }
-:root[data-theme="houston"] .mocr .wall .none[hidden]{display:none}
-/* A spacecraft: a lit square on the track in its lamp colour, the session's
-   name beside it and how long since Houston heard it. Behind the Moon the
-   lamp goes hollow and the name dims; the silence reads in amber. */
-:root[data-theme="houston"] .mocr .craft{
-  position:absolute; left:calc(var(--x) * 1%); top:calc(var(--y) * 1%); width:0; height:0;
-  font-style:normal; --lamp:var(--running); transition:left 1s linear, top 1s linear;
+:root[data-theme="intranet"] .webparts .parts{display:flex; gap:8px; align-items:flex-start}
+:root[data-theme="intranet"] .webparts .part{flex:1 1 0; min-width:0; background:#fff; border:1px solid #c0c0c0}
+:root[data-theme="intranet"] .webparts .part > h4{
+  margin:0; padding:3px 8px; font:bold 11px/1.4 var(--face-chrome); color:#000; background:#e6e6e6; border-bottom:1px solid #c0c0c0;
 }
-:root[data-theme="houston"] .mocr .craft[data-s="blocked"]{--lamp:var(--blocked)}
-:root[data-theme="houston"] .mocr .craft b{
-  position:absolute; left:-5px; top:-5px; width:10px; height:10px; border-radius:2px;
-  background:linear-gradient(180deg, rgba(255,255,255,.4), transparent 50%), var(--lamp);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), 0 0 10px var(--lamp);
+:root[data-theme="intranet"] .webparts table{width:100%; border-collapse:collapse; table-layout:fixed; font:11px/1.3 var(--face-chrome)}
+:root[data-theme="intranet"] .webparts th{
+  text-align:left; font-weight:bold; color:#333; background:#f8f8f8; border-bottom:1px solid #c0c0c0; padding:2px 8px; white-space:nowrap;
 }
-:root[data-theme="houston"] .mocr .craft[data-s="blocked"] b{animation:mocr-alarm 1s steps(1,end) infinite}
-:root[data-theme="houston"] .mocr .craft em, :root[data-theme="houston"] .mocr .craft u{
-  position:absolute; left:10px; white-space:nowrap; text-decoration:none; font-style:normal; line-height:1;
-}
-:root[data-theme="houston"] .mocr .craft em{font-size:10px; color:#e8e6da; letter-spacing:.1em; max-width:170px; overflow:hidden; text-overflow:ellipsis}
-:root[data-theme="houston"] .mocr .craft u{font:11px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--accent); letter-spacing:.06em}
-/* Names above or below the track by lane, so a pile at AOS still reads; on
-   the far right they sit to the left of the lamp instead of off the glass. */
-:root[data-theme="houston"] .mocr .craft[data-lane="0"] em{top:-17px}  :root[data-theme="houston"] .mocr .craft[data-lane="0"] u{top:-5px}
-:root[data-theme="houston"] .mocr .craft[data-lane="1"] em{top:9px}    :root[data-theme="houston"] .mocr .craft[data-lane="1"] u{top:21px}
-:root[data-theme="houston"] .mocr .craft[data-lane="2"] em{top:-41px}  :root[data-theme="houston"] .mocr .craft[data-lane="2"] u{top:-29px}
-:root[data-theme="houston"] .mocr .craft[data-lane="3"] em{top:31px}   :root[data-theme="houston"] .mocr .craft[data-lane="3"] u{top:43px}
-:root[data-theme="houston"] .mocr .craft[data-side="l"] em, :root[data-theme="houston"] .mocr .craft[data-side="l"] u{left:auto; right:10px; text-align:right}
-:root[data-theme="houston"] .mocr .craft[data-los="1"] b{background:transparent; box-shadow:inset 0 0 0 1.5px var(--lamp); animation:none}
-:root[data-theme="houston"] .mocr .craft[data-los="1"] em{color:#8f978f}
-:root[data-theme="houston"] .mocr .craft[data-los="1"] u{color:var(--waiting)}
-
-/* THE CONSOLES. Painted steel, like the bays above; the only light is the
-   lamps. */
-:root[data-theme="houston"] .mocr .consoles{
-  padding:8px 12px 10px; background-image:var(--grain), linear-gradient(180deg, #2b3230, #232927);
-  border:1px solid #171c1a; border-radius:3px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 0 #6f766f, 0 10px 24px -14px rgba(0,0,0,.9);
-}
-:root[data-theme="houston"] .mocr .loop{
-  display:flex; align-items:baseline; gap:18px; padding:0 2px 7px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:8px;
-}
-:root[data-theme="houston"] .get{font:13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.08em; color:var(--accent); white-space:nowrap}
-:root[data-theme="houston"] .get i{font-style:normal; color:var(--faint); margin-right:8px; font:inherit}
-:root[data-theme="houston"] .mocr .say{flex:1; color:var(--dim); opacity:0; transition:opacity .35s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-:root[data-theme="houston"] .mocr .say.on{opacity:1}
-:root[data-theme="houston"] .mocr .alarm{
-  padding:2px 8px; border-radius:2px; color:#5a635c; background:#1a2332; font-style:normal; white-space:nowrap;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
-}
-:root[data-theme="houston"] .mocr[data-alarm="1"] .alarm{
-  color:#1a0b08; background:var(--blocked); box-shadow:inset 0 0 0 1px rgba(0,0,0,.5), 0 0 12px rgba(255,90,74,.7);
-  animation:mocr-alarm 1s steps(1,end) infinite;
-}
-:root[data-theme="houston"] .mocr .stns{display:flex; flex-wrap:wrap; gap:8px}
-/* A station plaque: the lamp, the station, and under it what it reads and
-   the figure it answered on. FLIGHT is framed, because FLIGHT is the room. */
-:root[data-theme="houston"] .mocr .stn{
-  display:grid; grid-template-rows:auto auto auto; gap:3px; flex:1 1 0; min-width:96px; padding:5px 8px 6px; font-style:normal;
-  background:linear-gradient(180deg, #343b37, #2a302d); border-radius:2px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5);
-}
-:root[data-theme="houston"] .mocr .stn.flight{box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 0 0 1px rgba(169,214,245,.55)}
-/* Mid-poll: the station answering is framed for the beat it speaks, and the
-   loop line is in ink, because the whole room is listening to it. */
-:root[data-theme="houston"] .mocr .stn.called{box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 0 0 1px var(--accent), 0 0 10px rgba(169,214,245,.35)}
-:root[data-theme="houston"] .mocr[data-poll="1"] .say{color:var(--ink)}
-:root[data-theme="houston"] .mocr .stn em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em; white-space:nowrap}
-:root[data-theme="houston"] .mocr .stn u{font-size:8.5px; color:var(--faint); text-decoration:none; letter-spacing:.1em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-:root[data-theme="houston"] .mocr .stn u span{font:11px/1 ui-monospace, "SF Mono", Menlo, monospace; color:var(--ink); letter-spacing:.02em; text-transform:none}
-/* The lamp itself, shared with the FLIGHT plaque that stays on with the full
-   board: dark frosted plastic until its answer lights it. */
-:root[data-theme="houston"] .lamp{
-  display:block; font-size:11.5px; font-weight:700; text-align:center; padding:3px 6px; border-radius:2px; color:#6f786f; white-space:nowrap;
-  background:linear-gradient(180deg, rgba(255,255,255,.14), transparent 50%), #232926;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.5);
-}
-:root[data-theme="houston"] [data-s="go"] > .lamp, :root[data-theme="houston"] [data-s="stby"] > .lamp, :root[data-theme="houston"] [data-s="nogo"] > .lamp{
-  background:linear-gradient(180deg, rgba(255,255,255,.32), transparent 50%), var(--lamp);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px color-mix(in srgb, var(--lamp) 60%, transparent);
-}
-:root[data-theme="houston"] [data-s="go"] > .lamp{--lamp:var(--running); color:#0b2412}
-:root[data-theme="houston"] [data-s="stby"] > .lamp{--lamp:var(--waiting); color:#2a1a00}
-:root[data-theme="houston"] [data-s="nogo"] > .lamp{--lamp:var(--blocked); color:#2a0a07; animation:mocr-alarm 1s steps(1,end) infinite}
-
-/* With the full board up, the clock and FLIGHT's answer stay on, small, at
-   the foot of the room; the band carries both, so it steps aside for it. */
-:root[data-theme="houston"]{--hud-inset:44px}
-:root[data-theme="houston"] .ghud.flight{
-  left:50%; bottom:calc(14px + var(--taken,0px)); transform:translateX(-50%);
-  display:flex; align-items:center; gap:12px; padding:5px 8px 5px 12px; font-style:normal;
-  font:12px/1 var(--face-chrome); letter-spacing:.12em; text-transform:uppercase; color:var(--ink);
-  background-image:var(--grain), linear-gradient(180deg, #343b37, #2a302d); border-radius:2px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.5), 0 2px 0 #6f766f, 0 8px 18px -12px rgba(0,0,0,.9);
-}
-:root[data-theme="houston"] .ghud.flight em{font-style:normal; font-size:10px; color:#d8d6ca; letter-spacing:.14em}
-:root[data-theme="houston"] .ghud.flight .lamp{min-width:52px}
-:root:has(.board.compact):not(:has(.sheet.on)) .ghud.flight{display:none}
+:root[data-theme="intranet"] .webparts td{padding:2px 8px; border-bottom:1px solid #e6e6e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="intranet"] .webparts td.v{font-family:var(--face-data); font-variant-numeric:tabular-nums}
+:root[data-theme="intranet"] .webparts td.s{font-weight:bold}
+:root[data-theme="intranet"] .webparts col.k{width:44%} :root[data-theme="intranet"] .webparts col.v{width:36%} :root[data-theme="intranet"] .webparts col.s{width:20%}
+:root[data-theme="intranet"] .webparts tr[data-s="ok"] td.s{color:#008000}
+:root[data-theme="intranet"] .webparts tr[data-s="warn"] td{background:#ffffcc}
+:root[data-theme="intranet"] .webparts tr[data-s="warn"] td.s{color:#b35c00}
+:root[data-theme="intranet"] .webparts tr[data-s="error"] td{background:#fde9e9}
+:root[data-theme="intranet"] .webparts tr[data-s="error"] td.s{color:#cc0000}
+:root[data-theme="intranet"] .webparts tr[data-s="na"] td.s{color:#808080}
+:root[data-theme="intranet"] .webparts .small{padding:2px 8px; color:#666; font-size:10px; border-top:1px solid #e6e6e6}
+:root[data-theme="intranet"] .webparts .none{padding:6px 8px; color:#666; font-style:italic}
+:root[data-theme="intranet"] .webparts ul{list-style:none; margin:0; padding:0}
+:root[data-theme="intranet"] .webparts li{padding:2px 8px; border-bottom:1px solid #e6e6e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-theme="intranet"] .webparts li time{color:#666; font-family:var(--face-data); font-variant-numeric:tabular-nums; margin-right:6px}
 :root:has(.board.compact):not(:has(.sheet.on)) .ghud.ring{bottom:calc(150px + var(--taken,0px))}
-@media (prefers-reduced-motion:reduce){
-  :root[data-theme="houston"] .mocr[data-alarm="1"] .alarm, :root[data-theme="houston"] [data-s="nogo"] > .lamp,
-  :root[data-theme="houston"] .mocr .craft[data-s="blocked"] b{animation:none}
-  :root[data-theme="houston"] .mocr .craft{transition:none}
-}
 
 </style>
 </head>
@@ -7142,7 +7140,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
           <option value="paper">paper</option>
         </optgroup>
         <optgroup label="worlds">
-          <option value="houston">apollo</option>
+          <option value="intranet">corporate intranet</option>
           <option value="staunton">casino royale</option>
           <option value="signal">cyberpunk 2077</option>
           <option value="e1m1">doom</option>
@@ -7219,8 +7217,9 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   <div class="head" id="mhead">search for anything, or sign in for your playlists</div>
   <div class="rows" id="mrows"></div>
 </div>
+<div id="ytscout" aria-hidden="true"></div>
 <div class="player" id="player">
-  <div class="screen"><div id="ytbox"></div></div>
+  <div class="screen"><div id="ytbox"></div><img class="art" id="mart" alt="" hidden></div>
   <div class="side">
     <div class="np" id="np">nothing playing</div>
     <div class="by" id="by"></div>
@@ -7381,12 +7380,12 @@ const THEME_MARKS = {
     antigravity:'<circle cx="8" cy="8" r="6.9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 3.2 L9.9 6.1 V9.9 L8 10.8 L6.1 9.9 V6.1Z M6.1 8.5 L4.5 10.9 L6.1 10.4Z M9.9 8.5 L11.5 10.9 L9.9 10.4Z M6.8 11.3h2.4L8 13.1Z" fill="currentColor"/>',
     codex:'<circle cx="8" cy="8" r="6.9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11.56 4.55A2.6 2.6 0 1 1 9.45 2.44" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M7.2 6.8L3.7 10.3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   },
-  /* houston -- mission-patch geometry: the command module (a cone on its
-     heat shield), a Saturn V, and one orbit with the spacecraft on it. */
-  houston:{
-    claude:'<path d="M8 1.6 L12.4 10.6 H3.6Z" fill="currentColor"/><path d="M3 11.8 Q8 15.4 13 11.8 L12.4 13.6 Q8 15.8 3.6 13.6Z" fill="currentColor" fill-opacity=".75"/>',
-    antigravity:'<path d="M8 1 L9.8 4.2 V11.6 H6.2 V4.2Z" fill="currentColor"/><path d="M6.2 9.4 L4 12.6 V14 L6.2 12.4ZM9.8 9.4 L12 12.6 V14 L9.8 12.4Z" fill="currentColor"/><path d="M6.6 12.4 H9.4 L8.7 15 H7.3Z" fill="currentColor" fill-opacity=".7"/>',
-    codex:'<ellipse cx="8" cy="8" rx="6.6" ry="3.1" transform="rotate(-28 8 8)" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2.2" fill="currentColor"/><circle cx="12.9" cy="4.6" r="1.4" fill="currentColor"/>',
+  /* intranet -- the bullets a slide deck defaults to: a square, a triangle
+     and a circle, each filled, none of them drawn by anyone. */
+  intranet:{
+    claude:'<rect x="3" y="3" width="10" height="10" fill="currentColor"/>',
+    antigravity:'<path d="M8 2.4 L14 13.4 H2Z" fill="currentColor"/>',
+    codex:'<circle cx="8" cy="8" r="5.4" fill="currentColor"/>',
   },
   /* casino royale -- the three suits:
      a spade, a club, and a diamond. Pure casino elegance. */
@@ -7522,9 +7521,9 @@ const VOICE = {
   /* hollow knight */
   chitin:    {blocked:'infected', waiting:'at bench', running:'delving', idle:'resting', done:'charm won', unknown:'in void',
               blank:'no map bought yet', quiet:'the well is silent', offline:'DREAM NO MORE'},
-  /* apollo mission control */
-  houston:   {blocked:'no go', waiting:'standby', running:'go', idle:'hold', done:'splashdown', unknown:'LOS',
-              blank:'no telemetry on this loop', quiet:'loss of signal', offline:'LOS'},
+  /* corporate intranet */
+  intranet:  {blocked:'Escalated', waiting:'Pending', running:'In progress', idle:'Inactive', done:'Resolved', unknown:'N/A',
+              blank:'No data available', quiet:'No items to display', empty:'No records found', offline:'Service unavailable'},
   /* fallout */
   pipboy:    {blocked:'crippled', waiting:'holotape', running:'exploring', idle:'resting', done:'completed', unknown:'unmarked',
               blank:'no entries in this log', quiet:'no signals in range', offline:'NO SIGNAL'},
@@ -9069,9 +9068,16 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
     if(d.first) return;
     (d.arrived || []).forEach(id => { const el = tileOf(id); if(el) once(el, 'dealt'); });
   });
+  // A card going to idle or off the table folds; one coming back unfolds;
+  // any other change turns it over. Two folded states swapping is nothing to
+  // see, and a collapsed board deals face up, so no turn there either.
+  const down = s => s === 'idle' || s === 'unknown';
   document.addEventListener('fleet:state', e => {
     if(!on()) return;
-    const el = tileOf((e.detail || {}).id || ''); if(el) once(el, 'turned');
+    const c = e.detail || {}, el = tileOf(c.id || ''); if(!el) return;
+    if(down(c.to) && down(c.from)) return;
+    if((down(c.to) || down(c.from)) && board.classList.contains('compact')) return;
+    once(el, down(c.to) ? 'fold' : down(c.from) ? 'unfold' : 'turned');
   });
   let riffleT = 0;
   document.querySelector('.brand b')?.addEventListener('click', () => {
@@ -9744,322 +9750,182 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
         clearTimeout(n._t); n._t = setTimeout(() => { say.classList.remove('on'); n.classList.remove('talking'); }, 3800);
       },
     },
-    /* Mission Control. The room's personality is procedural calm: the stakes
-       are enormous and nobody raises their voice. Everything is reduced to
-       one lit word, every sentence on the loop opens with who is called and
-       who is calling ("FLIGHT, EECOM"), amber is the only colour that asks
-       for a human, and when the alarm lights the room does not shout -- it
-       polls. You are FLIGHT: you sit at the back, the room reads its numbers
-       to you, and the poll is how it answers.
-       Two instruments, both drawn off numbers the board already has.
-       The wall is the plotboard: every session at work is a spacecraft on
-       the ground track, placed by how long since Houston last heard from
-       it -- a transcript write, a note or a prompt is contact. Two and a
-       half minutes of silence and it is behind the Moon: LOS, until it
-       writes again and comes round (AOS). That is the long-tool-call
-       problem the fleet notes exist for, drawn the way the room drew it.
-       Under the wall, the Flight Director's poll: each station reads one
-       real figure and answers GO, STBY or NO GO on its own threshold. The
-       poll is a ritual, not a readout: when the band comes up and whenever
-       FLIGHT's answer would change, FLIGHT calls the room, the lamps go
-       dark and each station answers in turn, then FLIGHT gives the verdict.
-       Between polls a station whose answer moves calls FLIGHT on its own,
-       and when the loop has been quiet for two minutes the PAO reads the
-       room to the public. GET counts from the oldest session still alive,
-       and the flight plan is Apollo 11's at a twentieth of the pace, so a
-       working day is a mission and the poll is always for the next event.
-       With the full board up, the clock and FLIGHT stay on (.ghud.flight). */
-    houston: {
-      LOS_S: 150, SPAN_S: 360, AMP: 22,
-      QUIET_MS: 120000,                       // the PAO speaks when the loop has been quiet this long
-      // the ground track: a sine and a half across the wall, in per cent of it
-      y(u){ return 50 + this.AMP * Math.sin(u * Math.PI * 3); },
-      WORD: {go:'GO', stby:'STBY', nogo:'NO GO', los:'—'},
-      SAID: {go:'GO', stby:'STBY', nogo:'NO GO', los:'no data'},
-      RANK: {los:0, go:0, stby:1, nogo:2},
-      // Apollo 11's flight plan, GET in seconds over twenty: TLI eight minutes
-      // in, lunar orbit by the fourth hour, on the surface after five, home
-      // before the tenth.
-      PLAN: [['TLI', 493], ['LOI', 13650], ['PDI', 18459], ['landing', 18497], ['EVA', 19643],
-             ['liftoff', 22386], ['TEI', 24371], ['entry', 35109], ['splashdown', 35156]],
-      /* What the loop says. The crew (the agents) report in their own words;
-         the stations report to FLIGHT; CAPCOM is the only one who talks to
-         the crew. `who` is the session's name. */
-      LINES: {
-        arrived: who => 'INCO — AOS, ' + who + ' on the loop',
-        blocked: who => who + ' — PROGRAM ALARM, it\'s a 1202',
-        waiting: who => 'CAPCOM — ' + who + ' is standing by for FLIGHT',
-        running: who => 'CAPCOM — ' + who + ', Houston, you are GO',
-        done:    who => 'RECOVERY — splashdown, ' + who,
-        idle:    who => who + ' — holding',
-        unknown: who => 'INCO — LOS, ' + who,
-        los:     who => 'INCO — LOS, ' + who,
-        aos:     who => 'INCO — AOS, ' + who,
-      },
-      /* [key, station, what it reads, read(snapshot, flights) -> {v: the
-         figure, s: go|stby|nogo|los, what?: a different label for this
-         reading}]. The thresholds are the gauges' own where the gauge has
-         one (pressure turns amber at 70 and red at 85 up in the HUD too). */
-      STATIONS: [
-        ['booster', 'BOOSTER', 'cpu', d => {
+    /* The intranet. Nothing here has a voice: it has a status page and a
+       status bar, and both are tables. The status page is three web parts.
+       System status is one row per figure the host or the fleet reports,
+       with OK, Warning or Error against its own threshold (the gauges' own
+       where the gauge has one). Active sessions is one row per session at
+       work with how long since it last reported -- a transcript write, a
+       note or a prompt is a report -- and past two and a half minutes of
+       silence it is "not responding", which is the long-tool-call problem
+       the fleet notes exist for, said the way a status page says it. Recent
+       activity is the last few things that happened, each with a timestamp,
+       kept whether or not the page is up so there is history when it comes
+       up. The status bar along the foot is always on: Ready, or the worst
+       word on the page, the head count, the cpu, the pressure and when the
+       page last refreshed. Nothing polls out loud and nothing narrates. */
+    intranet: {
+      STALE_S: 150, KEEP: 5,
+      WORD: {ok: 'OK', warn: 'Warning', error: 'Error', na: 'N/A'},
+      BAR: {ok: 'Ready', warn: 'Warning', error: 'Error', na: 'Ready'},
+      RANK: {na: 0, ok: 0, warn: 1, error: 2},
+      /* [label, read(snapshot, sessions) -> {v: the figure, s: ok|warn|error,
+         what?: a different label for this reading}] */
+      ROWS: [
+        ['CPU utilisation', d => {
           const v = d.host?.cpu?.pct; if(v == null) return null;
-          return {v: Math.round(v) + '%', s: v >= 90 ? 'nogo' : v >= 75 ? 'stby' : 'go'}; }],
-        ['eecom', 'EECOM', 'memory pressure', d => {
+          return {v: Math.round(v) + '%', s: v >= 90 ? 'error' : v >= 75 ? 'warn' : 'ok'}; }],
+        ['Memory pressure', d => {
           const h = d.host || {}, pw = h.power || {};
-          // off the cable, the battery is the consumable that matters
+          // off the cable, the battery is the figure that matters
           if(pw.source && pw.source !== 'AC' && pw.pct != null)
-            return {what: 'battery', v: pw.pct + '%', s: pw.pct <= 15 ? 'nogo' : pw.pct <= 30 ? 'stby' : 'go'};
+            return {what: 'Battery', v: pw.pct + '%', s: pw.pct <= 15 ? 'error' : pw.pct <= 30 ? 'warn' : 'ok'};
           const v = h.pressurePct; if(v == null) return null;
-          return {v: v + '%', s: v > 85 ? 'nogo' : v > 70 ? 'stby' : 'go'}; }],
-        // 1202 was the computer asked to hold more than it had room for
-        ['guido', 'GUIDO', 'agent memory', d => {
+          return {v: v + '%', s: v > 85 ? 'error' : v > 70 ? 'warn' : 'ok'}; }],
+        ['Agent memory', d => {
           const h = d.host || {}, total = h.memory?.total, rss = h.agentRssMb;
           if(!total || rss == null) return null;
-          const p = 100 * rss * 1048576 / total, g = rss >= 1024 ? (rss / 1024).toFixed(1) + 'G' : Math.round(rss) + 'M';
-          return {v: g + ' · ' + Math.round(p) + '%', s: p >= 60 ? 'nogo' : p >= 35 ? 'stby' : 'go'}; }],
-        ['surgeon', 'SURGEON', 'the crew', d => {
-          const b = d.tally?.blocked | 0; return {v: b ? b + ' blocked' : 'nominal', s: b ? 'nogo' : 'go'}; }],
-        ['capcom', 'CAPCOM', 'waiting on you', d => {
-          const w = d.tally?.waiting | 0; return {v: w ? String(w) : 'none', s: w ? 'stby' : 'go'}; }],
-        ['inco', 'INCO', 'signal', (d, fl) => {
-          if(!fl.length) return {v: 'no one in flight', s: 'go'};
-          const lost = fl.filter(f => f.los).length;
-          return {v: (fl.length - lost) + ' of ' + fl.length + ' heard', s: lost ? 'stby' : 'go'}; }],
-        // the board's own signal: how old the snapshot on screen is
-        ['network', 'NETWORK', 'this board', d => {
+          const p = 100 * rss * 1048576 / total, g = rss >= 1024 ? (rss / 1024).toFixed(1) + ' GB' : Math.round(rss) + ' MB';
+          return {v: g + ' (' + Math.round(p) + '%)', s: p >= 60 ? 'error' : p >= 35 ? 'warn' : 'ok'}; }],
+        ['Blocked sessions', d => {
+          const b = d.tally?.blocked | 0; return {v: String(b), s: b ? 'error' : 'ok'}; }],
+        ['Awaiting input', d => {
+          const w = d.tally?.waiting | 0; return {v: String(w), s: w ? 'warn' : 'ok'}; }],
+        ['Session heartbeat', (d, ss) => {
+          if(!ss.length) return {v: 'No active sessions', s: 'ok'};
+          const late = ss.filter(s => s.late).length;
+          return {v: (ss.length - late) + ' of ' + ss.length + ' responding', s: late ? 'warn' : 'ok'}; }],
+        // the page's own figure: how old the snapshot on screen is
+        ['Data refresh', d => {
           const a = Math.max(0, (Date.now() - (d.generatedAt || 0)) / 1000);
-          return {v: Math.round(a) + 's · ' + (d.buildMs | 0) + 'ms', s: a > 15 ? 'nogo' : a > 6 ? 'stby' : 'go'}; }],
+          return {v: Math.round(a) + ' s ago (' + (d.buildMs | 0) + ' ms)', s: a > 15 ? 'error' : a > 6 ? 'warn' : 'ok'}; }],
       ],
       each(d, fn){ (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(fn))); },
-      // the sessions in flight: working or stuck, placed by their silence
-      flights(d){
+      find(d, id){ let hit = null; this.each(d, s => { if(s.id === id) hit = s; }); return hit; },
+      // the sessions at work -- running or stuck -- and how long each has been silent
+      sessions(d){
         const now = Date.now(), out = [];
         this.each(d, s => {
           if(s.state !== 'running' && s.state !== 'blocked') return;
           const heard = Math.max(s.updated || 0, s.noteAt || 0, s.promptAt || 0);
-          const quiet = heard ? Math.max(0, (now - heard) / 1000) : this.SPAN_S;
-          out.push({id: s.id, name: s.name || s.handle || '', state: s.state, quiet, los: quiet >= this.LOS_S});
+          const quiet = heard ? Math.max(0, (now - heard) / 1000) : null;
+          out.push({id: s.id, name: s.name || s.handle || '', state: s.state, quiet, late: quiet == null || quiet >= this.STALE_S});
         });
-        return out.sort((a, b) => a.quiet - b.quiet);
+        return out.sort((a, b) => (b.quiet ?? 1e9) - (a.quiet ?? 1e9));
       },
-      fmt(sec){ const s = Math.round(sec); return s < 60 ? s + 's' : Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); },
-      // "3h 47m" / "8m 12s": how the PAO says how far off the next event is
-      dur(sec){
-        const s = Math.max(0, Math.round(sec)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
-        return h ? h + 'h ' + String(m).padStart(2, '0') + 'm' : m + 'm ' + String(s % 60).padStart(2, '0') + 's';
+      // "45 s ago", "2 min 30 s ago", "1 h 04 min ago": the way a status page says it
+      ago(sec){
+        if(sec == null) return 'never';
+        const s = Math.round(sec), m = Math.floor(s / 60), h = Math.floor(m / 60);
+        if(h) return h + ' h ' + String(m % 60).padStart(2, '0') + ' min ago';
+        if(m) return m + ' min ' + String(s % 60).padStart(2, '0') + ' s ago';
+        return s + ' s ago';
       },
-      get(ms){
-        const s = Math.floor(ms / 1000), pad = (v, w) => String(v).padStart(w, '0');
-        return pad(Math.floor(s / 3600), 3) + ':' + pad(Math.floor(s / 60) % 60, 2) + ':' + pad(s % 60, 2);
+      clock(t){ const d = new Date(t || Date.now()), p = v => String(v).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()); },
+      reads(d, ss){ return this.ROWS.map(([k, read]) => [k, read(d, ss) || {v: 'n/a', s: 'na'}]); },
+      worst(reads){ let w = 'ok'; reads.forEach(([, r]) => { if(this.RANK[r.s] > this.RANK[w]) w = r.s; }); return w; },
+      // a line on the activity list; the newest first, KEEP of them
+      log(n, text){
+        n._log.unshift({t: Date.now(), text});
+        if(n._log.length > this.KEEP) n._log.length = this.KEEP;
       },
-      // seconds of GET, or null with no one alive to count from
-      getSec(d, now){
-        let t0 = 0; this.each(d, s => { if(s.started && (!t0 || s.started < t0)) t0 = s.started; });
-        return t0 ? (now - t0) / 1000 : null;
-      },
-      // the next event on the flight plan; 'launch' before anyone is alive
-      next(sec){
-        if(sec == null) return ['launch', 0];
-        return this.PLAN.find(([, t]) => t > sec) || ['recovery', sec];
-      },
-      clock(get, d, now){
-        const sec = this.getSec(d, now), txt = sec == null ? '---:--:--' : this.get(sec * 1000);
-        if(get.lastChild.nodeValue !== txt) get.lastChild.nodeValue = txt;
-      },
-      lamp(p, s){
-        if(p.dataset.s !== s) p.dataset.s = s;
-        const b = p.querySelector('.lamp'), w = this.WORD[s];
-        if(b.textContent !== w) b.textContent = w;
-      },
-      // the figure under a station's name
-      reading(p, what, r){
-        const u = p.querySelector('u'), label = (r.what || what) + ' ';
-        if(u.firstChild.nodeValue !== label) u.firstChild.nodeValue = label;
-        if(u.lastChild.textContent !== r.v) u.lastChild.textContent = r.v;
-      },
-      // a cue on the loop, only for a listener who asked for the room's clicks
-      cue(name){ const FS = window.FleetSounds; if(FS && FS.clicks && FS.clicks()) FS.play(name); },
-      /* THE LOOP. One voice at a time, the way a loop works: whoever keys in
-         waits for the line to clear. Every utterance is {text, hold, fn};
-         fn runs as the line is spoken, which is how the poll lights its
-         lamps in step with the words. */
-      say(n, text, hold, fn){
-        const q = n._q || (n._q = []);
-        q.push({text, hold: hold || 5000, fn});
-        if(q.length > 20) q.splice(0, q.length - 20);
-        if(!n._on) this.drain(n);
-      },
-      drain(n){
-        if(!n.isConnected) return;
-        const it = n._q.shift(), s = n.querySelector('.say');
-        if(!it){ n._on = false; s.classList.remove('on'); return; }
-        n._on = true; n._said = Date.now();
-        if(it.fn) it.fn();
-        s.textContent = it.text; s.classList.add('on');
-        clearTimeout(n._t); n._t = setTimeout(() => this.drain(n), it.hold);
-      },
-      hush(n){
-        clearTimeout(n._t); n._q = []; n._on = false; n._polling = false; n._worst = null;
-        n.dataset.poll = '0'; n.querySelector('.say').classList.remove('on');
-        n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
-      },
-      /* THE POLL. FLIGHT calls the room for the next event on the flight
-         plan; the lamps go dark and each station answers in turn, worst
-         answer wins, FLIGHT gives the verdict. Runs when the band comes up
-         and whenever FLIGHT's answer would change. */
-      ritual(n, d, fl, now){
-        if(n._polling) return;
-        n._polling = true;
-        const ev = this.next(this.getSec(d, now))[0];
-        const reads = this.STATIONS.map(([k, name, what, read]) => [k, name, what, read(d, fl) || {v: '—', s: 'los'}]);
-        let worst = 'go', ok = 0;
-        reads.forEach(([, , , r]) => { if(this.RANK[r.s] > this.RANK[worst]) worst = r.s; if(r.s === 'go') ok++; });
-        const bad = reads.filter(([, , , r]) => worst !== 'go' && r.s === worst).map(([, name]) => name);
-        const f = n.querySelector('.stn.flight');
-        this.say(n, 'FLIGHT — go/no-go for ' + ev, 1100, () => {
-          n.dataset.poll = '1';
-          this.STATIONS.forEach(([k]) => this.lamp(n.querySelector('.stn.' + k), 'los'));
-          this.lamp(f, 'los');
-        });
-        reads.forEach(([k, name, what, r]) => this.say(n, name + ' — ' + this.SAID[r.s] + (r.s !== 'go' && r.s !== 'los' ? ' · ' + (r.what || what) + ' ' + r.v : ''), 420, () => {
-          const p = n.querySelector('.stn.' + k);
-          n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
-          p.classList.add('called');
-          this.lamp(p, r.s); this.reading(p, what, r); this.cue('poll');
-        }));
-        const verdict = 'FLIGHT — we are ' + this.SAID[worst] + (bad.length ? ' on ' + bad.join(', ') : ' for ' + ev);
-        this.say(n, verdict, 6500, () => {
-          n.querySelectorAll('.stn.called').forEach(x => x.classList.remove('called'));
-          this.lamp(f, worst);
-          const t = ok + '/' + this.STATIONS.length + ' go';
-          if(f.querySelector('u span').textContent !== t) f.querySelector('u span').textContent = t;
-          n.dataset.poll = '0'; n.dataset.alarm = worst === 'nogo' ? '1' : '0';
-          n._worst = worst; n._polling = false;
-          this.cue(worst === 'nogo' ? 'nogo' : 'poll');
-        });
-      },
-      // between polls: every station answers in place, and one whose answer
-      // moved calls FLIGHT about it; returns the worst
-      poll(n, d, fl){
-        let worst = 'go', ok = 0;
-        this.STATIONS.forEach(([k, name, what, read]) => {
-          const p = n.querySelector('.stn.' + k), r = read(d, fl) || {v: '—', s: 'los'}, was = p.dataset.s;
-          this.lamp(p, r.s); this.reading(p, what, r);
-          if(was !== r.s) this.say(n, 'FLIGHT, ' + name + ' — ' + this.SAID[r.s] + (r.s !== 'go' && r.s !== 'los' ? ' · ' + (r.what || what) + ' ' + r.v : ''), 5000);
-          if(this.RANK[r.s] > this.RANK[worst]) worst = r.s;
-          if(r.s === 'go') ok++;
-        });
-        const f = n.querySelector('.stn.flight'), t = ok + '/' + this.STATIONS.length + ' go';
-        this.lamp(f, worst);
-        if(f.querySelector('u span').textContent !== t) f.querySelector('u span').textContent = t;
-        return worst;
-      },
-      worst(d, fl){
-        let w = 'go';
-        this.STATIONS.forEach(([, , , read]) => { const r = read(d, fl); if(r && this.RANK[r.s] > this.RANK[w]) w = r.s; });
-        return w;
-      },
-      /* THE PAO. Public Affairs read the room to the world in the third
-         person, in a voice that never changed whatever the room was doing:
-         "This is Apollo Control, Houston, at 102 hours 45 minutes..." */
-      pao(n, d, fl, now){
-        const sec = this.getSec(d, now), [ev, at] = this.next(sec), heard = fl.filter(f => !f.los).length;
-        const parts = ['Apollo Control, Houston' + (sec == null ? '.' : ' — ' + this.get(sec * 1000).slice(0, 6) + ' GET.')];
-        parts.push(fl.length ? fl.length + ' in flight, ' + (heard === fl.length ? 'all' : heard) + ' heard.' : 'No one in flight.');
-        parts.push('FLIGHT is ' + this.SAID[n._worst || 'go'] + '.');
-        if(sec != null && at > sec) parts.push(ev + ' in ' + this.dur(at - sec) + '.');
-        this.say(n, parts.join(' '), 9000);
-      },
-      // the wall: one craft per flight, on the track by its silence
-      wall(n, fl){
-        const row = n.querySelector('.crafts'), seen = new Set(), xs = [];
-        n.querySelector('.none').hidden = fl.length > 0;
-        fl.forEach(f => {
-          seen.add(f.id);
-          let c = row.querySelector('.craft[data-id="' + CSS.escape(f.id) + '"]');
-          if(!c){ c = el('i', 'craft', '<b></b><em></em><u></u>'); c.dataset.id = f.id; row.appendChild(c); }
-          // parked just inside the far edge past the span, so the lamp is not clipped
-          const u = Math.min(1, f.quiet / this.SPAN_S), x = Math.min(u * 100, 99.2);
-          // a lane per neighbour within a tenth of the wall, so a pile at AOS still reads
-          const lane = xs.filter(v => Math.abs(v - x) < 10).length % 4; xs.push(x);
-          c.style.setProperty('--x', x.toFixed(2)); c.style.setProperty('--y', this.y(u).toFixed(2));
-          c.dataset.lane = lane; c.dataset.side = x > 72 ? 'l' : 'r';
-          c.dataset.s = f.state; c.dataset.los = f.los ? '1' : '0';
-          const t = this.fmt(f.quiet);
-          if(c.children[1].textContent !== f.name) c.children[1].textContent = f.name;
-          if(c.children[2].textContent !== t) c.children[2].textContent = t;
-        });
-        Array.from(row.children).forEach(c => { if(!seen.has(c.dataset.id)) c.remove(); });
-      },
+      cellText(td, text){ if(td.textContent !== text) td.textContent = text; },
       make(){
-        const n = el('div', 'band mocr'), u0 = this.LOS_S / this.SPAN_S, X = (u0 * 1000).toFixed(0);
-        let track = '', grid = '';
-        for(let i = 0; i <= 100; i++) track += (i ? ' L' : 'M') + (i * 10) + ' ' + (this.y(i / 100) * 1.6).toFixed(1);
-        for(let x = 100; x < 1000; x += 100) grid += '<path d="M' + x + ' 0v160" vector-effect="non-scaling-stroke"/>';
-        for(let y = 40; y < 160; y += 40) grid += '<path d="M0 ' + y + 'h1000" vector-effect="non-scaling-stroke"/>';
+        const n = el('div', 'band webparts');
         n.innerHTML =
-            '<div class="wall"><svg viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">'
-          +   '<rect x="' + X + '" y="0" width="' + (1000 - X) + '" height="160" fill="rgba(0,0,0,.38)"/>'
-          +   '<g stroke="#a9d6f5" stroke-opacity=".10" stroke-width="1" fill="none">' + grid + '</g>'
-          +   '<path d="M' + X + ' 0v160" stroke="#ffb638" stroke-opacity=".55" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>'
-          +   '<path d="' + track + '" fill="none" stroke="#a9d6f5" stroke-opacity=".5" stroke-width="1.5" vector-effect="non-scaling-stroke"/>'
-          + '</svg>'
-          + '<span class="mark aos">AOS — heard just now</span>'
-          + '<span class="mark los" style="left:' + (u0 * 100).toFixed(1) + '%">LOS — silent ' + this.fmt(this.LOS_S) + '</span>'
-          + '<span class="mark end">' + this.fmt(this.SPAN_S) + '+</span>'
-          + '<span class="none" hidden>no one in flight</span><i class="crafts"></i></div>'
-          + '<div class="consoles"><div class="loop"><b class="get"><i>GET</i>---:--:--</b><span class="say" aria-live="polite"></span><i class="alarm">master alarm</i></div><div class="stns">'
-          + this.STATIONS.map(([k, name, what]) => '<i class="stn ' + k + '" data-s="los"><b class="lamp">—</b><em>' + name + '</em><u>' + what + ' <span>—</span></u></i>').join('')
-          + '<i class="stn flight" data-s="los"><b class="lamp">—</b><em>FLIGHT</em><u>all stations <span>—</span></u></i>'
-          + '</div></div>';
-        n._los = new Set(); n._at = 0; n._q = []; n._on = false; n._worst = null; n._said = 0;
-        // crafts drift and the clock counts by the second, not by the paint
-        timers.push(setInterval(() => {
-          this.paint(n, null);
-          const h = document.querySelector('.ghud.flight'); if(h) this.paintHud(h, null);
-        }, 1000));
+            '<div class="parts">'
+          +   '<div class="part status"><h4>System status</h4>'
+          +     '<table><colgroup><col class="k"><col class="v"><col class="s"></colgroup><thead><tr><th>Component</th><th>Value</th><th>Status</th></tr></thead><tbody>'
+          +     this.ROWS.map(([k]) => '<tr data-s="na"><td class="k">' + k + '</td><td class="v">n/a</td><td class="s">N/A</td></tr>').join('')
+          +     '</tbody></table><div class="small">Last updated: <span class="at">--:--:--</span></div></div>'
+          +   '<div class="part sessions"><h4>Active sessions</h4>'
+          +     '<table><colgroup><col class="k"><col class="v"><col class="s"></colgroup><thead><tr><th>Session</th><th>Last reported</th><th>Status</th></tr></thead><tbody></tbody></table>'
+          +     '<div class="none" hidden>No active sessions.</div><div class="small"><span class="count">Showing 0 items</span></div></div>'
+          +   '<div class="part activity"><h4>Recent activity</h4><ul></ul><div class="none">No recent activity.</div></div>'
+          + '</div>';
+        n._log = []; n._seen = new Set(); n._late = new Set(); n._at = 0;
+        // the ages count by the second, not by the paint
+        timers.push(setInterval(() => this.paint(n, null), 1000));
         return n;
       },
-      // the name on a tile, for the loop
-      who(id){ return board.querySelector('.bubble[data-id="' + CSS.escape(id) + '"] .nm')?.textContent || ''; },
+      status(n, d, ss){
+        const reads = this.reads(d, ss), rows = n.querySelectorAll('.status tbody tr');
+        reads.forEach(([k, r], i) => {
+          const tr = rows[i]; if(!tr) return;
+          if(tr.dataset.s !== r.s) tr.dataset.s = r.s;
+          this.cellText(tr.children[0], r.what || k);
+          this.cellText(tr.children[1], r.v);
+          this.cellText(tr.children[2], this.WORD[r.s]);
+        });
+        this.cellText(n.querySelector('.status .at'), this.clock(d.generatedAt));
+        return this.worst(reads);
+      },
+      active(n, ss){
+        const body = n.querySelector('.sessions tbody'), seen = new Set(), max = 6;
+        n.querySelector('.sessions .none').hidden = ss.length > 0;
+        ss.slice(0, max).forEach(s => {
+          seen.add(s.id);
+          let tr = body.querySelector('tr[data-id="' + CSS.escape(s.id) + '"]');
+          if(!tr){ tr = el('tr', '', '<td class="k"></td><td class="v"></td><td class="s"></td>'); tr.dataset.id = s.id; body.appendChild(tr); }
+          const st = s.state === 'blocked' ? 'error' : s.late ? 'warn' : 'ok';
+          if(tr.dataset.s !== st) tr.dataset.s = st;
+          this.cellText(tr.children[0], s.name);
+          this.cellText(tr.children[1], this.ago(s.quiet));
+          this.cellText(tr.children[2], s.state === 'blocked' ? 'Escalated' : s.late ? 'Not responding' : 'In progress');
+        });
+        Array.from(body.children).forEach(tr => { if(!seen.has(tr.dataset.id)) tr.remove(); });
+        const shown = Math.min(ss.length, max);
+        this.cellText(n.querySelector('.sessions .count'), 'Showing ' + shown + (ss.length > shown ? ' of ' + ss.length : '') + ' item' + (ss.length === 1 ? '' : 's'));
+      },
+      activity(n){
+        const ul = n.querySelector('.activity ul');
+        n.querySelector('.activity .none').hidden = n._log.length > 0;
+        const want = n._log.map(e => '<li><time>' + this.clock(e.t) + '</time>' + e.text + '</li>').join('');
+        if(ul.innerHTML !== want) ul.innerHTML = want;
+      },
+      // what the page says happened, in the voice of a form
+      note(n, d, diff){
+        const name = id => { const s = this.find(d, id); return '"' + (s ? (s.name || s.handle || id) : id) + '"'; };
+        if(diff && !diff.first){
+          (diff.arrived || []).forEach(id => this.log(n, 'Session ' + name(id) + ' was added.'));
+          (diff.changed || []).forEach(c => this.log(n, 'Session ' + name(c.id) + ' changed status from ' + voice(c.from) + ' to ' + voice(c.to) + '.'));
+        }
+      },
       paint(n, diff){
         const d = latest; if(!d) return;
-        if(!(board.classList.contains('compact') && !document.querySelector('.sheet.on'))){   // not up
-          if(n._on || n._worst != null) this.hush(n);
-          return;
-        }
-        const now = Date.now(), fl = this.flights(d);
-        this.clock(n.querySelector('.get'), d, now);
-        this.wall(n, fl);
-        // the lamps: mid-poll they belong to the ritual; otherwise in place,
-        // and a change in FLIGHT's answer is what calls the room
-        if(!n._polling){
-          const worst = this.worst(d, fl);
-          if(n._worst == null || worst !== n._worst) this.ritual(n, d, fl, now);
-          else n.dataset.alarm = this.poll(n, d, fl) === 'nogo' ? '1' : '0';
-        }
-        // the loop: what just happened, on a board already being read
-        if(diff && !diff.first){
-          const c = diff.changed && diff.changed[0], a = diff.arrived && diff.arrived[0];
-          if(a) this.say(n, this.LINES.arrived(this.who(a)));
-          else if(c && this.LINES[c.to]) this.say(n, this.LINES[c.to](this.who(c.id)));
-        }
-        const was = n._los, los = new Set();
-        fl.forEach(f => {
-          if(f.los) los.add(f.id);
-          if(now - n._at < 5000){          // only transitions this paint saw happen
-            if(f.los && !was.has(f.id)) this.say(n, this.LINES.los(f.name));
-            if(!f.los && was.has(f.id)) this.say(n, this.LINES.aos(f.name));
+        const now = Date.now(), ss = this.sessions(d);
+        this.note(n, d, diff);
+        // a session going quiet, or answering again, is worth a line too --
+        // only transitions this paint saw happen, never the first paint
+        const late = new Set();
+        ss.forEach(s => {
+          if(s.late) late.add(s.id);
+          if(n._at && now - n._at < 5000){
+            if(s.late && !n._late.has(s.id)) this.log(n, 'Session "' + s.name + '" has not responded for ' + this.ago(s.quiet).replace(' ago', '') + '.');
+            if(!s.late && n._late.has(s.id)) this.log(n, 'Session "' + s.name + '" is responding again.');
           }
         });
-        n._los = los; n._at = now;
-        if(!n._on && now - n._said > this.QUIET_MS) this.pao(n, d, fl, now);
+        n._late = late; n._at = now;
+        if(!(board.classList.contains('compact') && !document.querySelector('.sheet.on'))) return;   // not up
+        this.status(n, d, ss);
+        this.active(n, ss);
+        this.activity(n);
       },
-      hud(){ const h = el('i', 'ghud flight', '<b class="get"><i>GET</i>---:--:--</b><em>flight</em><b class="lamp">—</b>'); h.dataset.s = 'los'; return h; },
+      hud(){
+        return el('div', 'ghud statusbar', '<span class="msg"><b>Ready</b></span><span class="n">Sessions: 0</span><span class="cpu">CPU: n/a</span><span class="mem">Memory pressure: n/a</span><span class="at">Last updated: --:--:--</span>');
+      },
       paintHud(h){
         const d = latest; if(!d) return;
-        this.clock(h.querySelector('.get'), d, Date.now());
-        this.lamp(h, this.worst(d, this.flights(d)));
+        const ss = this.sessions(d), reads = this.reads(d, ss), worst = this.worst(reads);
+        const bad = reads.filter(([, r]) => worst !== 'ok' && r.s === worst).map(([k, r]) => r.what || k);
+        if(h.dataset.s !== worst) h.dataset.s = worst;
+        const put = (sel, v) => { const e = h.querySelector(sel); if(e.textContent !== v) e.textContent = v; };
+        put('.msg b', this.BAR[worst] + (bad.length ? ': ' + bad.join(', ') : ''));
+        put('.n', 'Sessions: ' + (d.total | 0) + ' (' + ss.length + ' active)');
+        const cpu = d.host?.cpu?.pct, pres = d.host?.pressurePct;
+        put('.cpu', 'CPU: ' + (cpu == null ? 'n/a' : Math.round(cpu) + '%'));
+        put('.mem', 'Memory pressure: ' + (pres == null ? 'n/a' : pres + '%'));
+        put('.at', 'Last updated: ' + this.clock(d.generatedAt));
       },
     },
     /* Skyrim's three bars: magicka is the memory left, health the pressure
@@ -10432,13 +10298,27 @@ setInterval(() => {
    only adds your own library on top. */
 let yt = null, ytUp = false, apiReady = false, pending = null, pendingAt = 0,
     queue = [], qi = -1, misses = 0;
+/* The dead list. A fair share of what YouTube Music calls a song refuses the
+   standard embed player -- licensed to the app, not to the web -- and the
+   only way to know is to ask the player. Every refusal (100 gone, 101 and
+   150 embedding off) is remembered here per browser for a month, so a track
+   that would not play never comes back into a crate; the scout below asks
+   ahead of time so the needle never lands on one. Transient errors (2, 5)
+   are skipped but not remembered. */
+const DEAD_KEY = 'fleet.music.dead', DEAD_TTL = 30 * 86400000;
+const dead = (() => { try{ return JSON.parse(localStorage.getItem(DEAD_KEY) || '{}') || {}; }catch(e){ return {}; } })();
+Object.keys(dead).forEach(k => { if(Date.now() - dead[k] > DEAD_TTL) delete dead[k]; });
+const isDead = id => !!dead[id];
+function markDead(id){ dead[id] = Date.now(); try{ localStorage.setItem(DEAD_KEY, JSON.stringify(dead)); }catch(e){} }
+const unplayable = code => code === 100 || code === 101 || code === 150;
+let spare = [];                          // the reserve a crate is topped up from
 const playerEl = document.getElementById('player'), crateEl = document.getElementById('crate');
 const npEl = document.getElementById('np'), byEl = document.getElementById('by');
 const qnEl = document.getElementById('qn'), rowsEl = document.getElementById('mrows');
 const headEl = document.getElementById('mhead'), playBtn = document.getElementById('mplay');
 const authEl = document.getElementById('mauth'), authBtn = document.getElementById('mauthbtn');
 const headersEl = document.getElementById('mheaders');
-const minBtn = document.getElementById('mmin');
+const minBtn = document.getElementById('mmin'), artEl = document.getElementById('mart');
 
 // Each theme names its music as a plain search string rather than a playlist id,
 // so a theme stays portable: it needs no particular playlist to exist, and no
@@ -10465,7 +10345,7 @@ const THEME_MUSIC = {
   ochre:     'playful big band spy jazz brass action instrumental',
   staunton:  'elegant martini jazz and high stakes baccarat tension',
   pipboy:    '1950s swing jazz ink spots big band fallout',
-  houston:   'apollo mission control ambient 1960s space program analog drone',
+  intranet:  'office hold music muzak smooth jazz elevator instrumental',
   matrix:    '90s industrial metal dark techno breakbeat',
   offcut:    'acid jazz funk hammond organ heist groove instrumental',
   cobble:    'calm ambient piano and soft synth pads cave reverb building music',
@@ -10487,6 +10367,7 @@ function loadYT(){
 // code; the audio never had a chance.
 window.onYouTubeIframeAPIReady = () => {
   apiReady = true; if(pending) build(pending, pendingAt);
+  scoutQueue();
 };
 
 function build(videoId, from){
@@ -10515,12 +10396,14 @@ function build(videoId, from){
       },
       onError: e => {
         // 101 and 150 mean the rights holder disabled embedding for that video;
-        // 100 means it is gone. None of it is recoverable, so move on rather
-        // than sit on a dead track -- but stop if the whole queue is like that.
-        const why = (e.data === 101 || e.data === 150) ? 'embedding disabled' : 'unavailable';
-        toast(((queue[qi]||{}).title || 'track') + ': ' + why);
-        if(++misses >= Math.min(5, queue.length)){ misses = 0; return; }
-        next();
+        // 100 means it is gone. None of it is recoverable, so the track comes
+        // out of the crate (and onto the dead list) and whatever is now in its
+        // place plays -- quietly, one skip is not news. Stop if it is skip
+        // after skip after skip: something else is wrong.
+        const t = queue[qi];
+        if(t && unplayable(e.data)) markDead(t.id);
+        if(++misses >= 5){ misses = 0; toast('nothing in this crate will play here'); return; }
+        if(t) dropTrack(qi); else next();
       }
     }
   });
@@ -10541,6 +10424,8 @@ function choose(i){
   const t = queue[qi];
   npEl.textContent = t.title;
   byEl.textContent = t.artist || '';
+  // the screen shows the sleeve, not the video: the song is the point
+  if(t.art){ artEl.src = t.art; artEl.hidden = false; } else artEl.hidden = true;
   qnEl.textContent = (qi + 1) + ' / ' + queue.length;
   [...rowsEl.children].forEach((el, n) => el.classList.toggle('now', n === qi));
   return t;
@@ -10619,17 +10504,79 @@ setInterval(remember, 2000);
 addEventListener('beforeunload', remember);
 const prev = () => play(qi - 1);
 
-function setQueue(tracks, label){
-  queue = tracks || [];
-  headEl.textContent = label + ' \u00b7 ' + queue.length + ' tracks';
-  rowsEl.innerHTML = queue.map(t =>
-    '<button class="row" data-i="' + queue.indexOf(t) + '">'
+function setQueue(tracks, label, more){
+  queue = (tracks || []).filter(t => !isDead(t.id));
+  spare = (more || []).filter(t => !isDead(t.id));
+  crateLabel = label;
+  renderRows();
+  qi = -1;
+  scoutQueue();
+}
+let crateLabel = '';
+function renderRows(){
+  headEl.textContent = crateLabel + ' \u00b7 ' + queue.length + ' tracks';
+  rowsEl.innerHTML = queue.map((t, i) =>
+    '<button class="row' + (i === qi ? ' now' : '') + '" data-i="' + i + '">'
     + '<span class="t">' + esc(t.title) + '</span>'
     + '<span class="a">' + esc(t.artist || '') + '</span>'
     + '<span class="d">' + esc(t.duration || '') + '</span></button>').join('');
   rowsEl.querySelectorAll('.row').forEach(el =>
     el.onclick = () => play(+el.dataset.i));
-  qi = -1;
+}
+/* A track leaves the crate. If it was playing, what is now in its place
+   plays; if it was before the needle, the needle's number moves with it.
+   The reserve fills the hole so a crate stays a crate: the same song by way
+   of its video, or a fan upload, which is audio all the same. */
+function dropTrack(i){
+  if(i < 0 || i >= queue.length) return;
+  const wasPlaying = i === qi;
+  queue.splice(i, 1);
+  if(spare.length && queue.length < 25) queue.push(spare.shift());
+  if(i < qi) qi--;
+  renderRows();
+  if(wasPlaying){ if(queue.length) play(qi); else { qi = -1; npEl.textContent = 'nothing in this crate will play here'; } }
+  else if(qi >= 0) qnEl.textContent = (qi + 1) + ' / ' + queue.length;
+  scoutQueue();
+}
+
+/* THE SCOUT. A second player, off screen and never played, that cues each
+   track in the crate ahead of the needle: a cue is enough for the embed to
+   say whether it will play. A refusal drops the track (dropTrack, so the
+   reserve fills in); a cue is remembered as good for the session, so the
+   same crate is not asked twice. One at a time, in queue order, and it never
+   asks about the track that is playing -- the real player already knows. */
+let scout = null, scoutBusy = false, scoutT = 0, scoutId = null;
+const scoutOk = new Set();
+function scoutQueue(){
+  if(apiReady && playerEl.classList.contains('on') && !scoutBusy) scoutNext();
+}
+function scoutNext(){
+  const t = queue.find((t, i) => i !== qi && !scoutOk.has(t.id));
+  if(!t){ scoutBusy = false; return; }
+  scoutBusy = true; scoutId = t.id;
+  clearTimeout(scoutT);
+  scoutT = setTimeout(() => scoutDone(true), 6000);     // no answer is not a refusal
+  // Built on the first track it has to ask about, like the real player: an
+  // embed with no video id never initialises. That first load is the first
+  // cue, and answers the same way -- CUED, or an error.
+  if(!scout){
+    scout = new YT.Player('ytscout', {height: '1', width: '1', videoId: t.id, playerVars: {controls: 0, disablekb: 1, origin: location.origin},
+      events: {
+        onStateChange: e => { if(e.data === YT.PlayerState.CUED) scoutDone(true); },
+        onError: e => scoutDone(false, e.data),
+      }});
+    return;
+  }
+  try{ scout.cueVideoById(t.id); }catch(e){ clearTimeout(scoutT); scoutBusy = false; }
+}
+function scoutDone(ok, code){
+  clearTimeout(scoutT);
+  const id = scoutId; scoutId = null; scoutBusy = false;
+  if(!id) return;
+  const i = queue.findIndex(t => t.id === id);
+  if(ok || !unplayable(code) || i === qi) scoutOk.add(id);
+  else { markDead(id); if(i >= 0) dropTrack(i); }
+  setTimeout(scoutNext, 150);
 }
 
 async function mfetch(url, label){
@@ -10645,7 +10592,7 @@ async function msearch(q, autoplay){
   if(!q.trim()) return;
   const d = await mfetch('/api/music/search?q=' + encodeURIComponent(q));
   if(!d) return;
-  setQueue(d.tracks, q);
+  setQueue(d.tracks, q, d.more);
   // autoplay===false means "restock the crate, leave the needle alone": used
   // when the theme changes under a song that is already playing.
   if(d.tracks.length && autoplay !== false) play(0);
@@ -10679,6 +10626,7 @@ function openPlayer(on){
   if(!on) crateEl.classList.remove('on');
   if(on){
     loadYT();
+    scoutQueue();
     // A theme that names its own music seeds the crate the first time you open
     // the player on it, so picking a theme picks a mood as well as a palette.
     if(!queue.length){
@@ -10768,10 +10716,14 @@ headersEl.onkeyup = e => e.stopPropagation();
 // setTheme also coordinates with the player. Initialise the theme only after
 // the player's lexical bindings above exist; doing it earlier made every
 // music-backed theme throw before tick() could fetch the first snapshot.
+// A world retired under one name comes back under its new one, so a browser
+// that remembered it, or a kiosk URL that asks for it, is not dropped into
+// the default. Apollo's key was `houston`; it is the intranet now.
+const RENAMED = {houston: 'intranet'};
 setTheme((() => {
-  const asked = new URLSearchParams(location.search).get('theme');
-  if(asked) return asked;
-  try{ return localStorage.getItem(THEME_KEY) || 'console'; }catch(e){ return 'console'; }
+  let name = new URLSearchParams(location.search).get('theme');
+  if(!name){ try{ name = localStorage.getItem(THEME_KEY); }catch(e){} }
+  return RENAMED[name] || name || 'console';
 })());
 // Restore the crate immediately, and rebuild the iframe only when the player
 // was open. Minimized playback resumes minimized; the iframe stays mounted so

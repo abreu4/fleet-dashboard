@@ -511,7 +511,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif path == "/api/music/playlist":
                     self._json(music.playlist(one("id")))
                 elif path == "/api/music/search":
-                    self._json({"tracks": music.search(one("q"))})
+                    self._json(music.search(one("q")))
                 elif path == "/api/music/now":
                     # Polled far more often than the rest of the music API, and
                     # cheap: one AppleScript round trip, cached for a beat.

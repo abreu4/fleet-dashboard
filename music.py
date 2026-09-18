@@ -139,7 +139,7 @@ def _track(item):
     or a non-song row -- and is dropped rather than shown as a dead line.
     """
     vid = item.get("videoId")
-    if not vid:
+    if not vid or item.get("isAvailable") is False:     # greyed out in the playlist
         return None
     duration = item.get("duration") or ""
     if not duration and item.get("duration_seconds"):
@@ -205,10 +205,24 @@ def search(query, limit=25):
     Each theme names its music as a plain search string rather than a playlist
     id, so a theme stays portable: it does not depend on a particular playlist
     existing, or on being logged in at all.
+
+    Returns the songs, and under `more` the videos for the same query. A song
+    on YouTube Music is an audio track the label licensed to that app, and a
+    fair share of them refuse the standard embed player ("this video is
+    unavailable"); nothing on this side can tell which in advance, so the page
+    finds out by cueing each one quietly and drops the dead ones (see the
+    scout in ui.html). The videos are the reserve it tops the crate up from:
+    the same song by way of its video or a fan upload, which is audio all the
+    same to a player whose screen is covered by the cover art.
     """
     def read():
-        found = client().search(query, filter="songs", limit=limit)
-        return _tracks(found)[:limit]
+        songs = _tracks(client().search(query, filter="songs", limit=limit))[:limit]
+        seen = {t["id"] for t in songs}
+        try:
+            videos = _tracks(client().search(query, filter="videos", limit=limit))
+        except Exception:
+            videos = []
+        return {"tracks": songs, "more": [t for t in videos if t["id"] not in seen][:limit]}
     return _cached("q:" + query.lower().strip(), 600, read)
 
 
