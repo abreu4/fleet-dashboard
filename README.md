@@ -12,7 +12,14 @@ The installer keeps a self-contained runtime and virtual environment under
 `~/.local/share/fleet-dashboard`. This avoids macOS denying a background
 LaunchAgent access to a checkout under `~/Documents`. It requires Python 3.10+
 and selects Homebrew or Anaconda Python automatically when Apple Python is too
-old.
+old. It also builds `Fleet Dashboard.app` in the runtime and links it onto the
+Desktop: double-click it to open the board, and if the board is down it starts
+the login agent itself.
+
+The dashboard owns the shells it opens, and a restart hangs up on all of them.
+Run `install.sh` from one of those shells and it detaches the restart into its
+own session first, so the board comes back even though the shell that asked
+for it does not.
 
 Or run the dependency-free core by hand: `python3 dashboard.py --port 8787`.
 
@@ -172,25 +179,103 @@ genuinely flat rather than dimmed.
 One row, sized in `vh` so the readings keep their share of the screen instead
 of being squeezed to hold the session tiles at a fixed size: the brand and
 tally, six arc gauges in a 2x3 block, the trace, and the numeric readout. The
-gauge dials scale with the strip, and the trace carries gridlines,
-end-of-series markers and its current values in the caption.
+gauge dials scale with the strip. Every reading names its window in its label
+or its hover text, because a number without one is a guess; hover anything
+for what it is and how it is counted.
 
-The gauges are `cpu`, `mem`, `ram` (resident set of the agent processes),
-`live` (active sessions over total), `pres` and `disk` (gigabytes free). The
-readout beside them carries `load`, `procs`, `swap`, `power`, `tokens` and
-`uptime`. `power` reads `100% AC` on the wall and turns red once the machine
-is off the cable and under 20%.
+The board is glanced at from a metre away while something else has your
+attention, so the six gauges answer five questions in order and nothing else:
 
-`pres` is memory pressure, read from `memory_pressure -Q`. It sat here as a
-thermal gauge until it turned out that Apple Silicon records no CPU thermal
-level at all: `pmset -g therm` answers "no CPU power status has been
-recorded", the regex never matched, and the dial reported its fallback
-constant of 100 forever. Real die temperatures need `powermetrics` as root,
-which is not a thing a LaunchAgent should be asking for. Pressure costs
-nothing, needs no privilege, moves under load, and measures the resource that
-actually bites on a 16GB machine running a fleet -- it counts memory that
-cannot be reclaimed, so it tells 76% used and happy apart from 76% used and
-swapping.
+| gauge | what it is |
+| --- | --- |
+| `live` | sessions working right now (running or blocked on you) over everything on the board |
+| `tok/min · 5m` | output tokens the whole fleet is writing per minute, averaged over the last five whole minutes; the arc is against today's busiest minute |
+| `5h window` | estimated output tokens in the open five-hour Claude usage window; the arc is how much of the window has elapsed |
+| `max context` | the fullest context on the board, as a share of that session's window; amber past 70%, red past 85%, and clicking it opens the session |
+| `mem pressure` | macOS memory pressure, the number that predicts a stall (below) |
+| `done today` | jobs that reached done since midnight, with the merge requests they opened in the hover |
+
+"Tokens" everywhere on the board means **output** tokens: what the model
+wrote, thinking included. That is the number the job file eventually stamps,
+so a live session's count lands on the figure the job will report. They are
+read off the transcripts as each request lands -- the job file's own count is
+written once, when the job ends, which is why the old `tokens` cell sat still
+all day. Input is kept too (almost all of it cache reads, tens of millions per
+session) and shows in the drawer as `read`, with the cache share in the hover;
+it says how big the context is, not how much work was done.
+
+The five-hour window is Anthropic's usage-limit period: it opens on the first
+message and closes five hours later, and the next message after that opens
+another. The ledger chains that forward from the last gap of five quiet hours
+(which guarantees a fresh start), so the open window's start, total and reset
+time come from local data alone. It sees only this machine's Claude Code
+sessions -- claude.ai chats draw on the same limit and are invisible here --
+so it is an estimate, labelled as one. The actual percentage Anthropic holds
+against you needs the `/usage` endpoint and the CLI's OAuth token, which this
+board does not read.
+
+The trace is output tokens per minute, one bar a minute, with the number of
+sessions writing in that minute as a line over it: a burst of bars is a wave
+of agents answering, a flat stretch is you reading, and the last bar is always
+short because the minute is not over. The dashed rule is where the open
+five-hour window began. Click the caption to cycle 15m, 1h and 6h; the choice
+is remembered per browser. When more than one agent wrote in the span the
+bars stack by provider -- Claude in the accent, Codex in the dim ink -- with
+the swatches in the caption; one writer, plain bars.
+
+The readout beside it is the machine and the housekeeping: `load 1m` (the
+one-minute load average over the core count -- under the cores is
+comfortable, over it processes queue; the CPU and GPU busy shares in the
+hover), `agents` (agent processes and their CPU), `swap` (in use; memory,
+the agents' share of it and the disk in the hover -- the cell becomes a red
+`disk` if the data volume passes 90%, or `power` on the day the machine is
+off the cable), `waiting` (the longest anything has been waiting on you and
+how many are, amber past five minutes and red past fifteen; clicking it opens
+that session), `out today` (output tokens since midnight, with the per-agent
+split and the cache share in the hover) and `resets` (when the open window
+closes).
+
+### Optional panels
+
+Those three -- the gauges, the tok/min trace, the readout -- are the essential
+set: what a MacBook fits at 1440 wide, and nothing added since may squeeze
+them. Anything else is an optional panel: off unless switched on under
+**metrics** in the settings card (`⌘,`), remembered per browser -- so the
+wall's kiosk and a desk browser each keep their own answer -- and, even
+then, laid out only when the row has room for it with the essentials still
+at least as wide as they are on the MacBook. Resize the window narrower and
+it folds away; wider and it comes back. A panel that is on but has no room
+says so beside its switch.
+
+The one so far is the **host trace**: cpu busy as a filled area, gpu, memory
+used and the agents' resident set as lines (the last against its own
+high-water mark), one sample every two seconds over the last quarter hour.
+It is the chart the tok/min bars replaced, back for a screen with the room:
+a build pegging the cores or a fleet eating the RAM is still quickest to see
+as a line. The GPU comes from the accelerator's own counters in `ioreg`,
+which needs no privilege; a machine with nothing that answers gets no GPU
+line.
+
+The host's other vitals -- cpu, gpu, the agents' resident set, disk, swap,
+battery -- are measured every pass and published as `--g-*` custom
+properties on the root for the worlds that draw their own instruments
+(Skyrim's bars, Minecraft's hearts, Apollo's FLIGHT). Alongside them:
+`--g-rate`, `--g-window`, `--g-ctx`, `--n-done-today` and `--n-tok-min`.
+
+`mem pressure` is read from `memory_pressure -Q`. It sat here as a thermal
+gauge until it turned out that Apple Silicon records no CPU thermal level at
+all: `pmset -g therm` answers "no CPU power status has been recorded", the
+regex never matched, and the dial reported its fallback constant of 100
+forever. Real die temperatures need `powermetrics` as root, which is not a
+thing a LaunchAgent should be asking for. Pressure costs nothing, needs no
+privilege, moves under load, and measures the resource that actually bites on
+a 16GB machine running a fleet -- it counts memory that cannot be reclaimed,
+so it tells 76% used and happy apart from 76% used and swapping.
+
+Per session, the tile's foot carries what it has written and its context
+fill (`42k · ctx 24%`, coloured like the gauge), and the drawer adds `read`,
+`context` (tokens over the window), and `model` with its effort. Antigravity
+reports none of this, so its tiles say so with a dash rather than a number.
 
 ## Layout
 
@@ -241,6 +326,52 @@ does script iTerm, so the first click asks macOS for Automation permission
 (Python → iTerm). Allow it once; if you clicked Don't Allow, re-enable it in
 System Settings → Privacy & Security → Automation.
 
+## The graph window
+
+One run's trail, drawn: `graph` in the drawer, `⌘G`, or the `⋯` menu opens
+a window on the session, and the picker in its title bar switches to any
+other on the board. Time runs left to right along a spine of dots, one per
+model response; the files the run read sit in rows above the spine and the
+files it changed in rows below, each joined to the steps that touched it by
+a curve in the verb's colour (read, changed, run). A file every step keeps
+coming back to shows up as a fan, which is the point. Rings on the spine are
+where you spoke, and the stretch between two prompts is a phase, washed
+faintly every other one so they read as bands before the words do.
+
+The head of the spine carries the pulse. Three dots breathe after the last
+step while the model is between tool calls -- thinking, as far as a
+transcript can tell -- and the last step beats with its edges marching while
+a tool runs; both stop when the session does. The dot in the title bar says
+the same thing from across the room.
+
+Nothing in it is summarised. A step's line is what the agent said, or the
+one-line description it wrote on a shell command, or the tool and the file's
+name; a file is a path a tool call named. Hidden reasoning is mostly not on
+disk -- Claude Code writes empty `thinking` blocks unless the session opted
+in, Codex encrypts its reasoning and keeps a summary at best -- so where a
+thought *is* written it rides along in the side column, and where it is not
+the label is what the call was for. Shell commands are read for the files
+they name (`sed -n` reads, `sed -i` edits, a `>` writes, `pytest x.py` runs),
+with heredoc bodies, patterns, flags, URLs and folders left out. Antigravity
+keeps its steps as opaque protobuf, so its tiles say so rather than draw.
+
+It is lazy: the board never reads a transcript in full for this, only the
+page asks, with `/api/graph?id=`, and only for the run it is showing. The
+first request parses the file; every one after reads the appended bytes.
+While the window is open on a running session it asks again every few
+seconds and redraws only when the spine has grown, so the graph builds as
+the agent works.
+
+Three states, remembered per browser like the player's: a window in the
+bottom-right corner (the player owns the left), a strip with the name, the
+pulse and what it is doing this second, and the main view over the board,
+with the run's outline, the step in hand and every file down the side. Wheel
+to zoom along time, drag to pan, double-click or `⊡` to fit, `Esc` back from
+the main view, `←`/`→` to walk the pinned step there. Hover a step or a file
+to light its edges; click to pin it. The window is drawn with the same
+tokens every other surface uses, so each of the twenty-six worlds paints it
+in its own colours without a line of its own.
+
 ## The terminal sheet
 
 Start with `--terminal` (the installer does) and a real shell opens inside the
@@ -260,10 +391,14 @@ newline, and `⌘C`/`⌘V` copy a selection and paste as in any terminal. The
 face is SF Mono at medium weight with loose leading, whatever the browser's
 own monospace preference.
 
-`fleet.command` uses a tiny native WebKit shell so Chrome cannot consume
-`⌘T` before the dashboard sees it. The shell is compiled locally on first use;
-if the macOS command-line tools are unavailable, the launcher falls back to
-Chrome and the on-page shortcuts that Chrome permits.
+`fleet.command` uses a tiny native WebKit shell (`Fleet Dashboard.app`, from
+`fleet-browser.swift`, with an icon drawn by `fleet-icon.swift`) so Chrome
+cannot consume `⌘T` before the dashboard sees it. The shell is compiled locally
+on first use and whenever its source changes; if the macOS command-line tools
+are unavailable, the launcher falls back to Chrome and the on-page shortcuts
+that Chrome permits. The shell pings `/api/ping` every five seconds; when the
+board stays dark it bootstraps the login agent, shows a placeholder, and
+reloads once the board answers -- a dead board is never a stale page.
 
 The terminal is loopback-only and gated by a per-process token, so it is off
 when the server binds anything but 127.0.0.1.

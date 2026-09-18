@@ -26,6 +26,7 @@ import flush as flushmod
 import instance
 import sunset
 import collectors
+import graph
 import metrics
 import notes
 import music
@@ -114,6 +115,12 @@ class Snapshot:
 
     def session(self, session_id):
         return self._index.get(session_id)
+
+    def trail(self, session_id):
+        """The graph window's payload for one session: the steps, prompts
+        and files off its transcript, read on request and grown by the
+        appended bytes after -- never part of the two-second rebuild."""
+        return graph.build(self._index.get(session_id), self._transcripts)
 
     def sessions(self):
         return list(self._index.values())
@@ -445,6 +452,17 @@ class Handler(BaseHTTPRequestHandler):
             # The app shell's watchdog: is anyone home? Not counted as a poll,
             # so a shell left open does not keep an unwatched instance alive.
             self._send(b'{"ok":true}', "application/json")
+            return
+        if path == "/api/graph":
+            # Lazy: only a page with the graph window open asks, and only
+            # for the one session it is showing.
+            query = parse_qs(urlparse(self.path).query)
+            session_id = (query.get("id") or [""])[0]
+            try:
+                self._json(SNAPSHOT.trail(session_id))
+            except Exception as exc:
+                self._json({"available": False, "id": session_id,
+                            "why": "%s: %s" % (type(exc).__name__, str(exc)[:200])})
             return
         if path == "/api/term/stream":
             # No Origin is normal on a same-origin GET, so this one leans on

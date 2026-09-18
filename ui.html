@@ -794,6 +794,203 @@
                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .crate .row .d{flex:none; font:10.5px/1.35 var(--mono); color:var(--faint)}
 
+  /* ===================== graph window ===================== */
+  /* One run's trail: the steps along a spine, the files it read above it and
+     the files it changed below, joined by what each step did to them. It is
+     the player's sibling in the other corner -- same frame, same strip when
+     minimised, riding --taken over the terminal sheet -- and asks for nothing
+     from a theme beyond the tokens every surface already uses, so the
+     twenty-six worlds paint it without a line each. Three states: a window,
+     a strip, and the main view. */
+  .graph{
+    position:fixed; z-index:8; right:14px; bottom:calc(14px + var(--taken,0px) + var(--hud-inset,0px));
+    width:min(580px, calc(100vw - 28px)); height:min(350px, calc(100vh - 130px - var(--hud-inset,0px)));
+    display:none; grid-template-rows:auto minmax(0,1fr) auto; grid-template-columns:minmax(0,1fr);
+    border:1px solid var(--edge-hot); border-radius:8px; background:var(--panel);
+    overflow:hidden; box-shadow:0 18px 44px -18px #000;
+    transition:bottom .18s ease, right .18s ease;
+    font:11px/1.4 var(--mono); color:var(--dim);
+  }
+  .graph.on{display:grid}
+  /* The drawer opens down the same side; the window steps out from under it
+     rather than covering its foot, and steps back when it closes. */
+  #panel.on ~ .graph:not(.full){right:calc(14px + min(430px, 92vw))}
+  /* The strip: the run's name, what it is doing this second, and the pulse. */
+  .graph.min{
+    width:min(380px, calc(100vw - 28px)); height:auto; grid-template-rows:auto; border-radius:7px;
+    bottom:min(calc(14px + var(--taken,0px) + var(--hud-inset,0px)), calc(100vh - 80px));
+  }
+  .graph.min .gbody, .graph.min .gfoot, .graph.min .gside, .graph.min #g-fit, .graph.min .gsum{display:none}
+  /* The main view: the same card, grown to the viewport over a scrim, with
+     the run's outline, the step in hand and the files down the right. */
+  .graph.full{
+    inset:12px 12px calc(12px + var(--taken,0px) + var(--hud-inset,0px)) 12px;
+    width:auto; height:auto; z-index:10; border-radius:10px;
+    grid-template-columns:minmax(0,1fr) clamp(260px, 26vw, 340px);
+    box-shadow:0 30px 80px -30px #000;
+  }
+  .graph-scrim{
+    position:fixed; inset:0; z-index:9; display:none;
+    background:rgb(0 0 0 / .55); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+  }
+  .graph-scrim.on{display:block}
+
+  .graph .ghead{
+    grid-column:1 / -1; display:flex; align-items:center; gap:7px; min-width:0;
+    padding:6px 8px 6px 11px; border-bottom:1px solid var(--edge);
+  }
+  .graph.min .ghead{
+    border-bottom:0; padding:7px 8px 7px 11px;
+    display:grid; grid-template-columns:auto minmax(0,1fr) max-content; grid-template-rows:auto auto;
+    column-gap:8px; row-gap:1px; align-items:center;
+  }
+  .graph.min .gdot{grid-column:1; grid-row:1 / 3}
+  .graph.min .gpick{grid-column:2; grid-row:1}
+  .graph.min .gnow{grid-column:2; grid-row:2; display:block}
+  .graph.min .gbtns{grid-column:3; grid-row:1 / 3}
+  /* The pulse: what the head of the spine is doing, in one dot. Blinking
+     slowly while the model is between tool calls -- thinking -- and beating
+     while a tool runs; steady in the state's colour otherwise. */
+  .graph .gdot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--faint);
+               box-shadow:0 0 calc(var(--glow)*6px) currentColor; color:transparent}
+  .graph .gdot.think{background:var(--running); color:var(--running); animation:g-think 1.6s ease-in-out infinite}
+  .graph .gdot.work{background:var(--running); color:var(--running); animation:g-beat .9s ease-in-out infinite}
+  .graph .gdot.blocked{background:var(--blocked)}
+  .graph .gdot.done{background:var(--done)}
+  .graph .gdot.idle{background:var(--idle); opacity:.7}
+  @keyframes g-think{0%,100%{opacity:.25} 50%{opacity:1}}
+  @keyframes g-beat{0%,100%{transform:scale(1); opacity:1} 50%{transform:scale(1.45); opacity:.55}}
+  /* The picker is the title: a select dressed as a name, with the chevron
+     the only hint that it opens. */
+  .graph .gpick{position:relative; min-width:0; max-width:52%; flex:0 1 auto; display:flex; align-items:center}
+  .graph.min .gpick{max-width:none}
+  .graph .gpick::after{content:"\25BE"; position:absolute; right:1px; top:50%; transform:translateY(-50%);
+                       color:var(--faint); font-size:10px; pointer-events:none}
+  .graph .gpick select{
+    appearance:none; -webkit-appearance:none; width:100%; min-width:0; padding:1px 15px 1px 0;
+    background:transparent; border:0; color:var(--ink); cursor:pointer;
+    font:600 12px/1.3 var(--mono); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;
+  }
+  .graph .gpick .gm{position:absolute; left:0; top:0; visibility:hidden; white-space:nowrap; font:600 12px/1.3 var(--mono); pointer-events:none}
+  .graph .gpick select:focus{outline:none; color:var(--accent)}
+  .graph .gpick select:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+  .graph .gsum{color:var(--faint); letter-spacing:.06em; white-space:nowrap; overflow:hidden;
+               text-overflow:ellipsis; min-width:0; flex:1 1 auto}
+  .graph .gnow{display:none; font-size:10.5px; color:var(--dim); white-space:nowrap;
+               overflow:hidden; text-overflow:ellipsis; min-width:0}
+  .graph .gbtns{display:flex; gap:3px; flex:none; margin-left:auto}
+  .graph .gbtns button{
+    width:26px; height:24px; padding:0; display:inline-flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--cell) 72%, transparent);
+    border:1px solid color-mix(in srgb, var(--edge) 60%, transparent);
+    color:var(--dim); border-radius:6px; cursor:pointer; font:12px/1 var(--mono);
+    transition:color .15s ease, border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .graph .gbtns button:hover{color:var(--accent); border-color:var(--edge-hot);
+                             background:color-mix(in srgb, var(--tile-hi) 50%, var(--cell))}
+  .graph .gbtns button:active{transform:scale(.94); transition-duration:.04s}
+  .graph .gbtns button.lit{color:var(--accent); border-color:var(--edge-hot)}
+  .graph.min .gbtns button{width:30px; height:30px}
+
+  .graph .gbody{position:relative; min-height:0; min-width:0; overflow:hidden; cursor:grab;
+                background:linear-gradient(var(--scan) 1px, transparent 1px) 0 0/100% 3px}
+  .graph .gbody.drag{cursor:grabbing}
+  .graph .gbody svg{width:100%; height:100%; display:block; user-select:none}
+  .graph .gbody .gempty{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    padding:20px 28px; text-align:center; color:var(--faint); font-style:italic; line-height:1.6;
+  }
+  .graph .gbody .gempty.on{display:flex}
+  .graph .gtip{
+    position:absolute; z-index:2; max-width:min(300px, 70%); padding:6px 9px; pointer-events:none;
+    background:var(--panel); border:1px solid var(--edge-hot); border-radius:6px;
+    box-shadow:0 12px 30px -14px #000; font-size:10.5px; line-height:1.45; color:var(--dim);
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .graph .gtip b{display:block; color:var(--ink); font-weight:600; overflow-wrap:anywhere}
+  .graph .gtip i{color:var(--faint); font-style:normal; letter-spacing:.06em; text-transform:uppercase; font-size:9.5px}
+  .graph .gtip[hidden]{display:none}
+
+  /* The marks. Strokes never scale -- the spine is zoomed along time only. */
+  .graph .phase{fill:var(--ink); opacity:.028}
+  .graph .spine{stroke:var(--edge); stroke-width:1.5; fill:none}
+  .graph .edge{fill:none; stroke:var(--faint); stroke-width:1; opacity:.3; transition:opacity .12s}
+  .graph .edge.read{stroke:var(--idle)}
+  .graph .edge.run{stroke:var(--faint)}
+  .graph .edge.edit, .graph .edge.write{stroke:var(--accent)}
+  .graph .edge.hot{opacity:.95; stroke-width:1.6}
+  .graph .edge.dim{opacity:.07}
+  .graph .edge.live{opacity:.9; stroke:var(--running); stroke-dasharray:3 4; animation:g-march 1s linear infinite}
+  @keyframes g-march{to{stroke-dashoffset:-14}}
+  .graph .step{fill:var(--dim); opacity:.7}
+  .graph .step.say{fill:var(--ink); opacity:.95}
+  .graph .step.agent{fill:var(--waiting); opacity:.9}
+  .graph .step.hot{fill:var(--accent); opacity:1}
+  .graph .step.pin{fill:var(--accent); opacity:1}
+  .graph .step.open{fill:var(--running); opacity:1; animation:g-think .9s ease-in-out infinite}
+  .graph .ring{fill:none; stroke:var(--accent); stroke-width:1.2; opacity:.7}
+  .graph .prompt{fill:var(--panel); stroke:var(--accent); stroke-width:1.6}
+  .graph .ptick{stroke:var(--edge-hot); stroke-width:1; opacity:.55}
+  .graph .file{fill:var(--panel); stroke:var(--idle); stroke-width:1.2}
+  .graph .file.changed{fill:var(--accent); stroke:var(--accent)}
+  .graph .file.hot{stroke:var(--ink); stroke-width:1.8}
+  .graph .file.dim{opacity:.35}
+  .graph .hit{fill:transparent; stroke:none; cursor:pointer}
+  .graph text{font:10px var(--mono); fill:var(--dim); pointer-events:none}
+  .graph text.changed{fill:var(--ink)}
+  .graph text.hot{fill:var(--ink); font-weight:600}
+  .graph text.plabel{fill:var(--faint); font-size:9.5px; letter-spacing:.03em}
+  .graph text.tlabel{fill:var(--faint); font-size:9px; letter-spacing:.06em}
+  .graph .head{fill:var(--running)}
+  .graph .head.work{animation:g-beat .9s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
+  .graph .head.think{animation:g-think 1.6s ease-in-out infinite}
+  .graph .head.think.d2{animation-delay:.25s}
+  .graph .head.think.d3{animation-delay:.5s}
+  .graph .gdot.work{transform-origin:center}
+  @media (prefers-reduced-motion:reduce){
+    .graph .gdot, .graph .step, .graph .head, .graph .edge{animation:none !important}
+    .graph .gdot.think, .graph .gdot.work, .graph .head{opacity:1}
+    .graph .edge.live{stroke-dasharray:none}
+  }
+
+  .graph .gfoot{
+    grid-column:1; display:flex; gap:9px; align-items:baseline; min-width:0; min-height:28px;
+    padding:5px 11px 6px; border-top:1px solid var(--edge); white-space:nowrap; overflow:hidden;
+  }
+  .graph .gfoot .t{color:var(--faint); flex:none; font-variant-numeric:tabular-nums}
+  .graph .gfoot .k{color:var(--accent); flex:none; text-transform:uppercase; letter-spacing:.09em; font-size:9.5px}
+  .graph .gfoot .l{color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis}
+  .graph .gfoot .l.faint{color:var(--faint); font-style:italic}
+
+  .graph .gside{display:none; grid-row:2 / 4; grid-column:2; min-height:0; overflow:auto; scrollbar-width:thin;
+                border-left:1px solid var(--edge); padding:4px 14px 14px}
+  .graph.full .gside{display:block}
+  .graph .gside section{padding:10px 0 12px; border-bottom:1px solid var(--edge)}
+  .graph .gside h3{margin:0 0 7px; font:600 10px/1.2 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+  .graph .gside h3 span{color:var(--faint); font-weight:400; letter-spacing:.06em; text-transform:none; margin-left:6px}
+  .graph .gside p{margin:0 0 6px; font:11px/1.5 var(--mono); color:var(--dim); overflow-wrap:anywhere}
+  .graph .gside p.said{color:var(--ink)}
+  .graph .gside p.said::before{content:'\201C'; color:var(--accent); font-weight:700}
+  .graph .gside p.thought{color:var(--faint); font-style:italic}
+  .graph .gside p.meta{color:var(--faint); font-size:10px; letter-spacing:.06em; text-transform:uppercase}
+  .graph .gside .row{
+    display:flex; align-items:center; gap:7px; width:100%; padding:3px 4px; margin:0 -4px; border:0;
+    background:none; color:inherit; font:inherit; text-align:left; cursor:pointer; border-radius:4px; min-width:0;
+  }
+  .graph .gside .row:hover, .graph .gside .row.pin{background:var(--tile-hi)}
+  .graph .gside .row .sq{width:7px; height:7px; flex:none; border:1.2px solid var(--idle); border-radius:1.5px; background:var(--panel)}
+  .graph .gside .row .sq.changed{background:var(--accent); border-color:var(--accent)}
+  .graph .gside .row .sq.prompt{border-radius:50%; border-color:var(--accent); width:8px; height:8px}
+  .graph .gside .row .n{color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .graph .gside .row .d{color:var(--faint); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; flex:1 1 30%}
+  .graph .gside .row .c{color:var(--faint); flex:none; font-size:10px; letter-spacing:.04em; font-variant-numeric:tabular-nums}
+  .graph .gside .row .c b{color:var(--accent); font-weight:600}
+  .graph .gside .legend{display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:8px; font-size:9.5px; color:var(--faint); letter-spacing:.05em}
+  .graph .gside .legend span{display:inline-flex; align-items:center; gap:5px}
+  .graph .gside .legend i{display:inline-block; width:14px; height:0; border-top:1.5px solid var(--faint)}
+  .graph .gside .legend i.read{border-color:var(--idle)}
+  .graph .gside .legend i.edit{border-color:var(--accent)}
+
   /* ===================== drawer ===================== */
   .scrim{position:fixed; inset:0; background:#02060bcc; opacity:0; pointer-events:none;
          transition:opacity .15s; z-index:5}
@@ -3840,7 +4037,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="offcut"] .gauge, :root[data-theme="offcut"] .trace,
 :root[data-theme="offcut"] .readout, :root[data-theme="offcut"] .stat,
 :root[data-theme="offcut"] .chip, :root[data-theme="offcut"] .panel,
-:root[data-theme="offcut"] .player, :root[data-theme="offcut"] .toast,
+:root[data-theme="offcut"] .player, :root[data-theme="offcut"] .graph, :root[data-theme="offcut"] .toast,
 :root[data-theme="offcut"] button.ghost, :root[data-theme="offcut"] .ctl select{border-radius:0}
 :root[data-theme="offcut"] .bubble{
   border-radius:0;
@@ -3964,7 +4161,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="cobble"] .bubble, :root[data-theme="cobble"] .gauge,
 :root[data-theme="cobble"] .trace, :root[data-theme="cobble"] .readout,
 :root[data-theme="cobble"] .chip, :root[data-theme="cobble"] .stat,
-:root[data-theme="cobble"] .panel, :root[data-theme="cobble"] .player,
+:root[data-theme="cobble"] .panel, :root[data-theme="cobble"] .player, :root[data-theme="cobble"] .graph,
 :root[data-theme="cobble"] .toast, :root[data-theme="cobble"] button.ghost,
 :root[data-theme="cobble"] .ctl select{
   border-radius:0;
@@ -6832,6 +7029,28 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
     </div>
   </div>
 </div>
+<div class="graph-scrim" id="graph-scrim"></div>
+<div class="graph" id="graph" role="dialog" aria-label="the run's trail">
+  <div class="ghead">
+    <span class="gdot" id="g-dot"></span>
+    <span class="gpick"><select id="g-pick" title="which run to show" aria-label="which run to show"></select><span class="gm" id="g-measure" aria-hidden="true"></span></span>
+    <span class="gsum" id="g-sum"></span>
+    <span class="gnow" id="g-now"></span>
+    <span class="gbtns">
+      <button id="g-fit" title="fit the whole run (double-click the graph does too)" aria-label="fit">⊟</button>
+      <button id="g-full" title="open as the main view" aria-label="main view">⤢</button>
+      <button id="g-min" title="minimise to a strip" aria-label="minimise">—</button>
+      <button id="g-close" title="close" aria-label="close">✕</button>
+    </span>
+  </div>
+  <div class="gbody" id="g-body">
+    <svg id="g-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="gtip" id="g-tip" hidden></div>
+    <div class="gempty" id="g-empty"></div>
+  </div>
+  <div class="gfoot" id="g-foot"></div>
+  <aside class="gside" id="g-side"></aside>
+</div>
 <section class="sheet" id="sheet" hidden>
   <div class="bar">
     <div class="tabs" id="term-tabs"></div>
@@ -8046,9 +8265,11 @@ function select(id){
         + (t==='vscode' ? 'open the folder in VS Code' : t==='reveal' ? 'bring forward the iTerm tab it is already in' : verb + ' in ' + l)
         + '">'+l+'</button>').join('')
     + '</div></div>'
-    + '<div class="row tail"><button class="plain" data-copy="1">copy command</button>' + close + '</div>';
+    + '<div class="row tail"><button class="plain" data-copy="1">copy command</button>'
+    + '<button class="plain" data-graph="1" title="the run\'s trail: its steps and the files it touched (\u2318G)">graph</button>' + close + '</div>';
   document.getElementById('p-acts').querySelectorAll('button').forEach(b => {
     b.onclick = () => b.dataset.copy ? copyCommand(s)
+                    : b.dataset.graph ? (graphOpen(true, s.id), G.mode === 'min' && graphMode('win'))
                     : b.dataset.here ? openTerminal(s.id)
                     : b.dataset.close ? closeSession(s, b)
                     : open_(s.id, b.dataset.target);
@@ -8394,6 +8615,12 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
     const b = document.getElementById(id);
     if(b) menu.appendChild(b);
   });
+  const graphBtn = document.createElement('button');
+  graphBtn.className = 'ghost'; graphBtn.id = 'graphbtn';
+  graphBtn.innerHTML = '\u232c<span> graph</span>';
+  graphBtn.title = "one run's trail: its steps and the files it touched (\u2318G)";
+  graphBtn.onclick = () => { if(G.open && G.mode === 'min') graphMode('win'); else graphOpen(!G.open); };
+  menu.appendChild(graphBtn);
   const settingsBtn = document.createElement('button');
   settingsBtn.className = 'ghost'; settingsBtn.id = 'settings';
   settingsBtn.innerHTML = '\u2699<span> settings\u2026</span>';
@@ -10303,6 +10530,7 @@ async function tick(){
         render(d);
         if(!selected && location.hash) selected = decodeURIComponent(location.hash.slice(1));
         if(selected) select(selected);
+        graphSync();
       }
     }catch(err){
       document.getElementById('clock').textContent = voice('offline');
@@ -10313,6 +10541,545 @@ async function tick(){
   setTimeout(tick, 1000);
 }
 tick();
+
+/* ---------------- graph window ----------------
+   The trail of one run, read on request. /api/graph?id= returns the steps
+   (one per model response), the prompts that split them into phases and the
+   files each step touched, straight off the session's transcript; nothing is
+   asked for until the window opens, and while it is open on a running session
+   the page asks again every few seconds and redraws only when the spine has
+   actually grown. The picture is a timeline, not a physics simulation: time
+   runs left to right along the spine, zoomed and panned on that axis only,
+   while the file rows keep their place on the screen -- files read above the
+   spine, files changed below -- so it is the same picture at every zoom and
+   still reads from a metre away. The head of the spine carries the pulse:
+   three dots breathing while the model is between tool calls (thinking), the
+   last step beating with its edges marching while a tool runs. */
+const GRAPH_KEY = 'fleet.graph';
+const G = {
+  open:false, mode:'win', id:null, data:null, sig:'', seen:null, at:0,
+  view:{k:1, tx:0, auto:true}, pin:null, hover:null, timer:null, busy:false, L:null,
+};
+const G_DX = 18, G_PAD = 26;        // world px per step; screen margin at each end
+const gEl = document.getElementById('graph'), gScrim = document.getElementById('graph-scrim');
+const gSvg = document.getElementById('g-svg'), gBody = document.getElementById('g-body');
+const gTip = document.getElementById('g-tip'), gEmpty = document.getElementById('g-empty');
+const gPick = document.getElementById('g-pick'), gFoot = document.getElementById('g-foot');
+const gSide = document.getElementById('g-side'), gDot = document.getElementById('g-dot');
+const gSum = document.getElementById('g-sum'), gNow = document.getElementById('g-now');
+const gClock = t => t ? new Date(t).toTimeString().slice(0, 8) : '';
+const gHm = t => t ? new Date(t).toTimeString().slice(0, 5) : '';
+const gClamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const gCut = (s, n) => { s = s || ''; return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+
+function graphSave(){
+  try{ localStorage.setItem(GRAPH_KEY, JSON.stringify({open:G.open, mode:G.mode, id:G.id})); }catch(e){}
+}
+function graphOpen(on, id){
+  if(id && id !== G.id) graphShow(id);
+  G.open = on;
+  gEl.classList.toggle('on', on);
+  gScrim.classList.toggle('on', on && G.mode === 'full');
+  clearInterval(G.timer); G.timer = null;
+  if(on){
+    if(!G.id) G.id = graphDefaultId();
+    graphPickFill(true);
+    graphFetch();
+    G.timer = setInterval(graphPoll, 4000);
+    requestAnimationFrame(graphDraw);
+  } else {
+    gTip.hidden = true;
+  }
+  graphSave();
+}
+function graphShow(id){
+  G.id = id; G.data = null; G.sig = ''; G.seen = null; G.pin = null; G.hover = null;
+  G.view = {k:1, tx:0, auto:true};
+  if(gPick.value !== id) gPick.value = id;
+  graphPickSize();
+  gSvg.innerHTML = ''; gSide.innerHTML = ''; gFoot.innerHTML = '';
+  if(G.open) graphFetch();
+  graphSave();
+}
+function graphMode(mode){
+  G.mode = mode;
+  gEl.classList.toggle('min', mode === 'min');
+  gEl.classList.toggle('full', mode === 'full');
+  gScrim.classList.toggle('on', G.open && mode === 'full');
+  document.getElementById('g-full').classList.toggle('lit', mode === 'full');
+  document.getElementById('g-full').title = mode === 'full' ? 'back to the window (esc)' : 'open as the main view';
+  gTip.hidden = true;
+  G.view.auto = true;
+  requestAnimationFrame(graphDraw);
+  graphSave();
+}
+// The run to show when none was named: the tile in the drawer, else the last
+// one shown, else whatever is working right now.
+function graphDefaultId(){
+  if(selected && find(selected)) return selected;
+  if(G.id && find(G.id)) return G.id;
+  for(const lane of (latest?.lanes || [])) for(const p of lane.projects)
+    for(const s of p.sessions) if(s.state === 'running' && s.provider !== 'antigravity') return s.id;
+  for(const lane of (latest?.lanes || [])) for(const p of lane.projects)
+    for(const s of p.sessions) if(s.provider !== 'antigravity') return s.id;
+  return null;
+}
+
+/* The picker mirrors the board: every session, grouped by agent, the ones
+   with no trail on disk greyed rather than hidden so the list is the board's. */
+let gPickSig = '';
+function graphPickFill(force){
+  const lanes = latest?.lanes || [];
+  const sig = lanes.map(l => l.projects.map(p => p.sessions.map(s => s.id + s.name + s.project).join()).join()).join('|') + '|' + G.id;
+  if(!force && sig === gPickSig) return;
+  gPickSig = sig;
+  let found = false, out = '';
+  for(const lane of lanes){
+    const rows = lane.projects.flatMap(p => p.sessions);
+    if(!rows.length) continue;
+    out += '<optgroup label="' + esc(lane.label) + '">';
+    for(const s of rows){
+      const no = s.provider === 'antigravity';
+      if(s.id === G.id) found = true;
+      out += '<option value="' + esc(s.id) + '"' + (no ? ' disabled' : '') + (s.id === G.id ? ' selected' : '') + '>'
+           + esc(s.name) + ' · ' + esc(s.project) + (no ? ' (no trail)' : '') + '</option>';
+    }
+    out += '</optgroup>';
+  }
+  if(G.id && !found){
+    // flushed or finished and gone from the board; the trail is still readable
+    const name = G.data?.name || 'a session that has left the board';
+    out = '<option value="' + esc(G.id) + '" selected>' + esc(name) + ' · gone</option>' + out;
+  }
+  if(!out) out = '<option value="" disabled selected>nothing on the board</option>';
+  gPick.innerHTML = out;
+  if(G.id) gPick.value = G.id;
+  graphPickSize();
+}
+const gMeasure = document.getElementById('g-measure');
+function graphPickSize(){
+  gMeasure.textContent = gPick.selectedOptions[0]?.textContent || '';
+  gPick.style.width = (gMeasure.offsetWidth + 22) + 'px';
+}
+gPick.onchange = () => { if(gPick.value) graphShow(gPick.value); };
+
+/* Snapshot hook: the pulse follows the session's state on the board, and a
+   session whose transcript moved since the last read is read again. */
+function graphSync(){
+  if(!G.open) return;
+  graphPickFill(false);
+  graphDot();
+  const s = G.id ? find(G.id) : null;
+  if(s && G.seen !== null && s.updated !== G.seen && Date.now() - G.at > 2500) graphFetch();
+}
+function graphPoll(){
+  if(!G.open || !G.id) return;
+  const s = find(G.id);
+  if(!G.data || (s && s.state === 'running')) graphFetch();
+}
+async function graphFetch(){
+  if(!G.id || G.busy) return;
+  const id = G.id; G.busy = true;
+  try{
+    const r = await fetch('/api/graph?id=' + encodeURIComponent(id), {cache:'no-store'});
+    const d = await r.json();
+    if(id !== G.id) return;                 // the picker moved on meanwhile
+    // flushed off the board mid-view: the trail read so far stays up
+    if(!d.available && G.data && G.data.available && /no such session/.test(d.why || '')){ graphDot(); return; }
+    G.data = d; G.at = Date.now();
+    const s = find(id); G.seen = s ? s.updated : G.seen;
+    const last = d.available && d.steps.length ? d.steps[d.steps.length - 1] : null;
+    const sig = d.available
+      ? [d.steps.length, d.files.length, d.tail, d.state, last && last.open, last && last.n,
+         last && last.label.length, d.prompts.length].join(':')
+      : 'no:' + d.why;
+    if(sig !== G.sig){ G.sig = sig; graphDraw(); }
+    else graphDot();
+  }catch(e){
+    if(!G.data){ gEmpty.textContent = 'the board is not answering'; gEmpty.classList.add('on'); }
+  }finally{ G.busy = false; }
+}
+
+/* ---- the pulse ---- */
+function graphPulse(){
+  const d = G.data, s = G.id ? find(G.id) : null;
+  const state = (s && s.state) || (d && d.state) || 'unknown';
+  if(state !== 'running') return {cls:state, word:voice(state)};
+  if(d && d.available && d.tail === 'call'){
+    const last = d.steps[d.steps.length - 1];
+    return {cls:'work', word:'running ' + (last && last.tool ? last.tool.replace(/^mcp__.*__/, '') : 'a tool')};
+  }
+  return {cls:'think', word:'thinking'};
+}
+function graphDot(){
+  const p = graphPulse();
+  gDot.className = 'gdot ' + p.cls;
+  gDot.title = p.word;
+  if(G.mode === 'min') graphStrip();
+}
+function graphStrip(){
+  const d = G.data;
+  if(!d || !d.available){ gNow.textContent = d ? d.why : 'reading the run…'; return; }
+  const last = d.steps[d.steps.length - 1];
+  const p = graphPulse();
+  gNow.textContent = (p.cls === 'think' || p.cls === 'work' ? p.word + ' · ' : '')
+                   + (last ? last.label : 'nothing on the spine yet');
+  gNow.title = gNow.textContent;
+}
+
+/* ---- layout: time along x, rows fixed on y ---- */
+function graphFit(w){
+  const d = G.data; if(!d || !d.available) return;
+  const live = graphPulse().cls;
+  const n = d.steps.length + (live === 'think' || live === 'work' ? 2 : 0);
+  const span = Math.max(1, n - 1) * G_DX;
+  const avail = Math.max(60, w - 2 * G_PAD - 90);       // room for the last labels
+  const full = G.mode === 'full';
+  const k = full ? gClamp(avail / span, 0.3, 3) : gClamp(avail / span, 0.45, 2.2);
+  G.view.k = k;
+  G.view.tx = k * span > avail ? avail - k * span : 0;  // too long: show the tail
+}
+function graphLayout(w, h){
+  const d = G.data, k = G.view.k, tx = G.view.tx;
+  const sx = i => G_PAD + tx + i * G_DX * k;
+  const ys = Math.round(h * 0.5) + .5;
+  // Rows sit as far from the spine as the height allows -- long curves in the
+  // main view, tight ones in the window -- and spread over what is left.
+  const region = ys - 18, OFF = gClamp(Math.round(region * 0.28), 30, 84);
+  const cap = gClamp(Math.floor((region - OFF) / 22) + 1, 1, 8);
+  const pos = new Array(d.files.length);
+  const place = (list, nrows, sign) => {
+    const last = new Array(nrows).fill(-1e9), rows = [];
+    for(let i = 0; i < nrows; i++) rows.push([]);
+    // The hubs are labelled -- as many as the width has room for, by how
+    // often they were touched -- and a labelled file reserves the room its
+    // name needs, so the rest pack around it as bare squares.
+    const budget = Math.max(4, Math.floor(w / 55));
+    const want = new Set(list.slice().sort((a, b) => (b.reads + b.writes) - (a.reads + a.writes) || a.first - b.first)
+                             .slice(0, budget).map(f => f.idx));
+    list.sort((a, b) => a.first - b.first || a.idx - b.idx);
+    for(const f of list){
+      const x0 = Math.max(sx(f.first), 14), label = want.has(f.idx);
+      const lw = 6.05 * gCut(f.name, 30).length, foot = label ? 11 + lw : 6;
+      let r = -1;
+      for(let i = 0; i < nrows; i++) if(last[i] + 7 <= x0){ r = i; break; }
+      let x = x0;
+      if(r < 0){ r = 0; for(let i = 1; i < nrows; i++) if(last[i] < last[r]) r = i; x = last[r] + 7; }
+      last[r] = x + foot;
+      const p = {x, y: 0, r, f, label, w: lw};
+      pos[f.idx] = p; rows[r].push(p);
+    }
+    // rows are renumbered without gaps and spread over the height there is
+    const filled = rows.filter(r => r.length), used = filled.length;
+    const ROW = used > 1 ? gClamp((region - OFF - 6) / (used - 1), 22, 46) : 0;
+    filled.forEach((row, r) => { for(const p of row){ p.r = r; p.y = ys + sign * (OFF + r * ROW); } });
+  };
+  // Only the files in play across the visible stretch of the spine, and a
+  // file first touched before the left edge is kept just inside it, so the
+  // hub every step keeps coming back to stays on screen, fanned into.
+  const i0 = Math.floor((-G_PAD - tx) / (G_DX * k)), i1 = Math.ceil((w - G_PAD - tx) / (G_DX * k));
+  const files = d.files.map((f, idx) => Object.assign({idx}, f)).filter(f => f.first <= i1 && f.last >= i0);
+  place(files.filter(f => !f.writes), cap, -1);
+  place(files.filter(f => f.writes), cap, 1);
+  return {sx, ys, pos, w, h, k};
+}
+
+/* ---- draw ---- */
+function graphDraw(){
+  if(!G.open) return;
+  if(G.mode === 'min'){ graphDot(); graphStrip(); return; }
+  const d = G.data, w = gBody.clientWidth, h = gBody.clientHeight;
+  graphDot();
+  if(w < 40 || h < 40) return;
+  if(!d){ gSvg.innerHTML = ''; gEmpty.textContent = 'reading the run…'; gEmpty.classList.add('on'); return; }
+  if(!d.available){
+    gSvg.innerHTML = ''; gEmpty.textContent = d.why; gEmpty.classList.add('on');
+    gFoot.innerHTML = ''; gSum.textContent = ''; graphSide(); graphStrip(); return;
+  }
+  gEmpty.classList.remove('on');
+  if(G.view.auto) graphFit(w);
+  const L = graphLayout(w, h); G.L = L;
+  const {sx, ys, pos, k} = L;
+  const steps = d.steps, n = steps.length;
+  const pulse = graphPulse().cls, live = pulse === 'think' || pulse === 'work';
+  const hov = G.hover, pin = G.pin, focus = hov || pin;
+  const stepHot = new Set(), fileHot = new Set();
+  if(focus && focus.kind === 'step' && steps[focus.i]){ stepHot.add(focus.i); steps[focus.i].files.forEach(([fi]) => fileHot.add(fi)); }
+  if(focus && focus.kind === 'file'){ fileHot.add(focus.i); steps.forEach(s => { if(s.files.some(([fi]) => fi === focus.i)) stepHot.add(s.i); }); }
+  const dimming = focus !== null;
+  let edges = '', dots = '', marks = '', labels = '', bands = '';
+  const onscreen = x => x > -60 && x < w + 60;
+  // phases: every other stretch between prompts gets a faint wash
+  const px = p => sx(p.i) - (p.i ? G_DX * k / 2 : 9);
+  d.prompts.forEach((p, j) => {
+    if(j % 2) return;
+    const a = px(p), b = d.prompts[j + 1] ? px(d.prompts[j + 1]) : (live ? sx(n) + 30 : sx(Math.max(0, n - 1)) + 12);
+    if(b < 0 || a > w) return;
+    bands += '<rect class="phase" x="' + Math.max(-1, a).toFixed(1) + '" y="0" width="' + Math.max(0, Math.min(w + 2, b) - Math.max(-1, a)).toFixed(1) + '" height="' + h + '"/>';
+  });
+  // the spine, from the first step to the head
+  const x0 = sx(0), xEnd = live ? sx(n) + 22 : sx(Math.max(0, n - 1));
+  marks += '<line class="spine" x1="' + (x0 - 8) + '" y1="' + ys + '" x2="' + (xEnd + 8) + '" y2="' + ys + '"/>';
+  // edges and step dots
+  for(let i = 0; i < n; i++){
+    const s = steps[i], x = sx(i);
+    if(!onscreen(x)) continue;
+    const hot = stepHot.has(i);
+    for(const [fi, verb] of s.files){
+      const p = pos[fi]; if(!p) continue;
+      const ym = (ys + p.y) / 2;
+      const cls = 'edge ' + verb + (hot || fileHot.has(fi) ? ' hot' : dimming ? ' dim' : '') + (s.open && live ? ' live' : '');
+      edges += '<path class="' + cls + '" d="M' + x.toFixed(1) + ' ' + ys + 'C' + x.toFixed(1) + ' ' + ym.toFixed(1)
+             + ',' + p.x.toFixed(1) + ' ' + ym.toFixed(1) + ',' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + '"/>';
+    }
+    const r = s.kind === 'say' ? 3.2 : s.kind === 'agent' ? 3 : 2.6;
+    const cls = 'step ' + s.kind + (hot ? ' hot' : '') + (pin && pin.kind === 'step' && pin.i === i ? ' pin' : '')
+              + (s.open && live && i === n - 1 ? ' open' : '');
+    dots += '<circle class="' + cls + '" cx="' + x.toFixed(1) + '" cy="' + ys + '" r="' + r + '"/>';
+    if(pin && pin.kind === 'step' && pin.i === i) dots += '<circle class="ring" cx="' + x.toFixed(1) + '" cy="' + ys + '" r="6.5"/>';
+  }
+  // prompts: a ring on the spine where the user spoke, a tick, the words
+  let lastLabelEnd = -1e9;
+  for(const p of d.prompts){
+    const x = px(p);
+    if(!onscreen(x)) continue;
+    marks += '<line class="ptick" x1="' + x.toFixed(1) + '" y1="' + (ys - 13) + '" x2="' + x.toFixed(1) + '" y2="' + (ys + 13) + '"/>'
+           + '<circle class="prompt" cx="' + x.toFixed(1) + '" cy="' + ys + '" r="4.2"/>';
+    const text = gCut(p.text, 32), wl = 5.7 * text.length;
+    if(x + 8 > lastLabelEnd + 10){
+      labels += '<text class="plabel" x="' + (x + 8).toFixed(1) + '" y="' + (ys - 17) + '">' + esc(text) + '</text>'
+              + '<text class="tlabel" x="' + (x + 8).toFixed(1) + '" y="' + (ys + 21) + '">' + gHm(p.t) + '</text>';
+      lastLabelEnd = x + 8 + wl;
+    }
+  }
+  // the head: thinking dots, or the beat while a tool runs
+  if(live){
+    const lastPrompt = d.prompts[d.prompts.length - 1];
+    const hx = sx(n) + (lastPrompt && lastPrompt.i === n ? 9 : 0);
+    if(pulse === 'think' || n === 0){
+      for(let j = 0; j < 3; j++)
+        marks += '<circle class="head think d' + (j + 1) + '" cx="' + (hx + j * 7).toFixed(1) + '" cy="' + ys + '" r="1.9"/>';
+    } else {
+      marks += '<circle class="head work" cx="' + hx.toFixed(1) + '" cy="' + ys + '" r="2.4"/>';
+    }
+  } else if(n){
+    const xe = sx(n - 1);
+    labels += '<text class="tlabel" x="' + (xe + 8).toFixed(1) + '" y="' + (ys + 4) + '">' + gHm(steps[n - 1].t) + '</text>';
+  }
+  // files: squares in their rows, labels for the ones with room
+  for(const p of pos){
+    if(!p || !onscreen(p.x)) continue;
+    const f = p.f, changed = f.writes > 0, hot = fileHot.has(f.idx);
+    const cls = 'file' + (changed ? ' changed' : '') + (hot ? ' hot' : dimming ? ' dim' : '');
+    marks += '<rect class="' + cls + '" x="' + (p.x - 4).toFixed(1) + '" y="' + (p.y - 4).toFixed(1) + '" width="8" height="8" rx="1.5"/>';
+    if(p.label || hot)
+      labels += '<text class="' + (changed ? 'changed' : '') + (hot ? ' hot' : '') + '" x="' + (p.x + 7).toFixed(1)
+              + '" y="' + (p.y + 3.5).toFixed(1) + '">' + esc(gCut(f.name, 30)) + '</text>';
+  }
+  gSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  gSvg.innerHTML = bands + edges + marks + dots + labels;
+  const changed = d.files.filter(f => f.writes).length;
+  gSum.textContent = n + (n === 1 ? ' step' : ' steps') + ' · ' + d.files.length + (d.files.length === 1 ? ' file' : ' files')
+                   + (changed ? ', ' + changed + ' changed' : '');
+  graphFoot(); graphSide(); graphStrip();
+}
+
+/* ---- the foot, the tooltip, the side ---- */
+function graphItem(ref){
+  const d = G.data; if(!d || !d.available || !ref) return null;
+  if(ref.kind === 'step') return d.steps[ref.i] ? {kind:'step', s:d.steps[ref.i]} : null;
+  if(ref.kind === 'file') return d.files[ref.i] ? {kind:'file', f:d.files[ref.i], i:ref.i} : null;
+  return null;
+}
+function graphFoot(){
+  const d = G.data;
+  const it = graphItem(G.hover) || graphItem(G.pin)
+          || (d && d.available && d.steps.length ? {kind:'step', s:d.steps[d.steps.length - 1]} : null);
+  if(!it){ gFoot.innerHTML = '<span class="l faint">' + (d && d.available ? 'nothing on the spine yet' : '') + '</span>'; return; }
+  if(it.kind === 'step'){
+    const s = it.s, kind = s.tool ? s.tool.replace(/^mcp__.*__/, '') : s.kind === 'say' ? 'said' : s.kind;
+    gFoot.innerHTML = '<span class="t">' + gClock(s.t) + '</span><span class="k">' + esc(kind) + (s.n > 1 ? ' ×' + s.n : '') + '</span>'
+                    + '<span class="l' + (s.kind === 'say' ? '' : '') + '" title="' + esc(s.label) + '">' + esc(s.label) + '</span>';
+  } else {
+    const f = it.f;
+    gFoot.innerHTML = '<span class="k">file</span><span class="l" title="' + esc(f.path) + '">' + esc(f.dir + '/' + f.name) + '</span>'
+                    + '<span class="t">' + (f.reads ? 'read ' + f.reads : '') + (f.reads && f.writes ? ' · ' : '') + (f.writes ? 'changed ' + f.writes : '') + '</span>';
+  }
+}
+function graphTip(mx, my){
+  const it = graphItem(G.hover);
+  if(!it){ gTip.hidden = true; return; }
+  const d = G.data;
+  if(it.kind === 'step'){
+    const s = it.s;
+    const files = s.files.slice(0, 5).map(([fi, v]) => v + ' ' + (d.files[fi] || {}).name).join(' · ')
+                + (s.files.length > 5 ? ' · +' + (s.files.length - 5) : '');
+    gTip.innerHTML = '<i>' + gClock(s.t) + (s.tool ? ' · ' + esc(s.tool.replace(/^mcp__.*__/, '')) : s.kind === 'say' ? ' · said' : '') + '</i>'
+                   + '<b>' + esc(gCut(s.label, 160)) + '</b>' + (files ? esc(files) : '');
+  } else {
+    const f = it.f;
+    gTip.innerHTML = '<i>' + esc(f.dir) + '</i><b>' + esc(f.name) + '</b>'
+                   + (f.reads ? 'read ' + f.reads + (f.reads > 1 ? ' times' : ' time') : '') + (f.reads && f.writes ? ' · ' : '')
+                   + (f.writes ? 'changed ' + f.writes + (f.writes > 1 ? ' times' : ' time') : '')
+                   + ' · from step ' + (f.first + 1);
+  }
+  gTip.hidden = false;
+  const bw = gBody.clientWidth, bh = gBody.clientHeight, tw = gTip.offsetWidth, th = gTip.offsetHeight;
+  gTip.style.left = gClamp(mx + 14, 4, bw - tw - 4) + 'px';
+  gTip.style.top = (my + 16 + th > bh - 4 ? my - th - 10 : my + 16) + 'px';
+}
+function graphSide(){
+  if(G.mode !== 'full') return;
+  const d = G.data;
+  if(!d || !d.available){ gSide.innerHTML = ''; return; }
+  const s0 = G.id ? find(G.id) : null;
+  const last = d.steps[d.steps.length - 1];
+  const step = (graphItem(G.pin) || {}).s || last;
+  const pinFile = G.pin && G.pin.kind === 'file' ? G.pin.i : -1;
+  const changed = d.files.filter(f => f.writes).length;
+  let out = '<section><h3>the run</h3>'
+    + '<p class="meta">' + esc(d.provider || '') + (s0 ? ' · ' + esc(voice(s0.state)) : '') + (d.started ? ' · from ' + gHm(d.started) : '')
+    + '</p><p>' + d.steps.length + ' steps, ' + d.prompts.length + (d.prompts.length === 1 ? ' prompt, ' : ' prompts, ')
+    + d.files.length + ' files' + (changed ? ' (' + changed + ' changed)' : '') + '</p>';
+  d.prompts.forEach((p, j) => {
+    out += '<button class="row" data-prompt="' + j + '" title="' + esc(p.text) + '"><span class="sq prompt"></span>'
+         + '<span class="c">' + gHm(p.t) + '</span><span class="n">' + esc(p.text) + '</span></button>';
+  });
+  out += '</section>';
+  if(step){
+    const kind = step.tool ? step.tool.replace(/^mcp__.*__/, '') : step.kind;
+    out += '<section><h3>step ' + (step.i + 1) + '<span>' + (G.pin && G.pin.kind === 'step' ? 'pinned' : 'latest') + '</span></h3>'
+      + '<p class="meta">' + gClock(step.t) + ' · ' + esc(kind) + (step.n > 1 ? ' ×' + step.n : '') + '</p>';
+    if(step.think) out += '<p class="thought">' + esc(step.think) + '</p>';
+    if(step.text) out += '<p class="said">' + esc(step.text) + '</p>';
+    if(step.what && step.what !== step.label) out += '<p>' + esc(step.what) + '</p>';
+    else if(!step.text && !step.think) out += '<p>' + esc(step.label) + '</p>';
+    for(const [fi, v] of step.files){
+      const f = d.files[fi]; if(!f) continue;
+      out += '<button class="row" data-file="' + fi + '" title="' + esc(f.path) + '"><span class="sq' + (f.writes ? ' changed' : '') + '"></span>'
+           + '<span class="c">' + v + '</span><span class="n">' + esc(f.name) + '</span><span class="d">' + esc(f.dir) + '</span></button>';
+    }
+    out += '</section>';
+  }
+  const files = d.files.map((f, i) => Object.assign({i}, f)).sort((a, b) => b.writes - a.writes || b.reads - a.reads || a.first - b.first);
+  out += '<section><h3>files<span>' + d.files.length + '</span></h3>';
+  for(const f of files.slice(0, 80)){
+    out += '<button class="row' + (f.i === pinFile ? ' pin' : '') + '" data-file="' + f.i + '" title="' + esc(f.path) + '">'
+         + '<span class="sq' + (f.writes ? ' changed' : '') + '"></span><span class="n">' + esc(f.name) + '</span>'
+         + '<span class="d">' + esc(f.dir) + '</span><span class="c">' + (f.reads ? 'r' + f.reads : '') + (f.writes ? ' <b>w' + f.writes + '</b>' : '') + '</span></button>';
+  }
+  if(files.length > 80) out += '<p class="meta">and ' + (files.length - 80) + ' more</p>';
+  out += '<div class="legend"><span><i class="read"></i>read</span><span><i class="edit"></i>changed</span><span><i></i>run</span></div></section>';
+  gSide.innerHTML = out;
+}
+gSide.addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.file != null){ G.pin = {kind:'file', i:+b.dataset.file}; graphCentre(G.data.files[+b.dataset.file].first); }
+  else if(b.dataset.prompt != null){ const p = G.data.prompts[+b.dataset.prompt]; G.pin = {kind:'step', i:Math.min(p.i, G.data.steps.length - 1)}; graphCentre(p.i); }
+});
+function graphCentre(i){
+  const w = gBody.clientWidth;
+  G.view.auto = false;
+  G.view.tx = w / 2 - G_PAD - i * G_DX * G.view.k;
+  graphDraw();
+}
+
+/* ---- pointer: hover, pin, pan, zoom ---- */
+function graphHit(mx, my){
+  const L = G.L, d = G.data; if(!L || !d || !d.available) return null;
+  for(const p of L.pos){
+    if(!p) continue;
+    const lw = p.label ? p.w + 10 : 0;
+    if(my >= p.y - 9 && my <= p.y + 9 && mx >= p.x - 8 && mx <= p.x + 8 + lw) return {kind:'file', i:p.f.idx};
+  }
+  if(Math.abs(my - L.ys) <= 14 && d.steps.length){
+    const i = Math.round((mx - G_PAD - G.view.tx) / (G_DX * G.view.k));
+    if(i >= 0 && i < d.steps.length && Math.abs(L.sx(i) - mx) <= Math.max(6, G_DX * G.view.k / 2)) return {kind:'step', i};
+  }
+  return null;
+}
+let gDrag = null, gDrawQueued = false;
+function graphQueue(){ if(gDrawQueued) return; gDrawQueued = true; requestAnimationFrame(() => { gDrawQueued = false; graphDraw(); }); }
+gBody.addEventListener('pointerdown', e => {
+  if(e.button !== 0) return;
+  gDrag = {x:e.clientX, tx:G.view.tx, moved:false, id:e.pointerId};
+  gBody.setPointerCapture(e.pointerId);
+});
+gBody.addEventListener('pointermove', e => {
+  const r = gBody.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  if(gDrag){
+    const dx = e.clientX - gDrag.x;
+    if(Math.abs(dx) > 3) gDrag.moved = true;
+    if(gDrag.moved){ gBody.classList.add('drag'); G.view.tx = gDrag.tx + dx; G.view.auto = false; gTip.hidden = true; graphQueue(); }
+    return;
+  }
+  const hit = graphHit(mx, my);
+  const same = (hit && G.hover && hit.kind === G.hover.kind && hit.i === G.hover.i) || (!hit && !G.hover);
+  if(!same){ G.hover = hit; graphQueue(); }
+  if(hit) graphTip(mx, my); else gTip.hidden = true;
+});
+gBody.addEventListener('pointerup', e => {
+  if(!gDrag) return;
+  const was = gDrag; gDrag = null; gBody.classList.remove('drag');
+  if(was.moved) return;
+  const r = gBody.getBoundingClientRect();
+  const hit = graphHit(e.clientX - r.left, e.clientY - r.top);
+  G.pin = hit && G.pin && hit.kind === G.pin.kind && hit.i === G.pin.i ? null : hit;
+  graphDraw();
+});
+gBody.addEventListener('pointerleave', () => { if(G.hover){ G.hover = null; graphQueue(); } gTip.hidden = true; });
+gBody.addEventListener('pointercancel', () => { gDrag = null; gBody.classList.remove('drag'); });
+gBody.addEventListener('dblclick', () => { G.view.auto = true; graphDraw(); });
+gBody.addEventListener('wheel', e => {
+  e.preventDefault();
+  if(Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey){ G.view.tx -= e.deltaX; G.view.auto = false; graphQueue(); return; }
+  const r = gBody.getBoundingClientRect(), mx = e.clientX - r.left;
+  const k0 = G.view.k, k1 = gClamp(k0 * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022)), 0.08, 4);
+  G.view.tx = mx - G_PAD - (mx - G_PAD - G.view.tx) * (k1 / k0);
+  G.view.k = k1; G.view.auto = false;
+  gTip.hidden = true;
+  graphQueue();
+}, {passive:false});
+new ResizeObserver(() => { if(G.open && G.mode !== 'min') graphQueue(); }).observe(gBody);
+
+/* ---- chrome ---- */
+document.getElementById('g-close').onclick = () => graphOpen(false);
+document.getElementById('g-min').onclick = () => graphMode(G.mode === 'min' ? 'win' : 'min');
+document.getElementById('g-full').onclick = () => graphMode(G.mode === 'full' ? 'win' : 'full');
+document.getElementById('g-fit').onclick = () => { G.view.auto = true; graphDraw(); };
+gScrim.onclick = () => graphMode('win');
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && G.open && G.mode === 'full'){ e.preventDefault(); graphMode('win'); return; }
+  if(e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'g' || e.key === 'G')){
+    e.preventDefault();
+    if(G.open && G.mode === 'min') graphMode('win');
+    else graphOpen(!G.open);
+    return;
+  }
+  if(!G.open || G.mode !== 'full' || !G.data || !G.data.available) return;
+  if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    const n = G.data.steps.length; if(!n) return;
+    const at = G.pin && G.pin.kind === 'step' ? G.pin.i : n - 1;
+    const i = gClamp(at + (e.key === 'ArrowLeft' ? -1 : 1), 0, n - 1);
+    G.pin = {kind:'step', i};
+    const x = G.L ? G.L.sx(i) : 0;
+    if(x < 30 || x > gBody.clientWidth - 30) graphCentre(i); else graphDraw();
+    e.preventDefault();
+  }
+});
+// The window comes back the way it was left, once the board has told the
+// page which sessions exist.
+(() => {
+  let saved = null; try{ saved = JSON.parse(localStorage.getItem(GRAPH_KEY) || 'null'); }catch(e){}
+  if(!saved || !saved.open) return;
+  const once = () => {
+    if(!latest){ setTimeout(once, 300); return; }
+    G.mode = ['win', 'min', 'full'].includes(saved.mode) ? saved.mode : 'win';
+    graphMode(G.mode);
+    graphOpen(true, saved.id && find(saved.id) ? saved.id : null);
+  };
+  once();
+})();
 
 /* ---------------- terminal sheet ----------------
    Off unless the server was started with --terminal, in which case it splices
