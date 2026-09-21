@@ -165,7 +165,7 @@ count of how often each theme has been picked from the menu.
 | **Minecraft** | quarried stone by torchlight, grass-block headers, a splash on the title; the survival HUD is live and captioned -- hearts for the memory left, the XP bar for the CPU, the level for the sessions at work |
 | **Hollow Knight** | layered indigo void, bone hairlines on the top edge only, souls drifting up, a bench to rest on; move the pointer over the void and a lumafly's worth of light shows Cornifer's map under it — a dozen hatched rooms with their ledges, tunnels with dead ends and side chambers, dashed paths he only heard about, benches, stag stations, grub jars, a hot spring, geo, his compass — one tile drawn to run on across its own edges |
 | **Severance** | the severed floor: the MDR terminal's teal-black glass with the numbers faint under everything, files numbered on their door plates; a stuck session's numbers tremble (they are scary), a session waiting is a wellness check; the bins along the foot are the host's quota — WO the cpu, FC the memory, DR the pressure, MA the disk — filling as the figures rise; collapse the board for the refinement field with a box drawn round every frightening cluster |
-| **Evangelion** | Central Dogma: orange on black, two corners cut off every panel, a hex grid behind the instruments; every status dot a hexagon, a stuck unit is PATTERN BLUE (hazard rib, flashing tag); always on, the sync ratio (cpu), the A.T. field (memory headroom) and the power source — internal on the battery, with the activity limit counting down; collapse the board for the MAGI, one computer per provider voting off its own lane (承認 / 保留 / 否決 / 不在) and the resolution |
+| **Evangelion** | Central Dogma: orange on black, two corners cut off every panel, a hex grid behind the instruments; every status dot a hexagon, a stuck unit is PATTERN BLUE (hazard rib, flashing tag); always on, the sync ratio (cpu), the A.T. field (memory headroom) and the power source — external on the umbilical cable, internal on the battery with its charge, red and flashing (the flash has a switch in the settings card, under **power**); collapse the board for the MAGI, one computer per provider voting off its own lane (承認 / 保留 / 否決 / 不在) and the resolution |
 | **Doom** | the base, 1993: riveted plates, red LED digits, E1M1-numbered maps, blood on a stuck door; the status bar runs the full width, always on — AMMO the sessions working, HEALTH the memory free, ARMS the states present, ARMOR the pressure headroom, KEYS what is finished / waiting / stuck, the ammo table the sessions by provider — and the marine's face in the middle bleeds while anything is stuck or the pressure is over 85, grins when a session finishes, and otherwise glances about at random and blinks on its own clock; collapse the board for the intermission tally |
 | **The Sims** | the lot: sky-blue glass, white rounded cards, navy in a rounded sans — the only world with daylight; a plumbob turns over every Sim in its state's colour; always on, the needs — Energy the cpu idle, Hunger the memory free, Comfort the pressure headroom, Bladder the disk free, Social the share at work, Fun the share finished — green, yellow or red the way the game does it; collapse the board for the household's mood, its wants (who is waiting on you) and fears (who is stuck), and a word of Simlish when something happens |
 | **Star Trek** | LCARS, 2364: black, and on it the library computer's bars — orange, peach, tan, lavender, blue — with the elbow at the top of every lane's rail, projects as pill bars, tiles capped in their state's colour, labels black on the colour; the frame goes to yellow alert while a session waits on you and flashes red alert while one is stuck; the status line along the foot carries the stardate, the condition, warp (cpu), shields (memory free) and life support (pressure headroom); collapse the board for the ship's systems, one bar each |
@@ -262,6 +262,27 @@ battery -- are measured every pass and published as `--g-*` custom
 properties on the root for the worlds that draw their own instruments
 (Skyrim's bars, Minecraft's hearts, the intranet's status bar). Alongside them:
 `--g-rate`, `--g-window`, `--g-ctx`, `--n-done-today` and `--n-tok-min`.
+
+### One reading, one place
+
+A world's own instrument is the better place for a reading it draws:
+Skyrim's health bar *is* the memory pressure, Doom's ammo the live count,
+NERV's power source the battery. So each world declares what its always-on
+instrument reads (`plots`, on the world object, in the HUD's own names --
+`live`, `pressure`, `cpu`, `mem`, `disk`, `batt`), and the HUD keeps those
+off its own dials: a duplicated gauge goes to the first reading in the
+reserve that the world does not draw either -- the agents' resident set
+(`agents mem`, which nothing else shows), then cpu busy, memory used, disk
+used, gpu busy -- so the block still carries six figures and none of them
+twice. In the readout, the `power` cell never takes the slot while the
+world's instrument has the battery up; the cell stays on swap. The band
+(what a collapsed board uncovers) is not counted: it is a summary, up only
+while the board is folded.
+
+One theme never reallocates: **console**, the default, is the control --
+its six dials and its readout are always exactly what this section says,
+so there is one board to read every other against. (`CONTROL_THEME` in
+the page, beside the optional panels.)
 
 `mem pressure` is read from `memory_pressure -Q`. It sat here as a thermal
 gauge until it turned out that Apple Silicon records no CPU thermal level at

@@ -6167,8 +6167,9 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    The tell is the hexagon: every status dot is one, and a stuck session
    is PATTERN BLUE -- red hazard rib, a tag that flashes. Always on: the
    sync ratio (the cpu) and the A.T. field (the memory headroom), and the
-   power source -- external on the cable, internal on the battery, with
-   the activity limit counting down. Collapse the board for the MAGI.
+   power source -- external on the cable, internal on the battery with its
+   charge, flashing red unless settings say not to. Collapse the board for
+   the MAGI.
    Measured on --tile #1a1a1a: --faint 5.4:1, --dim 8.8:1, --ink 14.2:1.
    ========================================================================== */
 :root[data-theme="nerv"]{
@@ -6263,7 +6264,11 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="nerv"] .ghud.sync b{font:700 14px/1 var(--face-data); color:var(--accent); letter-spacing:.02em; white-space:nowrap}
 :root[data-theme="nerv"] .ghud.sync b small{font:9px/1 var(--face-chrome); color:var(--faint); margin-left:6px; letter-spacing:.1em; text-transform:uppercase}
 :root[data-theme="nerv"] .ghud.sync .power b{color:var(--running)}
+/* Internal power is the alarm: red, and flashing -- unless the settings
+   card has stilled it (data-nerv-flash="off" on the root), when it holds
+   red and still. The figure beside it is the charge. */
 :root[data-theme="nerv"] .ghud.sync .power[data-s="internal"] b{color:var(--blocked); animation:nerv-flash 1s steps(1, end) infinite}
+:root[data-theme="nerv"][data-nerv-flash="off"] .ghud.sync .power[data-s="internal"] b{animation:none}
 /* THE MAGI (the band). Three computers, one per provider, each with its
    verdict in Mincho and the reason under it; the resolution across the
    foot; PATTERN BLUE along the top while anything on the deck is stuck. */
@@ -7626,7 +7631,7 @@ function gauge(label, pct, value, colour){
    (the trace reads computed colours) -- for readings that mostly had not
    moved. Same markup, same numbers, and the arcs still snap to a reading
    (see .arc in the stylesheet for why they must). */
-const HUD = {arcs:null, vals:null, tiles:null, dds:null, cells:null, titles:null, tally:'', vars:{}};
+const HUD = {arcs:null, vals:null, tiles:null, keys:'', dds:null, cells:null, titles:null, tally:'', vars:{}};
 /* Output tokens, the way they read on a tile: 42k, 1.2M. Never "0k". */
 const fmtTok = n => n==null ? '—' : n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1)+'M'
   : n >= 1e4 ? Math.round(n/1e3)+'k' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(Math.round(n));
@@ -7662,38 +7667,76 @@ function drawHud(d){
   const by = today.byProvider||{};
   const split = Object.keys(by).length > 1
     ? ' — ' + Object.entries(by).map(([k,v]) => k+' '+fmtTok(v)).join(', ') : '';
+  const gb = b => (b/1073741824).toFixed(b >= 10*1073741824 ? 0 : 1);
+  const agentsMem = h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M';
+  const tone = (v, warn, bad) => v > bad ? 'var(--blocked)' : v > warn ? 'var(--warn)' : 'var(--good)';
+  // Each reading keyed by the name a world's `plots` uses to say it already
+  // draws that one (see drawn, below).
   const specs = [
-    ['live', fleetPct, active+'/'+d.total, 'var(--good)',
+    ['live', 'live', fleetPct, active+'/'+d.total, 'var(--good)',
       active+' of '+d.total+' sessions are working right now (running or blocked on you).'],
-    ['tok/min · 5m', ratePct, fmtTok(rate.perMin), 'var(--accent)',
+    ['rate', 'tok/min · 5m', ratePct, fmtTok(rate.perMin), 'var(--accent)',
       'Output tokens the whole fleet is writing per minute, averaged over the last '+(rate.minutes||5)+' whole minutes.'
       + (rate.peakPerMin ? '\nArc: against today’s busiest minute, '+fmtTok(rate.peakPerMin)+'/min at '+hhmm(rate.peakAt)+'.' : '')],
-    ['5h window', win ? win.elapsedPct : 0, win ? fmtTok(win.out) : '—', 'var(--warn)',
+    ['window', '5h window', win ? win.elapsedPct : 0, win ? fmtTok(win.out) : '—', 'var(--warn)',
       win ? 'Est. output tokens in the open 5-hour Claude usage window: opened '+hhmm(win.start)+', resets '+hhmm(win.end)+' ('+until(win.end)+' left).'
           + '\nArc: how much of the window has elapsed.'
           + '\nCounts Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here.'
           : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
-    ['max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
+    ['context', 'max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
       (ctxPct > 85 ? 'var(--blocked)' : ctxPct > 70 ? 'var(--warn)' : 'var(--idle)'),
       ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.\nClick to open it.'
-          : 'No session has reported its context size yet.'],
-    ['mem pressure', h.pressurePct, (h.pressurePct==null ? '—' : h.pressurePct+'%'),
-      ((h.pressurePct??0) > 85 ? 'var(--blocked)' : (h.pressurePct??0) > 70 ? 'var(--warn)' : 'var(--good)'),
+          : 'No session has reported its context size yet.',
+      ctx ? ctx.id : ''],
+    ['pressure', 'mem pressure', h.pressurePct, (h.pressurePct==null ? '—' : h.pressurePct+'%'), tone(h.pressurePct??0, 70, 85),
       'macOS memory pressure: the share of memory that cannot be reclaimed. Above 70% the machine starts swapping; above 85% agents stall.'
-      + '\nMemory '+Math.round(mem.pct||0)+'% used, agents hold '+(h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M')+' of it.'],
-    ['done today', donePct, String(done.today||0), 'var(--done)',
+      + '\nMemory '+Math.round(mem.pct||0)+'% used, agents hold '+agentsMem+' of it.'],
+    ['done', 'done today', donePct, String(done.today||0), 'var(--done)',
       (done.today||0)+' session'+(done.today===1?'':'s')+' reached done since midnight'
       + (done.mrs ? ', opening '+done.mrs+' merge request'+(done.mrs===1?'':'s') : '')+'.'
       + '\nArc: finished against still going.'],
   ];
+  // The reserve: readings the HUD does not carry, in the order they earn a
+  // tile when a world's instrument has taken one of the six. A world that
+  // draws the pressure as a health bar does not need it on a dial as well;
+  // what the fleet's processes are eating, which nothing else shows, is
+  // worth the tile more.
+  const reserve = [
+    ['ram', 'agents mem', ramPct, agentsMem, tone(ramPct, 35, 60),
+      'Memory the agent processes (claude, codex, agy) hold between them: '+agentsMem+(mem.total ? ' of '+gb(mem.total)+'G ('+Math.round(ramPct)+'%)' : '')+'.'
+      + '\nArc: their share of the machine.'],
+    ['cpu', 'cpu busy', cpu.pct, cpu.pct==null ? '—' : Math.round(cpu.pct)+'%', tone(cpu.pct??0, 70, 85),
+      'CPU busy across every core'+(h.gpu?.pct != null ? ', GPU '+Math.round(h.gpu.pct)+'%' : '')+'.'
+      + '\nLoad 1m '+(cpu.load1??'?')+' on '+(cpu.cores||1)+' cores; agents take '+Math.round(h.agentCpu??0)+'% of it.'],
+    ['mem', 'mem used', mem.pct, mem.pct==null ? '—' : Math.round(mem.pct)+'%', tone(mem.pct??0, 80, 92),
+      'Memory in use'+(mem.total ? ': '+gb(mem.used)+' of '+gb(mem.total)+'G' : '')+', agents hold '+agentsMem+' of it.'
+      + '\nUse is not pressure: the machine is happy full until it cannot reclaim any.'],
+    ['disk', 'disk used', h.disk?.pct, h.disk?.pct==null ? '—' : Math.round(h.disk.pct)+'%', tone(h.disk?.pct??0, 80, 90),
+      'The data volume is '+Math.round(h.disk?.pct??0)+'% full, '+(h.disk?.freeGb??'?')+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.'],
+    ['gpu', 'gpu busy', h.gpu?.pct, h.gpu?.pct==null ? '—' : Math.round(h.gpu.pct)+'%', 'var(--accent)',
+      h.gpu?.pct==null ? 'No GPU counter answers on this machine.' : 'GPU busy, from the accelerator’s own counters.'],
+  ];
+  // What this world's own instrument already reads -- Skyrim's health bar is
+  // the pressure, Doom's ammo the live count, NERV's power the battery. A
+  // reading drawn there is not drawn here as well: its tile goes to the
+  // first reserve reading the world does not draw either, so the row still
+  // carries six figures and none of them twice. The control theme never
+  // reallocates -- every reading stays where the HUD's own notes put it.
+  const theme = document.documentElement.dataset.theme;
+  const drawn = new Set(theme === CONTROL_THEME || typeof fleetPlots !== 'function' ? [] : fleetPlots(theme));
+  const spare = reserve.filter(sp => !drawn.has(sp[0]));
+  const shown = specs.map(sp => drawn.has(sp[0]) ? spare.shift() || sp : sp);
+  const keys = shown.map(sp => sp[0]).join(' ');
   const g = document.getElementById('gauges');
-  if(!HUD.arcs || g.children.length !== specs.length){
-    g.innerHTML = specs.map(sp => gauge(...sp.slice(0,4))).join('');
-    HUD.tiles = [...g.children]; HUD.titles = specs.map(() => '');
-    HUD.tiles.forEach((el, i) => { el.dataset.k = ['live','rate','window','context','pressure','done'][i]; });
+  let moved = false;
+  if(!HUD.arcs || HUD.keys !== keys){
+    g.innerHTML = shown.map(sp => gauge(...sp.slice(1,5))).join('');
+    HUD.tiles = [...g.children]; HUD.titles = shown.map(() => ''); HUD.keys = keys;
+    HUD.tiles.forEach((el, i) => { el.dataset.k = shown[i][0]; });
     HUD.arcs = [...g.querySelectorAll('.arc')]; HUD.vals = [...g.querySelectorAll('.val')];
+    moved = true;
   }
-  specs.forEach(([, pct, value, colour, title], i) => {
+  shown.forEach(([, , pct, value, colour, title, id], i) => {
     const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i];
     const dash = Math.max(0, Math.min(100, pct||0)).toFixed(1)+' 100';
     if(arc.getAttribute('stroke-dasharray') !== dash) arc.setAttribute('stroke-dasharray', dash);
@@ -7703,9 +7746,10 @@ function drawHud(d){
     }
     if(val.textContent !== value) val.textContent = value;
     if(HUD.titles[i] !== title){ HUD.titles[i] = title; el.title = title; }
+    // the context tile points at a session: open it
+    el.classList.toggle('link', !!id);
+    if((el.dataset.id || '') !== (id || '')) el.dataset.id = id || '';
   });
-  HUD.tiles[3].classList.toggle('link', !!ctx);
-  HUD.tiles[3].dataset.id = ctx ? ctx.id : '';
 
   // The readings as custom properties on the root, so a world can draw its
   // own instruments off them in pure CSS -- Skyrim's three bars, Minecraft's
@@ -7741,10 +7785,11 @@ function drawHud(d){
   // battery only takes a cell on the day the cable is out; otherwise the slot
   // holds swap, which is the number behind the pressure gauge on a 16G machine.
   // A full disk outranks swap the same way.
-  const onBat = pw.source !== 'AC' && pw.pct != null;
+  // A world whose instrument reads the battery (NERV's power source, the
+  // Game Boy's HP bar) keeps the cell on swap: the figure is already up.
+  const onBat = pw.source !== 'AC' && pw.pct != null && !drawn.has('batt');
   const power = '<b'+(pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '+(pw.charging ? 'chg' : 'batt');
   const cores = cpu.cores || 1, load = cpu.load1;
-  const gb = b => (b/1073741824).toFixed(b >= 10*1073741824 ? 0 : 1);
   const swapG = (sw.usedMb||0)/1024;
   const diskFull = (h.disk?.pct??0) > 90;
   // The longest anything has been waiting on you. A blocked or waiting
@@ -7770,7 +7815,7 @@ function drawHud(d){
       ? ['disk', '<b style="color:var(--blocked)">'+Math.round(h.disk.pct)+'%</b> full', 'The data volume is '+Math.round(h.disk.pct)+'% full, '+h.disk.freeGb+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.']
       : ['swap', '<b>'+swapG.toFixed(1)+'</b>G',
          'Swap in use. Memory '+(mem.total ? gb(mem.used)+' of '+gb(mem.total)+'G' : '?')+' used, agents hold '
-         + (h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M')+' of it; disk '+(h.disk?.freeGb??'?')+'G free.'],
+         + agentsMem+' of it; disk '+(h.disk?.freeGb??'?')+'G free.'],
     ['waiting', oldest ? '<b'+waitTone+'>'+age(oldest.updated)+'</b>'+(waiting > 1 ? ' ×'+waiting : '') : '<b>—</b>',
       oldest ? 'Longest a session has been waiting on you: '+oldest.name+', '+age(oldest.updated)+'. '
              + (waiting === 1 ? 'It is the only one.' : waiting+' sessions are waiting.')+'\nClick to open it.'
@@ -7783,7 +7828,6 @@ function drawHud(d){
         : ['window', '<b>—</b> open', 'No 5-hour Claude window is open right now.'],
   ];
   const ro = document.getElementById('readout');
-  let moved = false;
   if(!HUD.dds || ro.children.length !== cells.length){
     ro.innerHTML = cells.map(([k, v, t, id]) => cell(k, v, t, id)).join('');
     HUD.dds = [...ro.querySelectorAll('dd')]; HUD.cells = cells.map(c => c[0]+'|'+c[1]+'|'+c[2]+'|'+(c[3]||''));
@@ -7861,6 +7905,13 @@ function fitHud(){
    on the MacBook. In priority order: the first that does not fit is hidden,
    and so is everything after it. A panel that is on but has no room says so
    in settings rather than silently not appearing. */
+/* The control theme. Every world with an instrument of its own tells the HUD
+   what it already draws (`plots`, in the worlds), and the HUD moves those
+   readings off its dials so nothing is up twice. On this one theme the HUD
+   never moves anything: the six dials and the readout are always what the
+   notes above say they are, so there is one board to read the others
+   against. The default, and the one the README shows. */
+const CONTROL_THEME = 'console';
 const PANELS = [
   {key:'host', label:'host trace',
    hint:'cpu and gpu busy, memory used and the agents\u2019 footprint, one sample every two seconds over the last quarter hour'},
@@ -9209,7 +9260,15 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
    that have one, the game's own HUD, always on (`hud`/`paintHud`; .ghud).
    Built once when its world comes on, torn down when it goes, and refreshed
    from the numbers the render already put on the root: the band after every
-   paint, the HUD every second with the gauges. */
+   paint, the HUD every second with the gauges.
+
+   `plots` is what that always-on instrument reads, in the HUD's own names
+   for its readings (live, pressure, cpu, mem, disk, batt, ...): a world
+   that draws the pressure as a health bar says so here, and the HUD gives
+   that dial to a reading the world does not draw (drawHud). The band is not
+   counted: it is up only while the board is collapsed, and it is meant as a
+   summary. A world whose instrument is pure CSS declares its readings the
+   same way, with nothing else in its entry. */
 (function(){
   const root = document.documentElement;
   const rootNum = k => parseFloat(root.style.getPropertyValue(k)) || 0;
@@ -9227,6 +9286,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        Collapsed: the field, one crop per session grown by its state and,
        for a session at work, by how far it has run. */
     stardew: {
+      plots: ['cpu'],
       SEASON: ['Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Fall', 'Fall', 'Fall', 'Winter'],
       DAY: ['Sun.', 'Mon.', 'Tue.', 'Wed.', 'Thu.', 'Fri.', 'Sat.'],
       LINES: {arrived: 'a new crop is planted', blocked: 'a crop has wilted', waiting: 'someone is at the door', done: 'harvested!', idle: 'off to bed', running: 'watered'},
@@ -9299,6 +9359,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        is stuck), warp (cpu), shields (memory free), life support (pressure
        headroom). Collapsed: the ship's systems, one bar each, and the crew. */
     lcars: {
+      plots: ['cpu', 'mem', 'pressure'],
       SYS: [['warp', 'warp core', 'cpu', () => rootNum('--g-cpu'), 'up'], ['shields', 'shields', 'memory free', () => 100 - rootNum('--g-mem'), 'down'],
             ['life', 'life support', 'pressure headroom', () => 100 - rootNum('--g-pres'), 'down'], ['deflector', 'deflector', 'disk free', () => 100 - rootNum('--g-disk'), 'down'],
             ['crew', 'crew', 'at stations', () => rootNum('--n-total') ? 100 * rootNum('--n-active') / rootNum('--n-total') : 0, 'none']],
@@ -9353,6 +9414,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        bar green, yellow or red by its value. Collapsed: the household's
        mood, its wants (the sessions waiting on you) and fears (the stuck). */
     plumbob: {
+      plots: ['cpu', 'mem', 'pressure', 'disk', 'live'],
       NEEDS: [['energy', 'Energy', 'cpu idle', () => 100 - rootNum('--g-cpu')], ['hunger', 'Hunger', 'memory free', () => 100 - rootNum('--g-mem')],
               ['comfort', 'Comfort', 'pressure headroom', () => 100 - rootNum('--g-pres')], ['bladder', 'Bladder', 'disk free', () => 100 - rootNum('--g-disk')],
               ['social', 'Social', 'at work', () => rootNum('--n-total') ? 100 * rootNum('--n-active') / rootNum('--n-total') : 0],
@@ -9402,6 +9464,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        grins when a session finishes, and looks about otherwise. Collapsed:
        the intermission tally. */
     e1m1: {
+      plots: ['live', 'mem', 'pressure'],
       COL: {H:'#5a3a1a', S:'#d9a66f', D:'#b07a48', E:'#f4f4f4', P:'#1c1c1c', M:'#5a2a1a', B:'#d81e1e', T:'#f0f0f0'},
       FACE: {
         ok: ['....HHHHHHHH....', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.', '.HHSSSSSSSSSSHH.', '.HSSSSSSSSSSSSH.', '.HSSSSSSSSSSSSH.',
@@ -9507,12 +9570,17 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
       },
     },
     /* Central Dogma. Always on: the sync ratio (cpu), the A.T. field (memory
-       headroom) and the power source -- external on the cable, internal on
-       the battery with the activity limit counting down, five minutes at a
-       full charge. Collapsed: the MAGI -- Melchior, Balthasar, Casper, one
-       per provider, each voting off its own lane's states, and the
-       resolution. PATTERN BLUE along the top while anything is stuck. */
+       headroom) and the power source -- external on the umbilical cable,
+       internal on the battery with its charge. (It used to count the
+       activity limit down from five minutes, scaled by the charge: a figure
+       that looked like a clock and was not one. The charge is what the
+       machine knows.) Internal is the alarm -- red, and it flashes unless
+       the settings card says not to. Collapsed: the MAGI -- Melchior,
+       Balthasar, Casper, one per provider, each voting off its own lane's
+       states, and the resolution. PATTERN BLUE along the top while anything
+       is stuck. */
     nerv: {
+      plots: ['cpu', 'mem', 'batt'],
       MAGI: [['claude', 'MELCHIOR', '1'], ['antigravity', 'BALTHASAR', '2'], ['codex', 'CASPER', '3']],
       VOTE: {approve: ['承認', 'approved'], deny: ['否決', 'rejected'], hold: ['保留', 'hold'], absent: ['不在', 'absent']},
       LINES: {arrived: '発進 — launch', blocked: '警告 — emergency', waiting: '命令待ち — awaiting orders',
@@ -9521,7 +9589,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
       hud(){
         return el('i', 'ghud sync', '<span class="ratio"><em>sync ratio</em><b>—<small>cpu</small></b></span>'
           + '<span class="field"><em>a.t. field</em><b>—<small>memory headroom</small></b></span>'
-          + '<span class="power"><em>power</em><b>—</b></span>');
+          + '<span class="power"><em>power</em><b>—<small></small></b></span>');
       },
       paintHud(h){
         const d = latest; if(!d) return;
@@ -9531,11 +9599,11 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
         set('.field', mem == null ? '—' : Math.round(100 - mem) + '%');
         const p = h.querySelector('.power'), internal = pw.source && pw.source !== 'AC';
         p.dataset.s = internal ? 'internal' : 'external';
-        if(internal){
-          // the activity limit: five minutes at a full charge, less as it drains
-          const s = Math.round((pw.pct || 0) / 100 * 300), mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
-          set('.power', 'internal · ' + mm + ':' + ss);
-        } else set('.power', 'external');
+        const what = internal ? (pw.charging ? 'charging' : 'battery') : 'umbilical cable', small = p.querySelector('small');
+        set('.power', internal ? 'internal · ' + (pw.pct == null ? '—' : pw.pct + '%') : 'external');
+        if(small.textContent !== what) small.textContent = what;
+        const title = internal ? 'Off the cable: the battery at ' + (pw.pct == null ? '?' : pw.pct + '%') + (pw.charging ? ', charging' : '') + '.' : 'On the cable.';
+        if(p.title !== title) p.title = title;
       },
       make(){
         const n = el('div', 'band magi');
@@ -9587,6 +9655,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        refinement field, with a box drawn round every session that is
        frightening (stuck or asking), and the day's quote. */
     lumon: {
+      plots: ['cpu', 'mem', 'pressure', 'disk'],
       BINS: [['wo', 'WO', 'cpu', '--g-cpu'], ['fc', 'FC', 'memory', '--g-mem'], ['dr', 'DR', 'pressure', '--g-pres'], ['ma', 'MA', 'disk', '--g-disk']],
       QUOTES: ['The work is mysterious and important.', 'Be ever merry.', 'Let not weakness live in your veins.', 'A good person will follow the rules. A great person will follow himself.',
                'Render not my creation in miniature.', 'Come now, children of my industry, and know the children of my blood.'],
@@ -9676,6 +9745,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
     },
     /* The beacons: one lit per session that is stuck or asking. */
     vellum: {
+      plots: ['cpu'],
       make(){
         const n = el('div', 'band beacons');
         const H = [96, 124, 88, 140, 104, 132, 92], O = ['4%', '5%', '3%', '6%', '4%', '5%', '7%'];
@@ -9765,6 +9835,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        word on the page, the head count, the cpu, the pressure and when the
        page last refreshed. Nothing polls out loud and nothing narrates. */
     intranet: {
+      plots: ['live', 'cpu', 'pressure'],
       STALE_S: 150, KEEP: 5,
       WORD: {ok: 'OK', warn: 'Warning', error: 'Error', na: 'N/A'},
       BAR: {ok: 'Ready', warn: 'Warning', error: 'Error', na: 'Ready'},
@@ -9932,6 +10003,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
        headroom, stamina the CPU not yet spent. Each captioned with what it
        reads, because blue-means-memory is not something a glance can know. */
     hoarstone: {
+      plots: ['mem', 'pressure', 'cpu'],
       BARS: [['mag', 'Magicka', 'memory free', '--g-mem'],
              ['hp',  'Health',  'pressure headroom', '--g-pres'],
              ['sta', 'Stamina', 'cpu idle', '--g-cpu']],
@@ -9952,6 +10024,7 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
     /* Minecraft's survival HUD: hearts for the memory left (they drain as it
        fills), the XP bar for the CPU, the level for the sessions at work. */
     cobble: {
+      plots: ['mem', 'cpu', 'live'],
       hud(){
         const n = el('div', 'ghud survival');
         n.innerHTML = '<i class="hearts">' + '\u2665'.repeat(10) + '</i>'
@@ -9968,6 +10041,9 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
         set('.cap.mem b', mem + '%'); set('.cap.cpu b', cpu + '%'); set('.lvl span', String(lvl));
       },
     },
+    /* The HP bar on the trainer card is the battery, drawn in CSS off the
+       root (.board::after); nothing to build here, only what it reads. */
+    cardstock: {plots: ['batt']},
     /* The calendar card, with the hour the game would print. */
     offcut: {
       make(){ return el('div', 'band p5date', '<b></b><i></i><span></span>'); },
@@ -10000,6 +10076,10 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
   document.addEventListener('fleet:paint', e => sync(e.detail));
   document.addEventListener('fleet:theme', () => sync(null));
   document.addEventListener('fleet:hud', () => { if(hud && WORLDS[cur]) WORLDS[cur].paintHud(hud, null); });
+  // What a world's instrument already reads, for the HUD to keep off its own
+  // dials. Asked, not announced: drawHud runs inside setTheme before the
+  // theme event goes out, so the answer has to be there on the first paint.
+  window.fleetPlots = theme => (WORLDS[theme] && WORLDS[theme].plots) || [];
 })();
 
 /* ---- the weather (pass 9) ---------------------------------------------- */
@@ -10112,6 +10192,16 @@ function applyMotion(){
   if(off) document.documentElement.dataset.motion = 'off'; else delete document.documentElement.dataset.motion;
 }
 applyMotion();
+/* NERV's power readout flashes while the unit is on the internal battery.
+   The alarm is the point of it, and also the thing you may not want beside
+   you for a whole afternoon off the cable; this stills the flash and keeps
+   the red. Per browser, like the rest of the card. */
+const NERV_FLASH_KEY = 'fleet.nerv.flash';
+function applyNervFlash(){
+  let off = false; try{ off = localStorage.getItem(NERV_FLASH_KEY) === 'off'; }catch(e){}
+  if(off) document.documentElement.dataset.nervFlash = 'off'; else delete document.documentElement.dataset.nervFlash;
+}
+applyNervFlash();
 
 /* Whatever a theme wrote -- hex, rgb(), oklch() -- the colour input wants
    #rrggbb; let the engine resolve it. */
@@ -10163,6 +10253,8 @@ function openSettings(){
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="motion"> stop every animation (pulses, halos, rain, roulette)</label></div></section>'
       + '<section data-k="cube-sec" hidden><h3>companion cube <span class="hint">it floats about the room and through the portals \u2014 or waits in storage</span></h3>'
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="cube"> let the companion cube loose</label></div></section>'
+      + '<section data-k="nerv-sec" hidden><h3>power <span class="hint">the readout goes red on the internal battery, with the charge beside it</span></h3>'
+      +   '<div class="row"><label class="chk"><input type="checkbox" data-k="nerv-flash"> flash it while the unit is off the cable</label></div></section>'
       + '</div>';
     document.body.appendChild(settingsEl);
     const q = k => settingsEl.querySelector('[data-k="'+k+'"]');
@@ -10230,6 +10322,14 @@ function openSettings(){
     const fillCube = () => { q('cube-sec').hidden = document.documentElement.dataset.theme !== 'aperture'; };
     document.addEventListener('fleet:theme', fillCube);
     settingsEl.fillCube = fillCube;
+    // the power alarm: on the evangelion theme only
+    q('nerv-flash').onchange = () => {
+      try{ localStorage.setItem(NERV_FLASH_KEY, q('nerv-flash').checked ? 'on' : 'off'); }catch(e){}
+      applyNervFlash();
+    };
+    const fillNerv = () => { q('nerv-sec').hidden = document.documentElement.dataset.theme !== 'nerv'; };
+    document.addEventListener('fleet:theme', fillNerv);
+    settingsEl.fillNerv = fillNerv;
     // the table: the six cloths, on the casino table only
     const fillFelt = () => {
       const F = window.fleetFelt, on = document.documentElement.dataset.theme === 'staunton' && F;
@@ -10245,6 +10345,7 @@ function openSettings(){
   }
   settingsEl.fillFelt();
   settingsEl.fillCube();
+  settingsEl.fillNerv();
   fillSettings();
   settingsEl.classList.add('on');
   settingsEl.querySelector('[data-k="close"]').focus();
@@ -10274,6 +10375,7 @@ function fillSettings(){
   q('motion').checked = document.documentElement.dataset.motion === 'off';
   let cubeOn = true; try{ cubeOn = localStorage.getItem(CUBE_KEY) !== 'off'; }catch(e){}
   q('cube').checked = cubeOn;
+  q('nerv-flash').checked = document.documentElement.dataset.nervFlash !== 'off';
 }
 function closeSettings(){ settingsEl?.classList.remove('on'); }
 document.addEventListener('keydown', e => {
