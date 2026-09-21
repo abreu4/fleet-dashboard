@@ -1,5 +1,113 @@
 # Fleet Dashboard Tasks
 
+## Open board — ranked (2026-09-21)
+
+Ranked for what the board is for: a glance from a metre away, most of the day
+with the terminal maximised. A wrong reading ranks above a missing one; the
+daily posture above any one world; a world's bug above its polish. Each entry
+says what it does now (checked in the code, not guessed), why, and the fix
+direction. Nothing here is started. Python-side items need a board restart
+(which kills embedded terminals); page-only items deploy by patching the
+runtime copy.
+
+1. [ ] **The 5h window dial is misleading.** It reads e.g. `128k · 5h window`
+   with a yellow arc near full. The number is Claude Code output tokens since
+   the open usage window began (this Mac only, Claude only — `usage.window()`);
+   the arc is *time elapsed* in the five hours, not usage; and the colour is
+   always `var(--warn)`. So it reads "near the limit" when it means "near the
+   reset". Nothing local knows the real limit (the docstring in `usage.py`
+   says as much), so it can only be a clock or go. Direction: retire the dial;
+   fold the window into the readout's `resets` cell as a countdown (`resets
+   23:58 · 58m`), tokens-in-window in its tooltip; give the freed dial to the
+   consolidation in 3. Page-only (`drawHud` specs, `ui.html`).
+
+2. [ ] **Terminal rides over a fixed bottom bar.** With the sheet maximised
+   (88vh) it covers Skyrim's bars, NERV's status bar, the Minecraft HUD and
+   the casino wheel, and the band never shows while the sheet is on
+   (`.band` is `:not(:has(.sheet.on))`). Why: `.sheet` is `fixed; bottom:0`
+   at z 8; `.ghud` sits at z 2; only some instruments ride `--taken`, and
+   those float up over the tiles instead. Direction: one fixed bottom bar,
+   `--hud-inset` tall, that owns every always-on instrument (the `.ghud`s,
+   the band's object, the wheel); the sheet's `bottom` becomes the top of
+   that bar and its steps become `calc(100vh - hud-inset - hud)` at most;
+   `--taken` no longer moves the instruments, only the board. Every world's
+   fixed-bottom ornament (`bottom:calc(Npx + var(--taken))`, ~20 rules)
+   needs re-homing or removing from the `--taken` ride. Acceptance: at each
+   sheet step, in every world with an inset, the instrument is whole and the
+   sheet's last row is visible; with no inset the bar is 0 tall. Page-only,
+   but the biggest item on the board.
+
+3. [ ] **The two sides of the graph read as one instrument.** Left, six dials
+   whose arcs measure six different things against six denominators (share
+   of the fleet, vs today's peak minute, time elapsed, % of a ceiling, OS
+   pressure, done÷(done+active)); right, six cells that repeat some of the
+   same readings (`out today` beside tok/min, `resets` beside the window)
+   and carry a dead one: `waiting` is "longest a session has waited on you",
+   and no collector emits `blocked`/`waiting`, so it always prints `—` (the
+   same reason the tally never shows those chips). Direction: one rule for
+   each side — a dial is a fill against a hard ceiling that means something
+   is about to go wrong (context, pressure, maybe agents' memory); a cell is
+   a count with its window named (out today, tok/min, done, resets, load,
+   agents) — no reading twice, nothing that cannot move. Drop `waiting`
+   until a collector can emit it (or make it "oldest idle session", which is
+   what "waiting on you" is in practice). Subsumes where 4 and 5 land.
+   Page-only.
+
+4. [ ] **`max context` — say which session.** It is the fullest context on
+   the board (`d.context`: name, used, max); the name is only in the hover
+   tooltip and the tile is a click-to-open. Direction: print the session's
+   name (aliased) under the percentage, and mark that tile on the board.
+   Page-only; small.
+
+5. [ ] **`done today` is always 0.** Not the timezone: the live board's
+   midnight is 00:00 WEST (`local_midnight_ms` uses `time.localtime`). The
+   count is `~/.claude/jobs/*/state.json` in state `done` since midnight
+   (the last one was 2026-09-20) plus roster sessions in state `done`, and
+   only jobs ever get that state — an interactive session goes running →
+   idle and never counts. The arc, done÷(done+active), is a made-up ratio.
+   Direction: define done for interactive work — turns finished today
+   (running→idle transitions, which the collectors already see) or sessions
+   that wrote today and are now idle — or retire the dial into a cell in 3.
+   Python side (`usage.finished`, `dashboard.py`), so a restart.
+
+6. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
+   near its corner.** The face-down rule is on the card itself
+   (`.bubble:is([data-state=idle],[data-state=unknown]):not(:hover):not(.sel)
+   {rotate:y 180deg}`, `.45s` transition, under `perspective` on
+   `.bubbles`), and `:hover` lifts it too. Mid-turn the card's projected
+   footprint narrows, a pointer near an edge or corner falls outside it,
+   `:hover` drops, the card turns back, the pointer is inside again — it
+   oscillates. Direction: hit-test on a box that does not turn (a wrapper
+   around the card, or `pointerenter`/`pointerleave` on the stable cell
+   setting a class), never `:hover` on the rotating element. Must hold with
+   the cursor on the very corner. Page-only.
+
+7. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
+   cards are dealt face down whenever the board is not compact. Add a toggle
+   in the settings card beside the cloth picker (`fleet.*` localStorage, per
+   browser): cards face up in every state. Default stays face down unless
+   decided otherwise. Page-only; small.
+
+8. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
+   fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
+   purpose. Wanted: centred, 384px. Note it sits under the cards at z 2
+   with `mix-blend-mode:screen`, so centred it crosses the middle lanes; the
+   ball (`.ball`) and the winning-number plaque are placed for the corner
+   and move with it; and it belongs in the bottom bar of 2, since the sheet
+   covers it now. Page-only.
+
+9. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
+   strip of cardinal letters under the HUD (`.hud::after`, centred, clipped
+   at the edges, gold needle at 50% — so it always reads S) and a diamond
+   per working tile at that tile's x, with no relation to the letters;
+   blocked/waiting diamonds never appear (see 3). Fix or replace, decide
+   first: (a) a real compass — the strip scrolls so the selected or most
+   recent session's tile is the heading and the letters mean something, the
+   diamonds keep their bearing; or (b) keep the strip as decoration and give
+   the world a different staple — the quest banner ("quest completed" when a
+   session finishes, "new objective" when one asks) or the XP bar for the
+   day's done. Page-only.
+
 ## Theme Quality Board
 
 ### Done
