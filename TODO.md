@@ -1,6 +1,6 @@
 # Fleet Dashboard Tasks
 
-## Open board — ranked (2026-09-21)
+## Open board — ranked (2026-09-22)
 
 Ranked for what the board is for: a glance from a metre away, most of the day
 with the terminal maximised. A wrong reading ranks above a missing one; the
@@ -70,7 +70,153 @@ runtime copy.
    that wrote today and are now idle — or retire the dial into a cell in 3.
    Python side (`usage.finished`, `dashboard.py`), so a restart.
 
-6. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
+6. [ ] **A totals panel: everything the fleet has spent, and its records.**
+   Nothing on the board can answer this. `usage.Ledger` keeps one-minute
+   buckets for `HORIZON_MINUTES` (30 hours) and prunes past that, and
+   `_discover` only tracks transcripts touched inside the same horizon -- so
+   `today` is the longest window the board can report, and no reading survives
+   the day it was taken. Worse, the raw material is going away: no
+   `cleanupPeriodDays` in `~/.claude/settings.json`, so Claude Code's 30-day
+   default applies and the transcripts on disk now reach back only to
+   2026-08-12. Every day that passes, the oldest day's evidence is deleted.
+   Whatever is going to remember the fleet's history has to start writing it
+   down before the transcripts do.
+
+   Wanted: a toggleable panel -- overall token expenditure, the biggest day by
+   tokens, the biggest day spun by sessions, and more (proposals below, to
+   pick from before anything is built).
+
+   **Where the numbers come from.** A day-rollup file, `~/.config/fleet/`
+   (`music.py`'s convention), one row per local day: out, fresh in, cache
+   read, cache write, requests, distinct sessions, split by provider, the
+   day's peak minute. Written two ways: a backfill that walks every transcript
+   still on disk, and the live ledger folding today's row in as it goes. A day
+   once closed is never recomputed -- its transcripts will not be there. The
+   backfill is cheap enough to simply re-run at every start, which also
+   self-heals a deleted file: measured at **2.4 s for 0.92 GB across 247
+   transcripts**, the same byte-needle prefilter `_tail` already uses. Codex
+   folds in the same way through `_codex_row`'s deltas. Antigravity writes no
+   usage anywhere, so `agy` cannot be counted -- the panel should say so
+   rather than quietly under-report.
+
+   **Found while measuring, worth its own fix.** `_discover` scans one level
+   under each project dir, so the 96 subagent transcripts at
+   `<project>/<session>/subagents/*.jsonl` are counted by nothing -- 0.28M
+   output all-time (~1%, but 0.11M of one day on 2026-09-05). The rollup walk
+   must include them, and widening `_discover` fixes today's tok/min, out
+   today and the 5h window at the same time.
+
+   **What it would print today** (measured 2026-09-22, so the discussion has
+   real numbers): 37 days on record; 29.4M output tokens, of which Codex 1.4M;
+   6.9 *billion* cache reads and 137M cache writes against 0.2M of fresh
+   input; 32,056 requests; biggest day 2026-09-10 at 2.8M output over 22
+   sessions; most sessions 2026-09-18 at 27.
+
+   **Two definitions to settle first.** (a) "Sessions spun in a day" -- ones
+   that *wrote* that day (what `today.sessions` counts now: distinct
+   transcript files with a bucket, so a session running past midnight counts
+   twice) or ones that *started* that day (the first row's timestamp). (b)
+   "Token expenditure" -- output has always been this board's word for tokens,
+   and cache reads are 230x larger; output stays the headline and the rest
+   goes on a second line, or the biggest number on the panel is the one that
+   means the least.
+
+   **Proposed readings, to discuss** -- each with what it would be read from,
+   so it can be costed:
+   - *Records.* Busiest minute ever, with when (the ledger already finds
+     today's). Longest day, first write to last. Longest unbroken run of days
+     worked; days worked over days elapsed.
+   - *Rhythm.* A calendar heat map of output per day. An hour-of-day profile
+     (24 buckets per day row, near-free). A weekday profile.
+   - *Where it went.* Top projects all-time -- the project dir is in the
+     transcript path and `aliases.py` already maps it to a display name.
+     Share by agent; share by model (`modelId` rides the attachment row).
+   - *What came out.* Jobs finished and merge requests opened all-time, from
+     `~/.claude/jobs/*/state.json` -- what `usage.finished` reads for today,
+     34 job dirs now -- carrying item 5's caveat that only jobs reach `done`.
+   - *The long record.* `~/.claude/history.jsonl` holds every prompt typed
+     back to **2025-10-24**: 2,714 prompts over 118 days in 103 projects. No
+     tokens, no session id, but it is the only thing on this Mac that
+     remembers last year, and it is the honest source for "days worked" and
+     "prompts typed" over a span the transcripts cannot reach.
+   - *Notional cost.* What the output would have cost at API list prices, by
+     model. A subscription makes it a number that was never paid -- label it
+     that way or leave it out.
+
+   **The panel.** A third overlay beside settings (Cmd-,) and the graph
+   (Cmd-G): an entry in the `#more` menu next to `settings...` and `graph`,
+   its own shortcut, built on the `.settings` scrim-and-card so all 26 worlds
+   theme it for free. Not on the HUD -- item 3's rule is one reading in one
+   place, and this is the retrospective view; the HUD stays the live one. It
+   has to read correctly before the first backfill lands, and on a Mac with no
+   history at all. Ranked below 1-5 because nothing reads *wrong* without it.
+   Python side (a rollup module, an endpoint) so a restart, plus page-only
+   work for the panel itself.
+
+7. [ ] **The Sims (`plumbob`): the six needs do not measure what they say.**
+   `WORLDS.plumbob.NEEDS` inverts a host gauge or a session ratio into each
+   bar, green over 50, yellow over 25, red under. Read off the live board
+   (2026-09-22, five sessions, a healthy Mac): Energy 47 yellow, Hunger 26
+   yellow, Comfort 47 yellow, Bladder 45 yellow, Social 60 green, Fun 0 red.
+   Five of six amber or worse with nothing wrong -- the cuts sit inside the
+   band these readings naturally live in, so the household is permanently in
+   crisis.
+
+   A motive in the game is a resource that drains while the Sim works, refills
+   when you do something about it, and turns red to ask for that something.
+   Judged that way:
+   - *Energy = cpu idle* (`100 - --g-cpu`). Noisy at the two-second sample,
+     no memory of the day, and nothing you could do if it went red. The
+     laptop's battery is the right shape: it drains all day, refills when you
+     plug in, and a red bar has an action. `--g-batt` is already published
+     (`metrics.power()` -> `pmset -g batt`: pct, source, charging). Decide what
+     it does while docked -- right now the Mac reads `100% AC, not charging`,
+     so the bar would pin full, which is honest (the machine is rested, the
+     Sim is asleep in bed) but never moves. Pin it with a plugged-in tell, or
+     read time-on-battery instead. Note `--g-batt` falls back to 100 when the
+     pct is null, so a Mac that reports no battery also pins full.
+   - *Hunger = memory free* and *Comfort = pressure headroom* are the same
+     reading one derivative apart -- `--g-mem` is memory used, `--g-pres` is
+     the memory that cannot be reclaimed. Two of six bars move together, which
+     is item 3's "no reading twice" inside a single panel.
+   - *Bladder = disk free* is frozen: 45% today, 45% next week. The joke is
+     better than the reading -- the board's own word for clearing stale
+     sessions is **flush**. A Bladder that fills as finished and quiet
+     sessions pile up and empties when the flush button is pressed is both
+     accurate and the better joke.
+   - *Social = share of sessions at work* measures busyness, not contact.
+     Nearer: how long since you last typed to anything, or the share of
+     sessions that have spoken to you recently.
+   - *Fun = done / total* is dead. `--n-done` is the tally's `done`, and only
+     jobs ever reach that state (item 5) -- the live tally is `{idle: 2,
+     running: 3}`, so Fun has been 0 and red since the world shipped.
+
+   Latent, and not only here: `whole(v)` is `round(clamp(v || 0))`, so a
+   reading that is missing publishes as 0, and five of these bars invert it --
+   an absent gauge (`pressure()` returns None when its regex misses) would
+   print as a full green bar. Missing should read missing, not perfect.
+
+   Direction: settle the panel's rule before re-pointing any one bar, the way
+   item 3 settles the HUD's two sides. Proposed: a motive is a resource that
+   visibly moves over a working day, is not a second view of another bar, goes
+   red only when there is something to do about it, and reads blank rather
+   than full when its source is missing. Then re-point each bar to the nearest
+   reading that satisfies it and re-cut the thresholds so a healthy machine
+   reads green. Every re-point also edits `plots: ['cpu', 'mem', 'pressure',
+   'disk', 'live']`, which is what hands those dials to HUD reserves -- Energy
+   on the battery drops `cpu` and adds `batt`, giving the cpu dial back and
+   taking the battery one away. Change them together or the HUD reallocates
+   against a world that no longer draws what it claims.
+
+   Scoped to these six. The same host readings are inverted into other worlds'
+   instruments -- LCARS (`warp`, `shields`, `life support`, `deflector`,
+   `crew`), Doom (health the memory, armor the pressure), Skyrim's three bars,
+   Minecraft's hearts, Evangelion's A.T. field -- and the rule settled here
+   should sweep them after, as its own item. The Sims panel is where it gets
+   written because it is the one with six bars side by side. Page-only
+   (`WORLDS.plumbob`, its `plots` and the theme's doc comment, `ui.html`).
+
+8. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
    near its corner.** The face-down rule is on the card itself
    (`.bubble:is([data-state=idle],[data-state=unknown]):not(:hover):not(.sel)
    {rotate:y 180deg}`, `.45s` transition, under `perspective` on
@@ -82,13 +228,13 @@ runtime copy.
    setting a class), never `:hover` on the rotating element. Must hold with
    the cursor on the very corner. Page-only.
 
-7. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
+9. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
    cards are dealt face down whenever the board is not compact. Add a toggle
    in the settings card beside the cloth picker (`fleet.*` localStorage, per
    browser): cards face up in every state. Default stays face down unless
    decided otherwise. Page-only; small.
 
-8. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
+10. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
    fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
    purpose. Wanted: centred, 384px. Note it sits under the cards at z 2
    with `mix-blend-mode:screen`, so centred it crosses the middle lanes; the
@@ -96,7 +242,7 @@ runtime copy.
    and move with it; and it belongs in the bottom bar of 2, since the sheet
    covers it now. Page-only.
 
-9. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
+11. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
    strip of cardinal letters under the HUD (`.hud::after`, centred, clipped
    at the edges, gold needle at 50% — so it always reads S) and a diamond
    per working tile at that tile's x, with no relation to the letters;
