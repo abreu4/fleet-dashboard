@@ -7678,11 +7678,14 @@ function drawHud(d){
     ['rate', 'tok/min · 5m', ratePct, fmtTok(rate.perMin), 'var(--accent)',
       'Output tokens the whole fleet is writing per minute, averaged over the last '+(rate.minutes||5)+' whole minutes.'
       + (rate.peakPerMin ? '\nArc: against today’s busiest minute, '+fmtTok(rate.peakPerMin)+'/min at '+hhmm(rate.peakAt)+'.' : '')],
-    ['window', '5h window', win ? win.elapsedPct : 0, win ? fmtTok(win.out) : '—', 'var(--warn)',
-      win ? 'Est. output tokens in the open 5-hour Claude usage window: opened '+hhmm(win.start)+', resets '+hhmm(win.end)+' ('+until(win.end)+' left).'
-          + '\nArc: how much of the window has elapsed.'
-          + '\nCounts Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here.'
-          : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
+    // The 5-hour window had a dial here: its arc was the time elapsed and
+    // its colour always the warning one, so it read "near the limit" when it
+    // meant "near the reset" -- and nothing on this Mac knows the limit. It
+    // is a clock, so it is the readout's `resets` cell now, and its tile
+    // went to the agents' memory, a fill against the machine.
+    ['ram', 'agents mem', ramPct, agentsMem, tone(ramPct, 35, 60),
+      'Memory the agent processes (claude, codex, agy) hold between them: '+agentsMem+(mem.total ? ' of '+gb(mem.total)+'G ('+Math.round(ramPct)+'%)' : '')+'.'
+      + '\nArc: their share of the machine.'],
     ['context', 'max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
       (ctxPct > 85 ? 'var(--blocked)' : ctxPct > 70 ? 'var(--warn)' : 'var(--idle)'),
       ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.\nClick to open it.'
@@ -7702,9 +7705,6 @@ function drawHud(d){
   // what the fleet's processes are eating, which nothing else shows, is
   // worth the tile more.
   const reserve = [
-    ['ram', 'agents mem', ramPct, agentsMem, tone(ramPct, 35, 60),
-      'Memory the agent processes (claude, codex, agy) hold between them: '+agentsMem+(mem.total ? ' of '+gb(mem.total)+'G ('+Math.round(ramPct)+'%)' : '')+'.'
-      + '\nArc: their share of the machine.'],
     ['cpu', 'cpu busy', cpu.pct, cpu.pct==null ? '—' : Math.round(cpu.pct)+'%', tone(cpu.pct??0, 70, 85),
       'CPU busy across every core'+(h.gpu?.pct != null ? ', GPU '+Math.round(h.gpu.pct)+'%' : '')+'.'
       + '\nLoad 1m '+(cpu.load1??'?')+' on '+(cpu.cores||1)+' cores; agents take '+Math.round(h.agentCpu??0)+'% of it.'],
@@ -7769,7 +7769,6 @@ function drawHud(d){
   put('--g-disk', whole(h.disk?.pct));
   put('--g-batt', whole(pw.pct != null ? pw.pct : 100));
   put('--g-rate', whole(ratePct));          // tok/min against today's peak
-  put('--g-window', whole(win ? win.elapsedPct : 0));
   put('--g-ctx',  whole(ctxPct));           // the fullest context
   put('--n-active', String(active|0));
   put('--n-total',  String(d.total|0));
@@ -7824,8 +7823,14 @@ function drawHud(d){
     ['out today', '<b>'+fmtTok(today.out)+'</b>',
       'Output tokens written by every agent since midnight'+(today.sessions ? ', across '+today.sessions+' sessions and '+num(today.requests)+' requests' : '')+'.'+split
       + '\nInput was '+fmtTok((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0))+', '+(today.cacheRead && today.in!=null ? Math.round(100*today.cacheRead/((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0)))+'% of it from cache' : 'mostly cache')+'.'],
-    win ? ['resets', '<b>'+hhmm(win.end)+'</b>', 'The open 5-hour Claude window closes at '+hhmm(win.end)+', in '+until(win.end)+'. The first message after that opens the next one.']
-        : ['window', '<b>—</b> open', 'No 5-hour Claude window is open right now.'],
+    // The 5-hour window is a clock, so it reads as one: a countdown to the
+    // reset. The clock time and what the window has cost so far ride in the
+    // title -- the cell is too narrow for "23:58 · 58m" -- and the cost is
+    // not a headline, since nothing here knows the limit it is measured by.
+    ['resets in', win ? '<b>'+(win.end - Date.now() < 60000 ? '&lt;1m' : until(win.end))+'</b>' : '<b>—</b>',
+      win ? 'The open 5-hour Claude window closes at '+hhmm(win.end)+', in '+until(win.end)+' (it opened at '+hhmm(win.start)+'). The first message after that opens the next one.'
+          + '\nEst. '+fmtTok(win.out)+' output tokens written in it so far. Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here, and the limit itself is not known.'
+          : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
   ];
   const ro = document.getElementById('readout');
   if(!HUD.dds || ro.children.length !== cells.length){
