@@ -5521,8 +5521,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    narrows to a sliver, so a pointer near its edge fell off it, :hover
    dropped, the card turned back under the pointer and it flapped for as
    long as you held still. The script hit-tests on the box layout gave the
-   card, which does not turn (see "the hole card"). Perspective sits on the hand, one vanishing point per
-   project, the way a hand on a table reads from a seat. */
+   card, which does not turn (see "the hole card"). The settings card can
+   deal every card face up (data-deal="up" on the root). Perspective sits
+   on the hand, one vanishing point per project, the way a hand on a table
+   reads from a seat. */
 :root[data-theme="staunton"] .bubbles{perspective:1100px}
 :root[data-theme="staunton"] .bubble{transition:background .12s, border-color .12s, transform .12s, box-shadow .12s, rotate .45s ease-in-out}
 :root[data-theme="staunton"] .bubble::before{
@@ -5536,8 +5538,8 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   box-shadow:inset 0 0 0 1px rgba(234,179,8,.6), inset 0 0 0 2px rgba(0,0,0,.3);
   animation:none; transition:opacity 0s linear .22s;
 }
-:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel){rotate:y 180deg; outline-color:transparent}
-:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel)::before{opacity:1}
+:root[data-theme="staunton"]:not([data-deal="up"]) .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel){rotate:y 180deg; outline-color:transparent}
+:root[data-theme="staunton"]:not([data-deal="up"]) .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel)::before{opacity:1}
 /* 4. The deal, the turn, the riffle. A card that arrives is dealt in from the
    dealer's corner (face down if it arrives folded, since the deal composes
    with the fold); a card whose state changed is turned over -- a full turn,
@@ -9125,13 +9127,16 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
   });
   // A card going to idle or off the table folds; one coming back unfolds;
   // any other change turns it over. Two folded states swapping is nothing to
-  // see, and a collapsed board deals face up, so no turn there either.
+  // see, and a collapsed board deals face up, so no turn there either. A
+  // table set to deal face up (settings) never folds: the card turns over
+  // to its new suit like any other change.
   const down = s => s === 'idle' || s === 'unknown';
   document.addEventListener('fleet:state', e => {
     if(!on()) return;
     const c = e.detail || {}, el = tileOf(c.id || ''); if(!el) return;
     if(down(c.to) && down(c.from)) return;
     if((down(c.to) || down(c.from)) && board.classList.contains('compact')) return;
+    if(root.dataset.deal === 'up'){ once(el, 'turned'); return; }
     once(el, down(c.to) ? 'fold' : down(c.from) ? 'unfold' : 'turned');
   });
   let riffleT = 0;
@@ -10246,6 +10251,15 @@ function applyNervFlash(){
   if(off) document.documentElement.dataset.nervFlash = 'off'; else delete document.documentElement.dataset.nervFlash;
 }
 applyNervFlash();
+/* The casino deals a folded hand -- idle, or off the table -- face down, which
+   is the tell, and also a board you cannot read without pointing at it. This
+   turns every card face up in every state. Per browser. */
+const DEAL_KEY = 'fleet.casino.deal';
+function applyDeal(){
+  let up = false; try{ up = localStorage.getItem(DEAL_KEY) === 'up'; }catch(e){}
+  if(up) document.documentElement.dataset.deal = 'up'; else delete document.documentElement.dataset.deal;
+}
+applyDeal();
 
 /* Whatever a theme wrote -- hex, rgb(), oklch() -- the colour input wants
    #rrggbb; let the engine resolve it. */
@@ -10287,7 +10301,8 @@ function openSettings(){
       +   PANELS.map(p => '<div class="row"><label class="chk"><input type="checkbox" data-k="panel-'+p.key+'"> <span class="nm">'+esc(p.label)+'</span> <span class="hint">\u2014 '+esc(p.hint)+'</span></label><i class="hint" data-k="panel-'+p.key+'-note"></i></div>').join('')
       + '</section>'
       + '<section data-k="felt-sec" hidden><h3>table <span class="hint">the cloth on the casino table \u2014 the outside bets printed on a closed rail lay it too</span></h3>'
-      +   '<div class="picks" data-k="felt"></div></section>'
+      +   '<div class="picks" data-k="felt"></div>'
+      +   '<div class="row"><label class="chk"><input type="checkbox" data-k="deal-down"> <span class="nm">fold face down</span> <span class="hint">\u2014 idle and quiet cards show their backs and peek when pointed at; off, every card lies face up</span></label></div></section>'
       + '<section><h3>terminal <span class="hint">the face the sheet\u2019s shells use \u2014 applies to open ones as you change it</span></h3>'
       +   '<div class="row"><span>face</span><select data-k="tf-face"></select></div>'
       +   '<div class="row"><span>weight</span><select data-k="tf-weight"><option value="400">regular</option><option value="500">medium</option><option value="600">semibold</option><option value="700">bold</option></select></div>'
@@ -10383,6 +10398,10 @@ function openSettings(){
     };
     q('felt').addEventListener('click', e => { const b = e.target.closest('[data-felt]'); if(b) window.fleetFelt.set(b.dataset.felt); });
     q('felt').addEventListener('keydown', e => { const b = e.target.closest('[data-felt]'); if(b && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); window.fleetFelt.set(b.dataset.felt); } });
+    q('deal-down').onchange = () => {
+      try{ localStorage.setItem(DEAL_KEY, q('deal-down').checked ? 'down' : 'up'); }catch(e){}
+      applyDeal();
+    };
     document.addEventListener('fleet:theme', fillFelt);
     document.addEventListener('fleet:felt', fillFelt);
     settingsEl.fillFelt = fillFelt;
@@ -10420,6 +10439,7 @@ function fillSettings(){
   let cubeOn = true; try{ cubeOn = localStorage.getItem(CUBE_KEY) !== 'off'; }catch(e){}
   q('cube').checked = cubeOn;
   q('nerv-flash').checked = document.documentElement.dataset.nervFlash !== 'off';
+  q('deal-down').checked = document.documentElement.dataset.deal !== 'up';
 }
 function closeSettings(){ settingsEl?.classList.remove('on'); }
 document.addEventListener('keydown', e => {

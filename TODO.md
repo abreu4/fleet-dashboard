@@ -244,11 +244,14 @@ runtime copy.
    card's layout box (offsets, which no turn moves) and put back after a repaint;
    parked on a corner or edge for 2 s the card turned once (0 reversals; up to 4 before).
 
-9. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
+9. [x] **Casino: face-down when folded is a setting.** Today idle/unknown
    cards are dealt face down whenever the board is not compact. Add a toggle
    in the settings card beside the cloth picker (`fleet.*` localStorage, per
    browser): cards face up in every state. Default stays face down unless
    decided otherwise. Page-only; small.
+   Done (2026-09-24): `fold face down` in the settings card's table section,
+   under the cloths (`fleet.casino.deal`, `data-deal="up"` on the root); default face down;
+   face up, a fold or unfold turns the card over like any other change. Survives a reload.
 
 10. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
    fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
