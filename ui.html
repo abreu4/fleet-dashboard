@@ -6474,11 +6474,13 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    goes red. That is exactly the job.
 
    The tell is the plumbob on every tile, turning in the state's colour.
-   Always on, the needs: Energy the cpu idle, Hunger the memory free,
-   Comfort the pressure headroom, Bladder the disk free, Social the share
-   of sessions at work, Fun the share finished -- each bar green, yellow or
-   red the way the game does it. Collapse the board for the Sim's mood,
-   its wants and fears. Measured on --tile #fff: --faint 4.9:1, --dim 7.9:1.
+   Always on, the needs: Energy the battery, Hunger the memory pressure,
+   Comfort the room in the fullest context, Bladder the sessions waiting
+   for a flush, Social how long you have kept one waiting, Fun the sessions
+   at work -- each bar green, yellow or red the way the game does it, and
+   grey when its reading is missing (WORLDS.plumbob has the rule). Collapse
+   the board for the Sim's mood, its wants and fears. Measured on --tile
+   #fff: --faint 4.9:1, --dim 7.9:1.
    ========================================================================== */
 :root[data-theme="plumbob"]{
   color-scheme:light;
@@ -6550,7 +6552,8 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="plumbob"] .bubble[data-state="blocked"]{background-color:#fff3f2}
 :root[data-theme="plumbob"] .bubble[data-state="waiting"]{background-color:#fff8ee}
 :root[data-theme="plumbob"] .bubble .foot .dot{border-radius:2px; transform:rotate(45deg); width:6px; height:6px}
-/* THE NEEDS, always on. Six bars, each green, yellow or red by its value. */
+/* THE NEEDS, always on. Six bars, each green, yellow or red on its own cut;
+   a need whose reading is missing is an empty hatched bar, not a full one. */
 :root[data-theme="plumbob"] .ghud.needs{
   left:50%; bottom:calc(8px + var(--taken,0px)); transform:translateX(-50%); font-style:normal;
   display:grid; grid-template-columns:repeat(3, auto); gap:5px 22px; padding:7px 14px 8px;
@@ -6562,6 +6565,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="plumbob"] .ghud.needs .need[data-m="ok"] i b{--k:linear-gradient(180deg, #8fe25a, #4fbd1f)}
 :root[data-theme="plumbob"] .ghud.needs .need[data-m="meh"] i b{--k:linear-gradient(180deg, #ffd45c, #e8b91a)}
 :root[data-theme="plumbob"] .ghud.needs .need[data-m="bad"] i b{--k:linear-gradient(180deg, #ff7a70, #e0433f)}
+:root[data-theme="plumbob"] .ghud.needs .need[data-m="na"] i{background:repeating-linear-gradient(135deg, #fff 0 3px, #dbe7f3 3px 6px)}
 :root[data-theme="plumbob"] .ghud.needs .need u{text-decoration:none; font-weight:500; color:#5f7a9c; font-size:9px}
 :root[data-theme="plumbob"] .ghud.needs .need u strong{color:#1d3557; font-weight:700}
 /* THE MOOD (the band). A big plumbob in the household's colour, the Sim's
@@ -9431,31 +9435,101 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
         clearTimeout(n._t); n._t = setTimeout(() => say.classList.remove('on'), 6000);
       },
     },
-    /* The lot. Always on: the needs -- Energy the cpu idle, Hunger the
-       memory free, Comfort the pressure headroom, Bladder the disk free,
-       Social the share of sessions at work, Fun the share finished -- each
-       bar green, yellow or red by its value. Collapsed: the household's
-       mood, its wants (the sessions waiting on you) and fears (the stuck). */
+    /* The lot. Always on: the needs. A motive in the game is a resource that
+       drains while the Sim lives its day, refills when you do something about
+       it, and turns red to ask for that something -- so each bar here is a
+       reading that visibly moves over a working day, is not a second view of
+       another bar, goes red only when there is something to do, and reads
+       blank (a grey bar and a dash) when its source is missing, never full.
+       Energy is the battery: it drains off the cable and refills on it, and
+       on the cable it stays green with the charge beside "plugged in" -- the
+       Sim is in bed. Hunger is the memory pressure, the one memory reading
+       that predicts a stall (close something). Comfort is the room left in
+       the fullest context (compact it, or start fresh). Bladder is the
+       finished and quiet sessions piling up on the board, and the flush
+       button empties it. Social is how long the oldest ask has waited on you
+       (answer it). Fun is the fleet at work, a quarter bar per running
+       session; with none running the Sim is bored, yellow and not red.
+       Each bar cuts green/yellow/red on its own figure, at the thresholds
+       the HUD already uses for it, so a healthy machine reads green.
+       Collapsed: the household's mood, its wants (the sessions waiting on
+       you) and fears (the stuck). */
     plumbob: {
-      plots: ['cpu', 'mem', 'pressure', 'disk', 'live'],
-      NEEDS: [['energy', 'Energy', 'cpu idle', () => 100 - rootNum('--g-cpu')], ['hunger', 'Hunger', 'memory free', () => 100 - rootNum('--g-mem')],
-              ['comfort', 'Comfort', 'pressure headroom', () => 100 - rootNum('--g-pres')], ['bladder', 'Bladder', 'disk free', () => 100 - rootNum('--g-disk')],
-              ['social', 'Social', 'at work', () => rootNum('--n-total') ? 100 * rootNum('--n-active') / rootNum('--n-total') : 0],
-              ['fun', 'Fun', 'finished', () => rootNum('--n-total') ? 100 * rootNum('--n-done') / rootNum('--n-total') : 0]],
+      plots: ['batt', 'pressure', 'context', 'live'],
+      QUIET_MIN: 20,          // an idle tile this long untouched is waiting for a flush
+      /* [key, name, read(snapshot) -> {v: bar 0..100, m: ok|meh|bad, what, n,
+         tip}, or {v: null, what, tip} when the source is missing] */
+      NEEDS: [
+        ['energy', 'Energy', d => {
+          const pw = powerOf(d.host);
+          if(pw.plugged === null) return {v: null, what: 'battery', tip: 'Energy: the power source did not answer.'};
+          if(pw.pct == null) return {v: null, what: 'no battery', tip: 'Energy: this Mac reports no battery.'};
+          if(pw.plugged) return {v: pw.pct, m: 'ok', what: pw.charging ? 'charging' : 'plugged in', n: pw.pct + '%',
+            tip: 'Energy: on the cable, the battery at ' + pw.pct + '%' + (pw.charging ? ' and charging' : '') + '. Rested.'};
+          return {v: pw.pct, m: pw.pct > 40 ? 'ok' : pw.pct > 20 ? 'meh' : 'bad', what: 'battery', n: pw.pct + '%',
+            tip: 'Energy: on the battery at ' + pw.pct + '%' + (pw.remaining ? ', about ' + hmLeft(pw.remaining) + ' left' : '') + '. Red at 20%: plug in.'};
+        }],
+        ['hunger', 'Hunger', d => {
+          const p = d.host?.pressurePct;
+          if(p == null) return {v: null, what: 'pressure', tip: 'Hunger: macOS did not report memory pressure.'};
+          return {v: 100 - p, m: p > 85 ? 'bad' : p > 70 ? 'meh' : 'ok', what: 'pressure', n: p + '%',
+            tip: 'Hunger: memory pressure ' + p + '%, the memory that cannot be reclaimed. Yellow past 70% (swapping), red past 85% (agents stall): close something.'};
+        }],
+        ['comfort', 'Comfort', d => {
+          const c = d.context;
+          if(!c) return {v: null, what: 'context', tip: 'Comfort: no session has reported its context size yet.'};
+          const f = Math.round(c.pct);
+          return {v: 100 - f, m: f > 85 ? 'bad' : f > 70 ? 'meh' : 'ok', what: 'fullest context', n: f + '%',
+            tip: 'Comfort: the fullest context on the board is ' + c.name + ' at ' + f + '%. Past ~80% it compacts; compact it or start fresh.'};
+        }],
+        ['bladder', 'Bladder', function(d){
+          const quiet = Date.now() - this.QUIET_MIN * 60000;
+          let n = 0;
+          (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(s => {
+            if(s.state === 'done' || s.state === 'unknown' || (s.state === 'idle' && (s.stale || (s.updated || 0) < quiet))) n++;
+          })));
+          return {v: Math.max(0, 100 - n * 12.5), m: n > 5 ? 'bad' : n > 2 ? 'meh' : 'ok', what: n ? 'to flush' : 'flushed', n: String(n),
+            tip: 'Bladder: ' + n + ' finished or quiet session' + (n === 1 ? '' : 's') + ' (done, or idle ' + this.QUIET_MIN + 'm+) on the board since the last flush. Yellow at 3, red at 6: press flush.'};
+        }],
+        ['social', 'Social', d => {
+          let oldest = 0, waiting = 0;
+          (d.lanes || []).forEach(l => (l.projects || []).forEach(p => (p.sessions || []).forEach(s => {
+            if(s.state !== 'waiting' && s.state !== 'blocked') return;
+            waiting++; if(s.updated && (!oldest || s.updated < oldest)) oldest = s.updated;
+          })));
+          if(!waiting) return {v: 100, m: 'ok', what: 'nobody waiting', n: '', tip: 'Social: nothing is waiting on you.'};
+          const min = oldest ? (Date.now() - oldest) / 60000 : 0;
+          return {v: Math.max(0, 100 - min * 100 / 30), m: min >= 15 ? 'bad' : min >= 5 ? 'meh' : 'ok',
+            what: waiting + ' waiting', n: oldest ? age(oldest) : '',
+            tip: 'Social: ' + waiting + ' session' + (waiting === 1 ? '' : 's') + ' waiting on you' + (oldest ? ', the oldest for ' + age(oldest) : '') + '. Yellow at 5m, red at 15m: answer it.'};
+        }],
+        ['fun', 'Fun', d => {
+          if(!d.total) return {v: null, what: 'nobody home', tip: 'Fun: there are no sessions on the board.'};
+          const r = d.tally?.running | 0;
+          return {v: Math.min(100, r * 25), m: r ? 'ok' : 'meh', what: 'at work', n: r + ' of ' + d.total,
+            tip: 'Fun: ' + r + ' of ' + d.total + ' sessions running, a quarter bar each. None running reads bored: give one something to do.'};
+        }],
+      ],
       LINES: {arrived: 'Sul sul!', left: 'Dag dag.', blocked: 'Bloo bagoo!', waiting: 'Firby nurbs?', done: 'Whippna choba dog!', idle: 'Zzz…', running: 'Litzergam.'},
       MOOD: {blocked: ['blocked', 'in a bad mood'], waiting: ['waiting', 'wants attention'], running: ['running', 'busy and happy'], idle: ['idle', 'napping'], done: ['done', 'fulfilled'], unknown: ['unknown', 'nobody home']},
       hud(){
         const h = el('i', 'ghud needs');
-        h.innerHTML = this.NEEDS.map(([k, name, what]) => '<span class="need ' + k + '">' + name + '<i><b></b></i><u>' + what + ' <strong>—</strong></u></span>').join('');
+        h.innerHTML = this.NEEDS.map(([k, name]) => '<span class="need ' + k + '" data-m="na">' + name + '<i><b></b></i><u><span>—</span> <strong></strong></u></span>').join('');
         return h;
       },
       paintHud(h){
-        this.NEEDS.forEach(([k, , , read]) => {
-          const v = pct(read()), n = h.querySelector('.need.' + k), b = n.querySelector('b'), s = n.querySelector('strong');
-          const m = v > 50 ? 'ok' : v > 25 ? 'meh' : 'bad';
-          if(b.style.width !== v + '%') b.style.width = v + '%';
+        const d = latest; if(!d) return;
+        this.NEEDS.forEach(([k, , read]) => {
+          const r = read.call(this, d), n = h.querySelector('.need.' + k), b = n.querySelector('b');
+          // a reading that is there always shows a sliver, so an empty red
+          // bar still reads red; a missing one is the hatched track alone
+          const m = r.v == null ? 'na' : r.m, w = r.v == null ? '0%' : Math.max(4, pct(r.v)) + '%';
+          if(b.style.width !== w) b.style.width = w;
           if(n.dataset.m !== m) n.dataset.m = m;
-          if(s.textContent !== v + '%') s.textContent = v + '%';
+          const what = n.querySelector('u span'), fig = n.querySelector('strong'), num = r.v == null ? '—' : r.n;
+          if(what.textContent !== r.what) what.textContent = r.what;
+          if(fig.textContent !== num) fig.textContent = num;
+          if(n.title !== r.tip) n.title = r.tip;
         });
       },
       make(){

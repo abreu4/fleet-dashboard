@@ -166,7 +166,7 @@ runtime copy.
    Python side (a rollup module, an endpoint) so a restart, plus page-only
    work for the panel itself.
 
-7. [ ] **The Sims (`plumbob`): the six needs do not measure what they say.**
+7. [x] **The Sims (`plumbob`): the six needs do not measure what they say.**
    `WORLDS.plumbob.NEEDS` inverts a host gauge or a session ratio into each
    bar, green over 50, yellow over 25, red under. Read off the live board
    (2026-09-22, five sessions, a healthy Mac): Energy 47 yellow, Hunger 26
@@ -228,6 +228,15 @@ runtime copy.
    should sweep them after, as its own item. The Sims panel is where it gets
    written because it is the one with six bars side by side. Page-only
    (`WORLDS.plumbob`, its `plots` and the theme's doc comment, `ui.html`).
+   Done (2026-09-24): the rule is in `WORLDS.plumbob`'s doc comment and each
+   need cuts on its own figure at the HUD's thresholds -- Energy the battery
+   (green on the cable, beside `plugged in`/`charging`), Hunger the memory
+   pressure, Comfort the room in the fullest context, Bladder the done and
+   20m-quiet sessions a flush would clear, Social the oldest ask waiting on
+   you, Fun the running sessions (a quarter bar each, yellow when none);
+   read off the snapshot, so a missing source is a hatched empty bar and
+   never a full one. `plots` is `batt, pressure, context, live`. On the live
+   board: five green, Social red for a session blocked 67m.
 
 8. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
    near its corner.** The face-down rule is on the card itself
@@ -335,6 +344,24 @@ runtime copy.
    `remaining`, 12 tests) and the page's `powerOf` feeds NERV, the readout,
    the intranet row and `--g-batt`, and also corrects an older board's
    `charging` and its `?` source (a failed pmset used to read as `internal`).
+
+15. [ ] **Sweep item 7's rule across the other worlds' instruments.** The Sims'
+   needs now follow a rule (`WORLDS.plumbob`'s doc comment): an instrument
+   moves over a working day, is not a second view of another bar, goes red
+   only when there is something to do, and reads blank rather than full when
+   its source is missing. The same host readings are still inverted into
+   LCARS (`warp`, `shields`, `life support`, `deflector`, `crew`), Doom
+   (health the memory, armor the pressure), Skyrim's three bars,
+   Minecraft's hearts, Evangelion's A.T. field and the Pip-Boy's
+   S.P.E.C.I.A.L., mostly through `rootNum('--g-*')` -- and `whole(v)` in
+   `drawHud` is `round(clamp(v || 0))`, so a missing reading publishes 0 and
+   an inverted one draws full. Two ways out, pick one first: publish nothing
+   (removeProperty) for a missing reading and let each world's `var(--g-x,
+   fallback)` and `rootNum` say what blank looks like, or have the JS worlds
+   read the snapshot the way the Sims now do. Then re-point each instrument,
+   re-cut so a healthy machine reads well, and edit `plots` in the same
+   change. `--g-batt` keeps its fallback of 100 on purpose until then (the
+   Game Boy's HP and the Pip-Boy's Endurance read it). Page-only.
 
 ## Theme Quality Board
 
