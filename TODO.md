@@ -284,6 +284,50 @@ runtime copy.
    header's minimise toggle; the terminal-off toast covers boards started
    without `--terminal`. Page-only; small.
 
+13. [ ] **Terminal: two states, fullscreen and normal; normal is resized by
+   dragging its top edge.** Today the sheet has three fixed heights —
+   `SHEET_STEPS = [34, 54, 88]` vh — cycled by `#term-size`, stored as an
+   index in `fleet.sheet`, applied by `applySheet()` to `--sheet` and
+   `--taken`. Wanted: (a) *normal* — today's docked sheet, but its height set
+   by dragging the top edge, at will, like the sidebar's width already is
+   (`#term-grip`, `barWidth`, `--barw`, pointer capture, kept per browser);
+   (b) *fullscreen* — the sheet takes the whole viewport. `#term-size`
+   becomes the toggle between the two. Direction: a horizontal grip on the
+   sheet's top edge (`cursor:row-resize`, `touch-action:none`) that writes
+   `--sheet` in px during the drag and refits once on release (`fit()` /
+   `refit()`, so the pty is not resized on every pointer move); clamp
+   between a few terminal rows and the viewport minus the header; store the
+   height (px or vh) in place of the step index, migrating an old index to
+   its vh. `--taken` follows `--sheet` in normal and is ignored in
+   fullscreen (the board is covered anyway). Interacts with 2: the bottom
+   bar's inset is the drag's floor. `termSize()` sizes a pty off
+   `SHEET_STEPS[sheetStep]` before it exists and must read the new height.
+   Page-only.
+
+14. [ ] **Power readings do not follow the cable.** Reported: NERV's power
+   readout still says `internal` after the Mac is unplugged — it should
+   change the moment the source does, and so should every other instrument
+   that reads the battery. Checked 2026-09-23: `metrics.power()` shells
+   `pmset -g batt` on every `/api/state` (uncached), the source is read
+   right, and NERV's `paintHud` reruns on every poll (`fleet:paint` from
+   `afterPaint`, `fleet:hud` from `drawHud`); the runtime copy matches HEAD.
+   One bug is certain: `charging = "charging" in raw` matches
+   `discharging`, so on battery every reader says *charging* — NERV's
+   `<small>` and tooltip, the readout's power cell (`chg`), its tooltip.
+   Live at the check: `pmset` said `discharging`, the board said
+   `charging: True`. The stuck `internal` did not reproduce from code
+   alone: reproduce on the live board (plug and unplug, watch
+   `/api/state`'s `host.power` and the readout side by side) before
+   deciding whether it is the page, the poll, or the wording (`internal`
+   *is* the battery label; `external` is the cable). Then sweep every
+   battery reader to use one parsed `{source, charging, pct}`: NERV's
+   `power`, the readout's `onBat` cell, the intranet status page's
+   `Memory pressure`/`Battery` swap, `--g-batt` (the `batt` plots: Game Boy
+   HP, the Sims' needs in 7), and the settings-card hint. Fix direction for
+   the parser: match `; charging;` / `discharging` / `charged` / `AC
+   attached; not charging` as the states `pmset` prints. Python + page; the
+   parser fix needs a board restart.
+
 ## Theme Quality Board
 
 ### Done
