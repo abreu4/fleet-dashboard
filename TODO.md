@@ -284,7 +284,7 @@ runtime copy.
    never a full one. `plots` is `batt, pressure, context, live`. On the live
    board: five green, Social red for a session blocked 67m.
 
-8. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
+8. [x] **Casino (`staunton`): a folded card flips back when the pointer is
    near its corner.** The face-down rule is on the card itself
    (`.bubble:is([data-state=idle],[data-state=unknown]):not(:hover):not(.sel)
    {rotate:y 180deg}`, `.45s` transition, under `perspective` on
@@ -295,12 +295,18 @@ runtime copy.
    around the card, or `pointerenter`/`pointerleave` on the stable cell
    setting a class), never `:hover` on the rotating element. Must hold with
    the cursor on the very corner. Page-only.
+   Done (2026-09-24): the peek is `.lift`, set by a pointer hit-test on the
+   card's layout box (offsets, which no turn moves) and put back after a repaint;
+   parked on a corner or edge for 2 s the card turned once (0 reversals; up to 4 before).
 
-9. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
+9. [x] **Casino: face-down when folded is a setting.** Today idle/unknown
    cards are dealt face down whenever the board is not compact. Add a toggle
    in the settings card beside the cloth picker (`fleet.*` localStorage, per
    browser): cards face up in every state. Default stays face down unless
    decided otherwise. Page-only; small.
+   Done (2026-09-24): `fold face down` in the settings card's table section,
+   under the cloths (`fleet.casino.deal`, `data-deal="up"` on the root); default face down;
+   face up, a fold or unfold turns the card over like any other change. Survives a reload.
 
 10. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
    fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
@@ -310,7 +316,7 @@ runtime copy.
    and move with it; and it belongs in the bottom bar of 2, since the sheet
    covers it now. Page-only.
 
-11. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
+11. [x] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
    strip of cardinal letters under the HUD (`.hud::after`, centred, clipped
    at the edges, gold needle at 50% — so it always reads S) and a diamond
    per working tile at that tile's x, with no relation to the letters;
@@ -321,8 +327,12 @@ runtime copy.
    the world a different staple — the quest banner ("quest completed" when a
    session finishes, "new objective" when one asks) or the XP bar for the
    day's done. Page-only.
+   Done (2026-09-24): (a), a real compass: the board is the horizon (left
+   edge north, a full turn its width); the tape of letters and diamonds turns the short way
+   so the selected tile, else the session you last spoke to (`promptAt`), sits under the
+   needle; blocked/waiting diamonds are drawn, and the heading's diamond is larger.
 
-12. [ ] **Folder cards: a (+) that opens a new session of that agent in
+12. [x] **Folder cards: a (+) that opens a new session of that agent in
    that folder.** Today a new session goes through the sheet's + picker
    (`newTermPicker`): choose a folder, choose an agent, open. The project
    card's header (`boardMarkup`: caret, name, count) has no launcher, though
@@ -338,6 +348,9 @@ runtime copy.
    they differ (say which in the tooltip); stop the click reaching the
    header's minimise toggle; the terminal-off toast covers boards started
    without `--terminal`. Page-only; small.
+   Done (2026-09-24): a faint + after the count (`launcher()` in `boardMarkup`);
+   opens in the cwd the card's sessions share, else the most recent one's (the tooltip names
+   it and how many folders the card spans); stops the minimise click; Enter/Space work too.
 
 13. [ ] **Terminal: two states, fullscreen and normal; normal is resized by
    dragging its top edge.** Today the sheet has three fixed heights —
