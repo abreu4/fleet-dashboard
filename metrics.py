@@ -144,13 +144,65 @@ def disk():
     return _cached("disk", 60, read)
 
 
+# The battery states `pmset -g batt` prints between the charge and the time
+# left, in the words it uses. "AC attached; not charging" is the cable in and
+# the charge held (optimised charging, or a full battery resting at 80-100%);
+# it is also what the first second after plugging in reads before the
+# controller starts charging.
+_BATT_STATES = ("finishing charge", "not charging", "discharging", "charging",
+                "charged")
+
+
+def parse_pmset_batt(raw):
+    """One reading of the power source, parsed once for every reader.
+
+    `raw` is `pmset -g batt`, which says where the power comes from on its
+    first line and how the battery is doing on the next:
+
+        Now drawing from 'Battery Power'
+         -InternalBattery-0 (id=1234)\t80%; discharging; 4:12 remaining present: true
+
+    The first line follows the cable the moment it moves (it is the power
+    source registry's own answer), so it decides `plugged`. The state is
+    matched as whole `;`-separated words: a substring test for "charging"
+    also matches "discharging" and "not charging", which is how a Mac on its
+    battery used to read as charging on every instrument. Anything missing
+    reads None -- no pmset, a Mac with no battery -- never a guess, so the
+    page can tell "unknown" from "on the cable".
+    """
+    raw = raw or ""
+    src = re.search(r"drawing from '([^']+)'", raw)
+    source = {"AC Power": "AC", "Battery Power": "battery",
+              "UPS Power": "UPS"}.get(src.group(1)) if src else None
+    batt = re.search(r"InternalBattery[^\n]*?(\d+)%;([^\n]*)", raw)
+    pct = int(batt.group(1)) if batt else None
+    fields = [f.strip() for f in batt.group(2).split(";")] if batt else []
+    state = next((w for f in fields for w in _BATT_STATES if f.startswith(w)), None)
+    if source is None and state:
+        # No source line (a pmset that printed only the battery): the state
+        # still says which side of the cable the Mac is on.
+        source = "battery" if state == "discharging" else "AC"
+    plugged = None if source is None else source == "AC"
+    charging = bool(plugged) and state in ("charging", "finishing charge")
+    left = re.search(r"(\d+):(\d\d) remaining", raw)
+    remaining = int(left.group(1)) * 60 + int(left.group(2)) if left else None
+    if state in ("charged", "not charging") or not remaining:
+        remaining = None          # "0:00 remaining" on a full battery is not a time
+    return {"pct": pct, "source": source, "plugged": plugged,
+            "charging": charging, "state": state, "remaining": remaining}
+
+
 def power():
-    raw = _sh("pmset", "-g", "batt")
-    pct = re.search(r"(\d+)%", raw)
-    source = "AC" if "AC Power" in raw else ("battery" if raw else "?")
-    charging = "charging" in raw and "not charging" not in raw
-    return {"pct": int(pct.group(1)) if pct else None, "source": source,
-            "charging": charging}
+    """Where the power comes from, and the battery's charge.
+
+    `pct`, `source` ("AC", "battery", "UPS" or None) and `charging` are the
+    fields the page has always read; `plugged`, `state` and `remaining` came
+    with the parser above, and the page falls back to its own reading of the
+    old three when a board older than it answers. Uncached: `pmset` costs a
+    few milliseconds and the cable is exactly the thing that should show up
+    on the next poll.
+    """
+    return parse_pmset_batt(_sh("pmset", "-g", "batt"))
 
 
 def pressure():

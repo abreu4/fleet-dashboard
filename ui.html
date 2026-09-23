@@ -4656,9 +4656,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 /* 8. THE OBJECT: the battle box, bottom right, the way the first games drew
    an opponent -- name, level, HP bar. The level is how many sessions are on
-   the board; the HP is the memory left in the machine, and the bar turns
-   from green through yellow to red as it drains, because that is what an HP
-   bar does. All of it is live off the root numbers. */
+   the board; the HP is the battery's charge (--g-batt, full on a Mac with no
+   battery), and the bar turns from green through yellow to red as it drains,
+   because that is what an HP bar does. All of it is live off the root
+   numbers. */
 :root[data-theme="cardstock"] .board::after{
   counter-reset:lvl var(--n-total, 0);
   content:"FLEET" "\00a0\00a0" ":L" counter(lvl) "\A HP:";
@@ -6269,6 +6270,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    red and still. The figure beside it is the charge. */
 :root[data-theme="nerv"] .ghud.sync .power[data-s="internal"] b{color:var(--blocked); animation:nerv-flash 1s steps(1, end) infinite}
 :root[data-theme="nerv"][data-nerv-flash="off"] .ghud.sync .power[data-s="internal"] b{animation:none}
+:root[data-theme="nerv"] .ghud.sync .power[data-s="unknown"] b{color:var(--dim)}
 /* THE MAGI (the band). Three computers, one per provider, each with its
    verdict in Mincho and the reason under it; the resolution across the
    foot; PATTERN BLUE along the top while anything on the deck is stuck. */
@@ -7614,6 +7616,27 @@ function dur(sec){
   return d ? d+'d '+h+'h' : h+'h '+Math.floor(sec%3600/60)+'m';
 }
 
+/* The power source, read one way for every instrument that shows it: NERV's
+   power, the readout's battery cell, the intranet's Battery row, --g-batt
+   (the Game Boy's HP, the Sims' Energy) and anything after them. `plugged`
+   is true on the cable, false on the battery, null when the board could not
+   tell -- and unknown is not the alarm: a pmset that failed used to answer
+   source "?", which every reader took for "off the cable". A board older
+   than this page sends only pct/source/charging, and its `charging` matched
+   the word inside "discharging"; off the cable nothing charges, so charging
+   only counts while plugged. */
+function powerOf(h){
+  const pw = (h && h.power) || {};
+  const plugged = typeof pw.plugged === 'boolean' ? pw.plugged
+    : pw.source === 'AC' ? true : (pw.source === 'battery' || pw.source === 'UPS') ? false : null;
+  const pct = typeof pw.pct === 'number' ? pw.pct : null;
+  const charging = plugged === true && !!pw.charging;
+  const state = pw.state || (plugged === false ? 'discharging' : charging ? 'charging' : null);
+  return {plugged, onBattery: plugged === false, pct, charging, state, remaining: pw.remaining || null};
+}
+/* "3h12m", "48m": a battery's time left, in minutes. */
+const hmLeft = m => m >= 60 ? Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')+'m' : m+'m';
+
 /* ---------------- HUD ---------------- */
 function gauge(label, pct, value, colour){
   const p = Math.max(0, Math.min(100, pct||0));
@@ -7656,7 +7679,7 @@ function until(ms){
    the HUD because none of them changes what you do next. Their trace is
    back as an optional panel (see PANELS) for a screen with the room. */
 function drawHud(d){
-  const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = h.power||{};
+  const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = powerOf(h);
   const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, ctx = d.context, done = d.done||{};
   const active = (d.tally.running||0)+(d.tally.blocked||0);
   const fleetPct = d.total ? 100*active/d.total : 0;
@@ -7787,7 +7810,7 @@ function drawHud(d){
   // A full disk outranks swap the same way.
   // A world whose instrument reads the battery (NERV's power source, the
   // Game Boy's HP bar) keeps the cell on swap: the figure is already up.
-  const onBat = pw.source !== 'AC' && pw.pct != null && !drawn.has('batt');
+  const onBat = pw.onBattery && pw.pct != null && !drawn.has('batt');
   const power = '<b'+(pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '+(pw.charging ? 'chg' : 'batt');
   const cores = cpu.cores || 1, load = cpu.load1;
   const swapG = (sw.usedMb||0)/1024;
@@ -7810,7 +7833,7 @@ function drawHud(d){
     ['agents', '<b>'+(h.agentProcs??'—')+'</b> '+Math.round(h.agentCpu??0)+'%',
       (h.agentProcs??0)+' agent processes (claude, codex, agy) using '+Math.round(h.agentCpu??0)+'% CPU between them, out of '+(cores*100)+'% available.'],
     onBat
-      ? ['power', power, 'On battery at '+pw.pct+'%'+(pw.charging ? ', charging' : '')+'. Swap '+swapG.toFixed(1)+'G.']
+      ? ['power', power, 'On battery at '+pw.pct+'%'+(pw.remaining ? ', about '+hmLeft(pw.remaining)+' left' : '')+'. Swap '+swapG.toFixed(1)+'G.']
       : diskFull
       ? ['disk', '<b style="color:var(--blocked)">'+Math.round(h.disk.pct)+'%</b> full', 'The data volume is '+Math.round(h.disk.pct)+'% full, '+h.disk.freeGb+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.']
       : ['swap', '<b>'+swapG.toFixed(1)+'</b>G',
@@ -9571,7 +9594,8 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
     },
     /* Central Dogma. Always on: the sync ratio (cpu), the A.T. field (memory
        headroom) and the power source -- external on the umbilical cable,
-       internal on the battery with its charge. (It used to count the
+       internal on the battery with its charge, both read off powerOf so the
+       readout turns the poll after the cable moves. (It used to count the
        activity limit down from five minutes, scaled by the charge: a figure
        that looked like a clock and was not one. The charge is what the
        machine knows.) Internal is the alarm -- red, and it flashes unless
@@ -9593,16 +9617,23 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
       },
       paintHud(h){
         const d = latest; if(!d) return;
-        const cpu = d.host?.cpu?.pct, mem = d.host?.memory?.pct, pw = d.host?.power || {};
+        const cpu = d.host?.cpu?.pct, mem = d.host?.memory?.pct, pw = powerOf(d.host);
         const set = (sel, txt) => { const b = h.querySelector(sel + ' b'); if(b.firstChild.nodeValue !== txt) b.firstChild.nodeValue = txt; };
         set('.ratio', cpu == null ? '—' : cpu.toFixed(1) + '%');
         set('.field', mem == null ? '—' : Math.round(100 - mem) + '%');
-        const p = h.querySelector('.power'), internal = pw.source && pw.source !== 'AC';
-        p.dataset.s = internal ? 'internal' : 'external';
-        const what = internal ? (pw.charging ? 'charging' : 'battery') : 'umbilical cable', small = p.querySelector('small');
-        set('.power', internal ? 'internal · ' + (pw.pct == null ? '—' : pw.pct + '%') : 'external');
+        // The words carry the plain meaning under the show's: "internal" is
+        // the battery, and the line beneath says so, with where the charge is
+        // headed. An unknown source is a dash, not the alarm.
+        const p = h.querySelector('.power'), small = p.querySelector('small'), at = pw.pct == null ? '' : pw.pct + '%';
+        const s = pw.plugged === false ? 'internal' : pw.plugged ? 'external' : 'unknown';
+        if(p.dataset.s !== s) p.dataset.s = s;
+        set('.power', s === 'internal' ? 'internal · ' + (at || '—') : s === 'external' ? 'external' : '—');
+        const what = s === 'internal' ? 'on battery' + (pw.remaining ? ' · ' + hmLeft(pw.remaining) + ' left' : '')
+          : s === 'external' ? (pw.charging ? 'cable · charging ' + at : 'umbilical cable') : 'no reading';
         if(small.textContent !== what) small.textContent = what;
-        const title = internal ? 'Off the cable: the battery at ' + (pw.pct == null ? '?' : pw.pct + '%') + (pw.charging ? ', charging' : '') + '.' : 'On the cable.';
+        const title = s === 'internal' ? 'Off the cable: running on the battery' + (at ? ' at ' + at : '') + (pw.remaining ? ', about ' + hmLeft(pw.remaining) + ' left' : '') + '.'
+          : s === 'external' ? 'On the cable' + (at ? ', the battery at ' + at + (pw.charging ? ' and charging' : pw.state === 'charged' ? ', charged' : pw.state === 'not charging' ? ', held' : '') : '') + '.'
+          : 'The power source did not answer.';
         if(p.title !== title) p.title = title;
       },
       make(){
@@ -9847,9 +9878,9 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
           const v = d.host?.cpu?.pct; if(v == null) return null;
           return {v: Math.round(v) + '%', s: v >= 90 ? 'error' : v >= 75 ? 'warn' : 'ok'}; }],
         ['Memory pressure', d => {
-          const h = d.host || {}, pw = h.power || {};
+          const h = d.host || {}, pw = powerOf(h);
           // off the cable, the battery is the figure that matters
-          if(pw.source && pw.source !== 'AC' && pw.pct != null)
+          if(pw.onBattery && pw.pct != null)
             return {what: 'Battery', v: pw.pct + '%', s: pw.pct <= 15 ? 'error' : pw.pct <= 30 ? 'warn' : 'ok'};
           const v = h.pressurePct; if(v == null) return null;
           return {v: v + '%', s: v > 85 ? 'error' : v > 70 ? 'warn' : 'ok'}; }],
@@ -10253,7 +10284,7 @@ function openSettings(){
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="motion"> stop every animation (pulses, halos, rain, roulette)</label></div></section>'
       + '<section data-k="cube-sec" hidden><h3>companion cube <span class="hint">it floats about the room and through the portals \u2014 or waits in storage</span></h3>'
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="cube"> let the companion cube loose</label></div></section>'
-      + '<section data-k="nerv-sec" hidden><h3>power <span class="hint">the readout goes red on the internal battery, with the charge beside it</span></h3>'
+      + '<section data-k="nerv-sec" hidden><h3>power <span class="hint">the readout goes red off the cable (internal: on the battery), with the charge beside it</span></h3>'
       +   '<div class="row"><label class="chk"><input type="checkbox" data-k="nerv-flash"> flash it while the unit is off the cable</label></div></section>'
       + '</div>';
     document.body.appendChild(settingsEl);

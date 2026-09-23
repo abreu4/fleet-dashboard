@@ -304,7 +304,7 @@ runtime copy.
    `SHEET_STEPS[sheetStep]` before it exists and must read the new height.
    Page-only.
 
-14. [ ] **Power readings do not follow the cable.** Reported: NERV's power
+14. [x] **Power readings do not follow the cable.** Reported: NERV's power
    readout still says `internal` after the Mac is unplugged — it should
    change the moment the source does, and so should every other instrument
    that reads the battery. Checked 2026-09-23: `metrics.power()` shells
@@ -327,6 +327,14 @@ runtime copy.
    the parser: match `; charging;` / `discharging` / `charged` / `AC
    attached; not charging` as the states `pmset` prints. Python + page; the
    parser fix needs a board restart.
+   Done (2026-09-24): no stuck reading -- `pmset -g log` has the Mac on its
+   battery 17:51-18:03 on 09-23 and the report came at 17:59, so `internal ·
+   100%` was right; what said otherwise was the line under it, `charging`
+   (the `discharging` match), at a full charge that had not moved yet. Now
+   `metrics.parse_pmset_batt` is the one reading (`plugged`, `state`,
+   `remaining`, 12 tests) and the page's `powerOf` feeds NERV, the readout,
+   the intranet row and `--g-batt`, and also corrects an older board's
+   `charging` and its `?` source (a failed pmset used to read as `internal`).
 
 ## Theme Quality Board
 
