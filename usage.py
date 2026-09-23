@@ -46,6 +46,7 @@ RATE_MINUTES = 5                        # tokens/min is averaged over this many
 RESCAN_SECONDS = 10                     # how often new files are looked for
 CONTEXT_SHORT = 200_000                 # Haiku 4.5 and the pre-4.6 generation
 CONTEXT_LONG = 1_000_000                # every Claude model since Opus/Sonnet 4.6
+SUBAGENTS = os.sep + "subagents" + os.sep    # <session>/subagents/*.jsonl
 
 
 def context_window(model_id):
@@ -157,6 +158,16 @@ class Ledger:
                     for entry in os.scandir(project.path):
                         if entry.name.endswith(".jsonl") and entry.stat().st_mtime >= oldest:
                             found.append((entry.path, "claude"))
+                        elif entry.is_dir():
+                            # A session's subagents write their own transcripts
+                            # one level down, <session>/subagents/*.jsonl; their
+                            # tokens are the fleet's too.
+                            try:
+                                for inner in os.scandir(os.path.join(entry.path, "subagents")):
+                                    if inner.name.endswith(".jsonl") and inner.stat().st_mtime >= oldest:
+                                        found.append((inner.path, "claude"))
+                            except OSError:
+                                pass
                 except OSError:
                     continue
         except OSError:
@@ -398,7 +409,8 @@ class Ledger:
                 by_provider[provider] = by_provider.get(provider, 0) + cell["out"]
             if minute_out > peak_out:
                 peak_out, peak_at = minute_out, minute
-        today["sessions"] = len(files_today)
+        # Subagent transcripts count for tokens, not as sessions.
+        today["sessions"] = len([f for f in files_today if SUBAGENTS not in f])
         today["since"] = midnight * MINUTE_MS
         today["byProvider"] = by_provider
 

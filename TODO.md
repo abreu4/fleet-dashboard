@@ -70,7 +70,7 @@ runtime copy.
    that wrote today and are now idle — or retire the dial into a cell in 3.
    Python side (`usage.finished`, `dashboard.py`), so a restart.
 
-6. [ ] **A totals panel: everything the fleet has spent, and its records.**
+6. [x] **A totals panel: everything the fleet has spent, and its records.**
    Nothing on the board can answer this. `usage.Ledger` keeps one-minute
    buckets for `HORIZON_MINUTES` (30 hours) and prunes past that, and
    `_discover` only tracks transcripts touched inside the same horizon -- so
@@ -165,6 +165,33 @@ runtime copy.
    history at all. Ranked below 1-5 because nothing reads *wrong* without it.
    Python side (a rollup module, an endpoint) so a restart, plus page-only
    work for the panel itself.
+
+   **Done (2026-09-24).** `totals.py` keeps the day-rollup in
+   `~/.config/fleet/totals.json` (`FLEET_TOTALS` moves it): a walker that
+   subclasses `usage.Ledger` -- same needles, same row readers, only `_credit`
+   replaced -- reads every transcript on disk (Claude, its subagents, Codex
+   under any date) on its own thread 3 s after start (5.7 s in-server for
+   1.3 GB), then folds appended bytes once a minute. A day seals an hour after
+   its midnight and a sealed row is never recomputed; the write is atomic and
+   sealed rows come from the transcripts alone, so two boards write the same
+   past; bumping `VERSION` discards them. Rows carry out, fresh in, cache
+   read/write, requests, per-provider, starts (subagents excluded), sessions
+   that wrote, output by model and by project, 24 hour buckets, the peak
+   minute, first and last write. `/api/totals`; the panel is `Σ totals` in the
+   `⋯` menu and `⌘I`, on the `.settings` card: spent with the agent split
+   (Antigravity "not countable"), six records, a calendar heat map, top
+   projects and models. It reads "reading the transcripts…" before the first
+   walk, "nothing on record yet" on an empty Mac, and "needs a board restart"
+   against a server without the route. `_discover` now reads
+   `<session>/subagents/*.jsonl`, and `today.sessions` leaves them out.
+   Printed today: 32.6M output (Claude Code 31.2M, Codex 1.4M), 42k requests,
+   301 sessions started, biggest day 2026-09-10 at 3.0M, most started
+   2026-09-18 at 23, busiest minute 88k (5 Sep 18:48), longest run 32 days,
+   56 days worked of 128. Days with tokens read 56, not 37: Codex rollouts
+   reach back to 2026-05-20. Needs a board restart. Still open: notional
+   cost, the `history.jsonl` long record, jobs and MRs all-time, the
+   hour-of-day and weekday profiles and the longest day (their data is
+   already in the rows).
 
 7. [ ] **The Sims (`plumbob`): the six needs do not measure what they say.**
    `WORLDS.plumbob.NEEDS` inverts a host gauge or a session ratio into each
