@@ -273,7 +273,7 @@ runtime copy.
    session finishes, "new objective" when one asks) or the XP bar for the
    day's done. Page-only.
 
-12. [ ] **Folder cards: a (+) that opens a new session of that agent in
+12. [x] **Folder cards: a (+) that opens a new session of that agent in
    that folder.** Today a new session goes through the sheet's + picker
    (`newTermPicker`): choose a folder, choose an agent, open. The project
    card's header (`boardMarkup`: caret, name, count) has no launcher, though
@@ -289,6 +289,9 @@ runtime copy.
    they differ (say which in the tooltip); stop the click reaching the
    header's minimise toggle; the terminal-off toast covers boards started
    without `--terminal`. Page-only; small.
+   Done (2026-09-24): a faint + after the count (`launcher()` in `boardMarkup`);
+   opens in the cwd the card's sessions share, else the most recent one's (the tooltip names
+   it and how many folders the card spans); stops the minimise click; Enter/Space work too.
 
 13. [ ] **Terminal: two states, fullscreen and normal; normal is resized by
    dragging its top edge.** Today the sheet has three fixed heights —

@@ -543,6 +543,18 @@
   .project > header .caret{color:var(--faint); font-size:11px; line-height:1}
   .project > header .nm{overflow:hidden; text-overflow:ellipsis}
   .project > header .ct{margin-left:auto; color:var(--faint)}
+  /* the launcher: a new session of this lane's agent in this card's folder.
+     Faint until the header is pointed at, so the card's own count stays the
+     thing read from across the room; in the header's own ink, which every
+     world has already made legible on its header. */
+  .project > header .new{
+    flex:none; width:16px; height:16px; margin-right:-3px; display:flex; align-items:center; justify-content:center;
+    border-radius:3px; font:14px/1 var(--mono); font-style:normal; color:inherit; opacity:.45;
+    transition:opacity .12s, color .12s, background .12s;
+  }
+  .project > header:hover .new, .project > header .new:focus-visible{opacity:1}
+  .project > header .new:hover{color:var(--accent); background:color-mix(in srgb, var(--accent) 16%, transparent)}
+  .project.min > header .new{display:none}
   .bubbles{flex:1; min-height:0; display:grid; gap:var(--gap); padding:var(--gap);
            align-content:start; justify-content:start; overflow:auto; scrollbar-width:thin}
   .project.min{flex:0 0 30px !important; min-width:30px}
@@ -8232,6 +8244,10 @@ function paintBoard(d){
 
   board.querySelectorAll('.project > header').forEach(h =>
     h.onclick = () => toggle(h.parentElement.dataset.key));
+  board.querySelectorAll('.project > header .new').forEach(n => {
+    n.onclick = e => { e.stopPropagation(); openFresh(n.dataset.cwd, n.dataset.agent); };
+    n.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); n.click(); } };
+  });
   board.querySelectorAll('.bubble').forEach(el => {
     el.onclick = () => select(el.dataset.id);
     if(el.dataset.id === selected) el.classList.add('sel');
@@ -8252,7 +8268,7 @@ function boardMarkup(d){
         + ' data-count="'+p.count+'" style="flex:'+weigh(p.sessions).toFixed(2)+' 1 0">'
         + '<header title="click to '+(min?'restore':'minimise')+'">'
         + '<span class="caret">'+(min?'▸':'▾')+'</span><span class="nm">'+esc(p.name)+'</span>'
-        + '<span class="ct">'+p.count+'</span></header>'
+        + '<span class="ct">'+p.count+'</span>'+launcher(lane, p)+'</header>'
         + '<div class="bubbles">'+p.sessions.map(tile).join('')+'</div></div>';
     }).join('') : '<div class="empty">'+esc(voice('empty'))+'</div>';
     const mark = '<svg viewBox="0 0 16 16" aria-hidden="true">'+markFor(lane.key)+'</svg>';
@@ -8267,6 +8283,24 @@ function boardMarkup(d){
       + '<span class="vlabel">'+esc(SHORT[lane.key]||lane.label)+'</span></div>'
       + '<div class="projects">'+cells+'</div></div>';
   }).join('');
+}
+
+/* A card is one agent's sessions in one project, so it already knows both
+   answers the + picker asks: the lane is the agent, the card the folder. But
+   a card groups by the project's display name, not a path, so its sessions
+   can sit in different folders (a subfolder, a worktree). When they all
+   share one, that is where the new session opens; when they do not, it opens
+   beside the one that wrote most recently, and the tooltip says so. The lane
+   key is a key of actions.FRESH, so the page still never names a command. */
+function launcher(lane, p){
+  const ss = p.sessions.filter(s => s.cwd);
+  if(!ss.length) return '';
+  const last = ss.reduce((a, s) => (s.updated || 0) > (a.updated || 0) ? s : a);
+  const dirs = new Set(ss.map(s => s.cwd));
+  const who = SHORT[lane.key] || lane.label || lane.key;
+  const why = dirs.size > 1 ? ' \u2014 where ' + last.name + ' is, the most recent of the ' + dirs.size + ' folders this card spans' : '';
+  return '<i class="new" role="button" tabindex="0" data-agent="'+esc(lane.key)+'" data-cwd="'+esc(last.cwd)+'"'
+    + ' title="new '+esc(who)+' session in '+esc(tilde(last.cwd))+esc(why)+'" aria-label="new '+esc(who)+' session here">+</i>';
 }
 
 function tile(s){
