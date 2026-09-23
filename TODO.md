@@ -293,7 +293,7 @@ runtime copy.
    header's minimise toggle; the terminal-off toast covers boards started
    without `--terminal`. Page-only; small.
 
-13. [ ] **Terminal: two states, fullscreen and normal; normal is resized by
+13. [x] **Terminal: two states, fullscreen and normal; normal is resized by
    dragging its top edge.** Today the sheet has three fixed heights —
    `SHEET_STEPS = [34, 54, 88]` vh — cycled by `#term-size`, stored as an
    index in `fleet.sheet`, applied by `applySheet()` to `--sheet` and
@@ -312,6 +312,14 @@ runtime copy.
    bar's inset is the drag's floor. `termSize()` sizes a pty off
    `SHEET_STEPS[sheetStep]` before it exists and must read the new height.
    Page-only.
+   Done (2026-09-24): a `.lip` on the sheet's top edge sets the docked
+   height (rAF-throttled `--sheet`/`--taken` in px, one refit on release,
+   clamped between 120px and the room under the board's HUD, floor = the
+   bottom bar); `#term-size` (now ⤢, lit when on) toggles fullscreen, which
+   covers everything above the bottom bar; both kept per browser
+   (`fleet.sheet` = e.g. `48.1vh`, `fleet.sheet.full`), an old index read as
+   its vh; double-click the edge resets to 34vh; a drag from fullscreen comes
+   down to the pointer. No keyboard chord for fullscreen yet.
 
 14. [ ] **Power readings do not follow the cable.** Reported: NERV's power
    readout still says `internal` after the Mac is unplugged — it should

@@ -2551,8 +2551,9 @@ html.theme-swapping .bubble > .halo{ animation:none; }
      compresses and re-tiles instead of being covered, so the one-screen rule
      survives. The right-hand drawer is 430px, which is about 52 columns --
      narrower than anything the agents actually run in -- so the drawer was
-     never a candidate. A full-screen takeover would work but throws away the
-     glance, which is the whole point of the board.
+     never a candidate. A full-screen takeover throws away the glance, which
+     is the whole point of the board, so it is a state you pick (the sheet's
+     ⤢ button), not where the sheet opens.
      The sheet stands on the bottom bar, not on the floor of the window. A
      world whose instrument stays on (Skyrim's bars, NERV's readout,
      Minecraft's hotbar) owns a strip --hud-inset tall along the foot of the
@@ -2568,6 +2569,19 @@ html.theme-swapping .bubble > .halo{ animation:none; }
     transform:translateY(calc(101% + var(--hud-inset,0px))); transition:transform .18s ease, height .12s ease;
   }
   .sheet.on{transform:none}
+  /* Two states. Docked, the sheet is as tall as its top edge was dragged
+     (--sheet, px); fullscreen, it takes the whole viewport above the bottom
+     bar, and the board under it keeps its docked layout so coming back down
+     is instant. */
+  .sheet.full{height:calc(100% - var(--hud-inset,0px))}
+  /* The top edge is the other handle: drag it for the sheet's height, the way
+     the sidebar's edge sets its width. Double-click puts it back at 34vh. */
+  .sheet .lip{position:absolute; left:0; right:0; top:-4px; height:8px; cursor:row-resize; z-index:3; touch-action:none}
+  .sheet.full .lip{top:0}
+  .sheet .lip::after{content:""; position:absolute; left:0; right:0; top:3px; height:2px; background:var(--accent); opacity:0; transition:opacity .12s}
+  .sheet .lip:hover::after, .sheet .lip.drag::after{opacity:.8}
+  /* the board follows the edge as it moves, not .12s behind it */
+  :root:has(.sheet.resizing) .wrap{transition:none}
   .sheet .bar{
     display:flex; flex-direction:column; align-items:stretch; gap:0; padding:0; width:var(--barw,180px); flex:none;
     background:linear-gradient(180deg,var(--rail-a),var(--rail-b));
@@ -2601,7 +2615,7 @@ html.theme-swapping .bubble > .halo{ animation:none; }
     display:flex; align-items:center; justify-content:center; align-self:center;
   }
   .sheet .bar button:hover{color:var(--accent); border-color:var(--edge-hot)}
-  .sheet .bar button[aria-expanded="true"]{color:var(--accent); border-color:var(--edge-hot)}
+  .sheet .bar button[aria-expanded="true"], .sheet .bar button[aria-pressed="true"]{color:var(--accent); border-color:var(--edge-hot)}
   .sheet .bar button:disabled{opacity:.35; cursor:default}
   /* The + picker: a folder the board knows about (or one you type), and which
      agent to start there. Hangs above the button that opens it, and opens
@@ -7278,12 +7292,13 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   <aside class="gside" id="g-side"></aside>
 </div>
 <section class="sheet" id="sheet" hidden>
+  <div class="lip" id="sheet-grip" title="drag to set the terminal's height — double-click to reset"></div>
   <div class="bar">
     <div class="tabs" id="term-tabs"></div>
     <div class="grp">
       <button id="term-new" title="new terminal: pick a folder and an agent" aria-label="new terminal" aria-haspopup="true" aria-expanded="false">+</button>
       <button id="term-close" title="close this terminal" aria-label="close terminal">×</button>
-      <button id="term-size" title="cycle the sheet height" aria-label="sheet height">⇕</button>
+      <button id="term-size" title="fullscreen — or drag the top edge for any height" aria-label="fullscreen terminal" aria-pressed="false">⤢</button>
       <button id="term-hide" title="hide the sheet — ⌘J or ctrl-` brings it back" aria-label="hide sheet">▁</button>
     </div>
     <div class="grip" id="term-grip" title="drag to resize the sidebar — double-click to reset"></div>
@@ -11437,8 +11452,13 @@ document.addEventListener('keydown', e => {
    burst of typing, coalesced so a paste is one request rather than one per
    character. */
 const TERMCFG = window.FLEET_TERM || {enabled:false, token:'', iterm:false};
-const SHEET_STEPS = [34, 54, 88];        // vh; 54 shows ~30 rows at 1431x896
-const SHEET_KEY = 'fleet.sheet';
+/* The sheet's height is yours: docked, it is as tall as its top edge was
+   dragged, kept per browser in vh so it keeps its share of a window that
+   changes size; or it is fullscreen. fleet.sheet used to hold an index into
+   three fixed heights (34/54/88vh) cycled by one button; an old index is read
+   as its height and written back in the new form. */
+const SHEET_KEY = 'fleet.sheet', SHEET_FULL_KEY = 'fleet.sheet.full';
+const SHEET_DEFAULT = 34, SHEET_MIN = 120;   // vh, what a fresh browser gets; px, about six rows
 const BARW_KEY = 'fleet.term.barw', BAR_DEFAULT = 180, BAR_MIN = 110, BAR_MAX = 520;   // the sidebar, px
 (() => {
   let w = BAR_DEFAULT; try{ w = parseInt(localStorage.getItem(BARW_KEY)) || BAR_DEFAULT; }catch(e){}
@@ -11449,7 +11469,7 @@ const tabsEl = document.getElementById('term-tabs');
 const bodyEl = document.getElementById('term-body');
 const emptyEl = document.getElementById('term-empty');
 
-let sheetOn = false, sheetStep = 0, xtermReady = null, streaming = false;
+let sheetOn = false, sheetVh = SHEET_DEFAULT, sheetFull = false, xtermReady = null, streaming = false;
 const terms = new Map();                 // tid -> {meta, term, fit, view, pending, alive}
 
 /* The sheet's face. Every entry is a family already installed on this Mac;
@@ -11506,7 +11526,12 @@ let activeTid = null;
 const outbox = new Map();                // tid -> string waiting to be POSTed
 let inFlight = false;
 
-try{ sheetStep = Math.min(2, Math.max(0, +localStorage.getItem(SHEET_KEY) || 0)); }catch(e){}
+try{
+  const v = localStorage.getItem(SHEET_KEY) || '';
+  if(/^[0-2]$/.test(v)){ sheetVh = [34, 54, 88][+v]; localStorage.setItem(SHEET_KEY, sheetVh + 'vh'); }
+  else if(parseFloat(v) > 0) sheetVh = Math.min(100, parseFloat(v));
+  sheetFull = localStorage.getItem(SHEET_FULL_KEY) === '1';
+}catch(e){}
 
 const b64enc = u8 => { let s=''; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); };
 const b64dec = s => { const bin=atob(s), u=new Uint8Array(bin.length);
@@ -11657,7 +11682,7 @@ function xtermTheme(){
 
 function cellsForSheet(){
   // What the sheet can hold right now, used to size a pty before it exists.
-  const h = bodyEl.clientHeight || (innerHeight * SHEET_STEPS[sheetStep] / 100) - 30;
+  const h = bodyEl.clientHeight || (sheetFull ? innerHeight - hudInset() : dockedPx()) - 30;
   const w = bodyEl.clientWidth || innerWidth;
   return {rows: Math.max(6, Math.floor((h - 8) / 17)),
           cols: Math.max(24, Math.floor((w - 14) / 7.3))};
@@ -11667,16 +11692,24 @@ function cellsForSheet(){
    (which the sheet stands on) and the board's HUD (which stays in sight above
    it). At 88vh the sheet ran up over the HUD and, with an inset, left the
    board a strip too short for its own header. */
+const hudInset = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hud-inset')) || 0;
 function sheetRoom(){
-  const inset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hud-inset')) || 0;
   const hud = document.querySelector('.wrap > .hud');
-  return innerHeight - inset - (hud ? hud.offsetHeight : 0);
+  return innerHeight - hudInset() - (hud ? hud.offsetHeight : 0);
+}
+// The docked height for a share of the viewport, held between a few rows and
+// that room. The bottom bar is the floor the drag cannot go under.
+function dockedPx(vh = sheetVh){
+  const room = sheetRoom();
+  return Math.round(Math.max(Math.min(SHEET_MIN, room), Math.min(innerHeight * vh / 100, room)));
 }
 // Writes the height alone, in px, so --taken is a length the page can read
 // back (the companion cube does) and a resize or a world with another inset
-// can re-clamp it without refitting every terminal.
+// can re-clamp it without refitting every terminal. --taken follows the
+// docked height even in fullscreen: the board is covered then, and keeping
+// its layout makes the way back down instant.
 function sizeSheet(){
-  const px = Math.round(Math.max(0, Math.min(innerHeight * SHEET_STEPS[sheetStep] / 100, sheetRoom())));
+  const px = dockedPx();
   document.documentElement.style.setProperty('--sheet', px + 'px');
   document.documentElement.style.setProperty('--taken', sheetOn ? px + 'px' : '0px');
   return px;
@@ -11686,6 +11719,10 @@ function applySheet(){
   sizeSheet();
   sheetEl.hidden = false;
   sheetEl.classList.toggle('on', sheetOn);
+  sheetEl.classList.toggle('full', sheetFull);
+  const sb = document.getElementById('term-size');
+  sb.setAttribute('aria-pressed', String(sheetFull));
+  sb.title = sheetFull ? 'back to the docked terminal' : 'fullscreen \u2014 or drag the top edge for any height';
   if(typeof fit === 'function') fit();
   setTimeout(() => { refit(); if(typeof fit === 'function') fit(); }, 190);
 }
@@ -12175,10 +12212,50 @@ if(TERMCFG.enabled){
     termBtn.onclick = () => showSheet(!sheetOn);
   }
   document.getElementById('term-size').onclick = () => {
-    sheetStep = (sheetStep + 1) % SHEET_STEPS.length;
-    try{ localStorage.setItem(SHEET_KEY, sheetStep); }catch(e){}
+    sheetFull = !sheetFull;
+    try{ localStorage.setItem(SHEET_FULL_KEY, sheetFull ? '1' : '0'); }catch(e){}
     applySheet();
   };
+  // The docked height: dragged on the sheet's top edge, like the sidebar's
+  // width. The pty is not resized on every move -- a shell redraws on each
+  // SIGWINCH, and an agent's TUI repaints its whole screen -- so the drag
+  // writes the height alone and the terminals refit once, on release. From
+  // fullscreen, the first move brings the sheet down to the pointer.
+  const lip = document.getElementById('sheet-grip');
+  let lipFrame = 0;
+  lip.addEventListener('pointerdown', e => {
+    if(e.button !== 0) return;
+    e.preventDefault(); lip.setPointerCapture(e.pointerId);
+    lip.classList.add('drag'); sheetEl.classList.add('resizing');
+    const floor = innerHeight - hudInset(), room = sheetRoom(), least = Math.min(SHEET_MIN, room);
+    let px = 0;
+    const move = ev => {
+      px = Math.max(least, Math.min(room, Math.round(floor - ev.clientY)));
+      if(sheetFull){ sheetFull = false; sheetEl.classList.remove('full'); }
+      if(!lipFrame) lipFrame = requestAnimationFrame(() => {
+        lipFrame = 0;
+        document.documentElement.style.setProperty('--sheet', px + 'px');
+        document.documentElement.style.setProperty('--taken', px + 'px');
+      });
+    };
+    const up = () => {
+      lip.removeEventListener('pointermove', move);
+      lip.classList.remove('drag'); sheetEl.classList.remove('resizing');
+      if(px){
+        sheetVh = Math.round(px / innerHeight * 1000) / 10;
+        try{ localStorage.setItem(SHEET_KEY, sheetVh + 'vh'); localStorage.setItem(SHEET_FULL_KEY, '0'); }catch(e){}
+      }
+      applySheet();
+    };
+    lip.addEventListener('pointermove', move);
+    lip.addEventListener('pointerup', up, {once:true});
+    lip.addEventListener('pointercancel', up, {once:true});
+  });
+  lip.addEventListener('dblclick', () => {
+    sheetVh = SHEET_DEFAULT; sheetFull = false;
+    try{ localStorage.removeItem(SHEET_KEY); localStorage.removeItem(SHEET_FULL_KEY); }catch(e){}
+    applySheet();
+  });
   // The sidebar's width: dragged on its edge, kept per browser, bounded so
   // it can neither vanish nor eat the terminal.
   const grip = document.getElementById('term-grip');
@@ -12213,7 +12290,8 @@ if(TERMCFG.enabled){
     try{ localStorage.removeItem(BARW_KEY); }catch(e){}
     refit();
   });
-  addEventListener('resize', () => setTimeout(() => { sizeSheet(); refit(); }, 60));
+  // (refit again once the sheet's own .12s height has run out)
+  addEventListener('resize', () => setTimeout(() => { sizeSheet(); refit(); setTimeout(refit, 150); }, 60));
   // Each world has its own bottom bar, so the room left for the sheet moves
   // with the theme.
   document.addEventListener('fleet:theme', () => { sizeSheet(); setTimeout(refit, 190); });
