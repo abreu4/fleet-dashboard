@@ -21,7 +21,7 @@ runtime copy.
    23:58 · 58m`), tokens-in-window in its tooltip; give the freed dial to the
    consolidation in 3. Page-only (`drawHud` specs, `ui.html`).
 
-2. [ ] **Terminal rides over a fixed bottom bar.** With the sheet maximised
+2. [x] **Terminal rides over a fixed bottom bar.** With the sheet maximised
    (88vh) it covers Skyrim's bars, NERV's status bar, the Minecraft HUD and
    the casino wheel, and the band never shows while the sheet is on
    (`.band` is `:not(:has(.sheet.on))`). Why: `.sheet` is `fixed; bottom:0`
@@ -36,6 +36,15 @@ runtime copy.
    sheet step, in every world with an inset, the instrument is whole and the
    sheet's last row is visible; with no inset the bar is 0 tall. Page-only,
    but the biggest item on the board.
+   Done (2026-09-24): the bar is the --hud-inset strip itself -- the sheet
+   stands on it (`bottom:var(--hud-inset)`), every `.ghud` and Minecraft's
+   creeper sit in it at fixed heights (off the --taken ride), Lord of the
+   Rings' seal and Stardew's clock box were trimmed to fit it, the player,
+   crate and toast dock above sheet + bar, and the sheet is clamped to leave
+   the board's HUD in sight (`sheetRoom()`); --taken is written in px.
+   Checked headless in all ten inset worlds. Not done: the band still shows
+   only with the board collapsed and the sheet closed (it needs the space the
+   sheet takes); its rules keep a --taken term that is 0 whenever it is up.
 
 3. [ ] **The two sides of the graph read as one instrument.** Left, six dials
    whose arcs measure six different things against six denominators (share

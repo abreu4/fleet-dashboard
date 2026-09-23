@@ -116,7 +116,8 @@
        display:flex; flex-direction:column; transition:height .12s ease}
   /* A world with an instrument that stays on (Skyrim's bars, Minecraft's
      hearts, the intranet's status bar) sets --hud-inset to its height, and the
-     board ends above it instead of running on under it. */
+     board ends above it instead of running on under it. That strip is the
+     bottom bar: the terminal sheet stands on it too (see .sheet). */
 
   /* ===================== HUD ===================== */
   /* Sized in vh, so the readings keep their share of the screen rather than
@@ -668,9 +669,10 @@
      band -- and at equal z-index the sheet is later in the DOM, so it paints over
      them. A minimised player is 58px tall against a 46vh sheet, so it vanishes
      outright. Riding on --taken docks them above the sheet instead of under it,
-     on the sheet's own .18s so the two move together. */
+     on the sheet's own .18s so the two move together; --hud-inset on top,
+     because the sheet stands on a world's bottom bar, not on the floor. */
   .player{
-    position:fixed; z-index:8; left:14px; bottom:calc(14px + var(--taken,0px));
+    position:fixed; z-index:8; left:14px; bottom:calc(14px + var(--taken,0px) + var(--hud-inset,0px));
     width:430px; display:none;
     border:1px solid var(--edge-hot); border-radius:8px; background:var(--panel);
     overflow:hidden; box-shadow:0 18px 44px -18px #000;
@@ -684,7 +686,7 @@
      riding --taken off the viewport. */
   .player.min{
     width:min(360px,calc(100vw - 28px)); height:auto; min-height:58px; border-radius:7px;
-    bottom:min(calc(14px + var(--taken,0px)), calc(100vh - 80px));
+    bottom:min(calc(14px + var(--taken,0px) + var(--hud-inset,0px)), calc(100vh - 80px));
   }
   .player.min .screen{
     position:absolute; width:1px; height:1px; opacity:0; overflow:hidden;
@@ -757,9 +759,9 @@
      starting 228px up from a sheet-raised floor would run off the top of the
      screen and take the search field with it. */
   .crate{
-    position:fixed; z-index:8; left:14px; bottom:calc(228px + var(--taken,0px));
+    position:fixed; z-index:8; left:14px; bottom:calc(228px + var(--taken,0px) + var(--hud-inset,0px));
     width:430px;
-    max-height:min(46vh, calc(100vh - var(--taken,0px) - 268px));
+    max-height:min(46vh, calc(100vh - var(--taken,0px) - var(--hud-inset,0px) - 268px));
     display:none; flex-direction:column; border:1px solid var(--edge-hot);
     border-radius:8px; background:var(--panel); overflow:hidden;
     box-shadow:0 18px 44px -18px #000;
@@ -1049,7 +1051,7 @@
      so the one message that explains why a click did nothing was the one message
      you could not see. */
   .toast{
-    position:fixed; z-index:9; bottom:calc(18px + var(--taken,0px)); right:20px; padding:9px 14px; border-radius:5px;
+    position:fixed; z-index:9; bottom:calc(18px + var(--taken,0px) + var(--hud-inset,0px)); right:20px; padding:9px 14px; border-radius:5px;
     border:1px solid var(--edge-hot); background:#0c1826; color:var(--ink);
     font:12px/1.5 var(--mono); opacity:0; transform:translateY(8px);
     transition:opacity .18s, transform .18s; pointer-events:none;
@@ -2550,12 +2552,20 @@ html.theme-swapping .bubble > .halo{ animation:none; }
      survives. The right-hand drawer is 430px, which is about 52 columns --
      narrower than anything the agents actually run in -- so the drawer was
      never a candidate. A full-screen takeover would work but throws away the
-     glance, which is the whole point of the board. */
+     glance, which is the whole point of the board.
+     The sheet stands on the bottom bar, not on the floor of the window. A
+     world whose instrument stays on (Skyrim's bars, NERV's readout,
+     Minecraft's hotbar) owns a strip --hud-inset tall along the foot of the
+     viewport, and nothing is laid over it: the board ends above it, the
+     sheet rises from its top edge, and its instruments sit in it at fixed
+     heights instead of riding --taken up over the tiles. They are always on,
+     so the sheet at any height leaves them whole.
+     A world without one has a bar 0 tall, and the sheet is on the floor. */
   .sheet{
-    position:fixed; left:0; right:0; bottom:0; z-index:8; height:var(--sheet,46vh);
+    position:fixed; left:0; right:0; bottom:var(--hud-inset,0px); z-index:8; height:var(--sheet,54vh);
     background:var(--panel); border-top:1px solid var(--edge-hot);
     box-shadow:0 -26px 50px -32px #000; display:flex; flex-direction:row;
-    transform:translateY(101%); transition:transform .18s ease, height .12s ease;
+    transform:translateY(calc(101% + var(--hud-inset,0px))); transition:transform .18s ease, height .12s ease;
   }
   .sheet.on{transform:none}
   .sheet .bar{
@@ -2828,9 +2838,10 @@ html.theme-swapping .bubble > .halo{ animation:none; }
 
 /* ---------- VELLUM -- the scriptorium ------------------------------------------
    Reference tier already; the one gap was its face, now vendored. Its object
-   is the seal: a wax blot with the sigil pressed into it, bottom-right. */
+   is the seal: a wax blot with the sigil pressed into it, bottom-right, set
+   in the bottom bar beside the Ring so the sheet never cuts it in half. */
 :root[data-theme="vellum"] .board::after{
-  content:"\2042"; position:fixed; right:26px; bottom:22px; width:74px; height:74px;
+  content:"\2042"; position:fixed; right:26px; bottom:3px; width:64px; height:64px;
   pointer-events:none; z-index:2; opacity:.78;
   display:flex; align-items:center; justify-content:center; border-radius:46% 54% 49% 51% / 52% 47% 53% 48%;
   font:32px/1 "IM Fell English SC", "Hoefler Text", serif; color:#5a1512; text-shadow:0 1px 0 rgba(255,220,180,.35);
@@ -3424,7 +3435,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* The script sets the heat on the SVG itself -- the two opacities and the
    glow -- so the three ease as plain values. */
 :root[data-theme="vellum"] .ghud.ring{
-  left:22px; bottom:calc(10px + var(--taken,0px)); display:flex; align-items:center; gap:12px; font-style:normal;
+  left:22px; bottom:10px; display:flex; align-items:center; gap:12px; font-style:normal;
 }
 :root[data-theme="vellum"] .ghud.ring svg{width:58px; height:58px; overflow:visible; transition:filter .8s ease}
 :root[data-theme="vellum"] .ghud.ring .gold{fill:none; stroke:url(#ring-gold); stroke-width:12}
@@ -4753,7 +4764,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    each reading in the same pixel face, so the hearts say what they count. */
 :root[data-theme="cobble"]{--hud-inset:60px}
 :root[data-theme="cobble"] .ghud.survival{
-  left:50%; bottom:calc(6px + var(--taken,0px)); transform:translateX(-50%);
+  left:50%; bottom:6px; transform:translateX(-50%);
   width:216px; height:50px; font:700 10px/1 "Silkscreen", Krungthep, monospace;
 }
 :root[data-theme="cobble"] .ghud.survival > *{position:absolute; display:block; font-style:normal; white-space:nowrap}
@@ -4815,7 +4826,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 7. Something is watching from the bottom-left. Point at the wordmark and
    it starts to hiss. */
 :root[data-theme="cobble"] .wrap::before{
-  content:""; position:fixed; left:14px; bottom:calc(10px + var(--taken,0px)); width:56px; height:56px; z-index:2;
+  content:""; position:fixed; left:14px; bottom:2px; width:56px; height:56px; z-index:2;
   pointer-events:none; opacity:.55; image-rendering:pixelated; background:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20viewBox='0%200%208%208'%20shape-rendering='crispEdges'%3E%3Crect%20x='0'%20y='0'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='1'%20y='0'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='2'%20y='0'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='3'%20y='0'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='4'%20y='0'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='5'%20y='0'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='6'%20y='0'%20width='2'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='0'%20y='1'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='1'%20y='1'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='2'%20y='1'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='3'%20y='1'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='4'%20y='1'%20width='2'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='6'%20y='1'%20width='2'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='0'%20y='2'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='1'%20y='2'%20width='2'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='3'%20y='2'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='4'%20y='2'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='5'%20y='2'%20width='2'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='7'%20y='2'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='0'%20y='3'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='1'%20y='3'%20width='2'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='3'%20y='3'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='4'%20y='3'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='5'%20y='3'%20width='2'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='7'%20y='3'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='0'%20y='4'%20width='2'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='2'%20y='4'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='3'%20y='4'%20width='2'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='5'%20y='4'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='6'%20y='4'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='7'%20y='4'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='0'%20y='5'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='1'%20y='5'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='2'%20y='5'%20width='4'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='6'%20y='5'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='7'%20y='5'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3Crect%20x='0'%20y='6'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='1'%20y='6'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='2'%20y='6'%20width='4'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='6'%20y='6'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='7'%20y='6'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='0'%20y='7'%20width='2'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='2'%20y='7'%20width='1'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='3'%20y='7'%20width='1'%20height='1'%20fill='%234c8a2f'/%3E%3Crect%20x='4'%20y='7'%20width='1'%20height='1'%20fill='%236cb545'/%3E%3Crect%20x='5'%20y='7'%20width='1'%20height='1'%20fill='%231a1a1a'/%3E%3Crect%20x='6'%20y='7'%20width='1'%20height='1'%20fill='%233f7a25'/%3E%3Crect%20x='7'%20y='7'%20width='1'%20height='1'%20fill='%235b9e3a'/%3E%3C/svg%3E") 0 0/56px 56px no-repeat;
 }
 :root[data-theme="cobble"] .wrap:has(.brand b:hover)::before{animation:mc-fuse .4s steps(2) infinite}
@@ -6098,7 +6109,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    the host reports plus the quota, each filling toward the top. The script
    sets the fill and prints the figure; the captions say what each one is. */
 :root[data-theme="lumon"] .ghud.bins{
-  left:50%; bottom:calc(8px + var(--taken,0px)); transform:translateX(-50%); display:flex; gap:22px; font-style:normal;
+  left:50%; bottom:8px; transform:translateX(-50%); display:flex; gap:22px; font-style:normal;
 }
 :root[data-theme="lumon"] .ghud.bins .bin{display:grid; grid-template-rows:auto auto auto; justify-items:center; gap:3px; min-width:74px}
 :root[data-theme="lumon"] .ghud.bins .bin em{font:600 9px/1 var(--face-chrome); letter-spacing:.24em; color:var(--faint); font-style:normal; text-transform:uppercase}
@@ -6254,7 +6265,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 /* THE READOUT, always on: sync ratio, A.T. field, the power source. */
 :root[data-theme="nerv"] .ghud.sync{
-  left:50%; bottom:calc(10px + var(--taken,0px)); transform:translateX(-50%); display:flex; gap:0; font-style:normal;
+  left:50%; bottom:10px; transform:translateX(-50%); display:flex; gap:0; font-style:normal;
   clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   background:#0c0c0c; box-shadow:inset 0 0 0 1px var(--accent);
 }
@@ -6406,7 +6417,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="e1m1"] .bubble .foot .st{font-family:var(--face-chrome); font-size:9px; letter-spacing:.04em; text-shadow:1px 1px 0 #000}
 /* THE STATUS BAR, always on and the full width of the room. */
 :root[data-theme="e1m1"] .ghud.bar{
-  left:0; right:0; bottom:var(--taken,0px); height:56px; display:flex; align-items:stretch; justify-content:center; font-style:normal;
+  left:0; right:0; bottom:0; height:56px; display:flex; align-items:stretch; justify-content:center; font-style:normal;
   background:linear-gradient(180deg, #5a5250, #3f3836 60%, #322c2a); border-top:3px solid #0f0c0b;
   box-shadow:inset 0 2px 0 #7a6f6a, inset 0 -3px 0 #1a1614; pointer-events:auto;
 }
@@ -6550,7 +6561,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="plumbob"] .bubble .foot .dot{border-radius:2px; transform:rotate(45deg); width:6px; height:6px}
 /* THE NEEDS, always on. Six bars, each green, yellow or red by its value. */
 :root[data-theme="plumbob"] .ghud.needs{
-  left:50%; bottom:calc(8px + var(--taken,0px)); transform:translateX(-50%); font-style:normal;
+  left:50%; bottom:8px; transform:translateX(-50%); font-style:normal;
   display:grid; grid-template-columns:repeat(3, auto); gap:5px 22px; padding:7px 14px 8px;
   background:linear-gradient(180deg, #eaf3fc, #d7e7f6); border:1px solid #a7c6e3; border-radius:12px; box-shadow:inset 0 1px 0 #fff, 0 2px 8px rgba(29,53,87,.12);
 }
@@ -6710,7 +6721,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 @keyframes lcars-alert{50%{opacity:.55}}
 /* THE STATUS LINE, always on, along the foot: pills, black on colour. */
 :root[data-theme="lcars"] .ghud.status{
-  left:14px; right:14px; bottom:calc(4px + var(--taken,0px)); height:24px; display:flex; gap:4px; font-style:normal;
+  left:14px; right:14px; bottom:4px; height:24px; display:flex; gap:4px; font-style:normal;
   font:14px/24px var(--face-chrome); text-transform:uppercase; letter-spacing:.04em; color:#000;
 }
 :root[data-theme="lcars"] .ghud.status > span{padding:0 12px; background:var(--lc-orange); white-space:nowrap; display:flex; gap:8px; align-items:baseline}
@@ -6848,7 +6859,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="stardew"] .bubble .foot .dot{border-radius:1px; width:7px; height:7px; box-shadow:1px 1px 0 rgba(0,0,0,.25)}
 /* THE CLOCK BOX, always on, bottom right, with the energy bar beside it. */
 :root[data-theme="stardew"] .ghud.day{
-  right:16px; bottom:calc(8px + var(--taken,0px)); display:flex; align-items:stretch; gap:8px; font-style:normal;
+  right:16px; bottom:4px; display:flex; align-items:stretch; gap:8px; font-style:normal;
 }
 :root[data-theme="stardew"] .ghud.day .box{
   display:grid; grid-template-columns:auto auto; grid-template-rows:auto auto auto; gap:2px 14px; padding:6px 10px; min-width:150px;
@@ -7072,7 +7083,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    few things that happened, each with a timestamp. What each thing reads is
    in the world at the end of the band script. */
 :root[data-theme="intranet"] .ghud.statusbar{
-  left:0; right:0; bottom:var(--taken,0px); height:22px; display:flex; align-items:stretch; padding:0 2px 1px;
+  left:0; right:0; bottom:0; height:22px; display:flex; align-items:stretch; padding:0 2px 1px;
   background:#f0f0f0; border-top:1px solid #a0a0a0; font:11px/19px var(--face-chrome); color:#000; font-style:normal;
 }
 :root[data-theme="intranet"] .ghud.statusbar > span{
@@ -7112,7 +7123,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="intranet"] .webparts ul{list-style:none; margin:0; padding:0}
 :root[data-theme="intranet"] .webparts li{padding:2px 8px; border-bottom:1px solid #e6e6e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 :root[data-theme="intranet"] .webparts li time{color:#666; font-family:var(--face-data); font-variant-numeric:tabular-nums; margin-right:6px}
-:root:has(.board.compact):not(:has(.sheet.on)) .ghud.ring{bottom:calc(150px + var(--taken,0px))}
+:root:has(.board.compact):not(:has(.sheet.on)) .ghud.ring{bottom:150px}
 
 </style>
 </head>
@@ -11652,10 +11663,27 @@ function cellsForSheet(){
           cols: Math.max(24, Math.floor((w - 14) / 7.3))};
 }
 
+/* The most the sheet may take: the viewport, less the world's bottom bar
+   (which the sheet stands on) and the board's HUD (which stays in sight above
+   it). At 88vh the sheet ran up over the HUD and, with an inset, left the
+   board a strip too short for its own header. */
+function sheetRoom(){
+  const inset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hud-inset')) || 0;
+  const hud = document.querySelector('.wrap > .hud');
+  return innerHeight - inset - (hud ? hud.offsetHeight : 0);
+}
+// Writes the height alone, in px, so --taken is a length the page can read
+// back (the companion cube does) and a resize or a world with another inset
+// can re-clamp it without refitting every terminal.
+function sizeSheet(){
+  const px = Math.round(Math.max(0, Math.min(innerHeight * SHEET_STEPS[sheetStep] / 100, sheetRoom())));
+  document.documentElement.style.setProperty('--sheet', px + 'px');
+  document.documentElement.style.setProperty('--taken', sheetOn ? px + 'px' : '0px');
+  return px;
+}
+
 function applySheet(){
-  const vh = SHEET_STEPS[sheetStep];
-  document.documentElement.style.setProperty('--sheet', vh + 'vh');
-  document.documentElement.style.setProperty('--taken', sheetOn ? vh + 'vh' : '0px');
+  sizeSheet();
   sheetEl.hidden = false;
   sheetEl.classList.toggle('on', sheetOn);
   if(typeof fit === 'function') fit();
@@ -12185,7 +12213,10 @@ if(TERMCFG.enabled){
     try{ localStorage.removeItem(BARW_KEY); }catch(e){}
     refit();
   });
-  addEventListener('resize', () => setTimeout(refit, 60));
+  addEventListener('resize', () => setTimeout(() => { sizeSheet(); refit(); }, 60));
+  // Each world has its own bottom bar, so the room left for the sheet moves
+  // with the theme.
+  document.addEventListener('fleet:theme', () => { sizeSheet(); setTimeout(refit, 190); });
   // ctrl-` the way a terminal drawer works everywhere else, and ⌘J the way
   // VS Code's does. Captured on the window so the browser never sees ⌘J.
   addEventListener('keydown', e => {
