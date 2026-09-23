@@ -256,13 +256,19 @@ runtime copy.
    browser): cards face up in every state. Default stays face down unless
    decided otherwise. Page-only; small.
 
-10. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
+10. [x] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
    fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
    purpose. Wanted: centred, 384px. Note it sits under the cards at z 2
    with `mix-blend-mode:screen`, so centred it crosses the middle lanes; the
    ball (`.ball`) and the winning-number plaque are placed for the corner
    and move with it; and it belongs in the bottom bar of 2, since the sheet
    covers it now. Page-only.
+   Done (2026-09-24): 384px, centred, hub 48px up in a 96px bottom bar of
+   its own (`--hud-inset:96px`), so the band through the hub stays in sight
+   at any sheet height and fullscreen; the upper half rises out of the bar
+   under the cards when the sheet is down. The ball's radii scaled by 1.2 and
+   its run ends level with the hub, inside the bar; the plaque sits in the
+   bar right of the wheel. The cost: the board and the sheet give up 96px.
 
 11. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
    strip of cardinal letters under the HUD (`.hud::after`, centred, clipped

@@ -3843,16 +3843,19 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    thirty-seven pockets in house green and black, yellow frets between them, a
    yellow rim and hub. It turns once every two and a half minutes, which is slow
    enough to never pull the eye off a tile and fast enough that you catch it
-   moving if you look. Cropped by the corner, because the table is bigger than
-   the screen. It is set into the table, so it does not move when the sheet
-   rises (it rode --taken up over the CLAUDE rail at half height); the sheet
-   covers it. And it is under the padded rails and the cards (see PASS 9),
-   which are laid on the table over it: the rim used to run through the
-   agent's mark and chip on whichever rail was at the bottom. The hub sits
-   110px in and 100px up, clear of a short lane's wide rail. */
+   moving if you look. It is set into the table at the foot of the room,
+   centred, and the table owns a bottom bar for it: the terminal sheet stands
+   on the bar, so the band through the hub -- the hub, the cone and the
+   pockets out to the rim on either side -- stays in sight at any height of
+   the sheet, fullscreen included. With the sheet down, the upper half rises
+   out of the bar under the padded rails and the cards (see PASS 9), which
+   are laid on the table over it. The hub sits in the middle of the bar;
+   the ball and the plaque are placed off it. It used to be 320px, cropped
+   by the bottom-left corner, and the sheet covered all of it. */
+:root[data-theme="staunton"]{--hud-inset:96px}
 :root[data-theme="staunton"] .wrap::before{
-  content:""; position:fixed; left:-50px; bottom:-60px;
-  width:320px; height:320px; border-radius:50%;
+  content:""; position:fixed; left:calc(50% - 192px); bottom:-144px;
+  width:384px; height:384px; border-radius:50%;
   /* Above the lane cloth, not under it: at z-index 0 it was first in tree
      order and every opaque lane panel painted over it, so it only ever showed
      in the gaps. Screen blending lightens whatever it crosses, which is how an
@@ -3867,7 +3870,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   animation:wheelspin 150s linear infinite;
 }
 @keyframes wheelspin{from{transform:rotate(0)} to{transform:rotate(360deg)}}
-/* Point at the board's corner and the wheel picks up -- the one easter egg. */
+/* Point at the board and the wheel picks up -- the one easter egg. */
 :root[data-theme="staunton"] .wrap:hover::before{animation-duration:26s}
 @media (prefers-reduced-motion:reduce){
   :root[data-theme="staunton"] .wrap::before,
@@ -5365,7 +5368,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    number in its pocket colour with the session's name under it. */
 :root[data-theme="staunton"] .wrap.spin::before{animation-duration:5s}
 :root[data-theme="staunton"] .ball{
-  position:fixed; left:110px; bottom:100px; width:0; height:0; z-index:3; pointer-events:none;
+  position:fixed; left:50%; bottom:48px; width:0; height:0; z-index:3; pointer-events:none;
   animation:ball-run 2.8s cubic-bezier(.2,.7,.3,1) forwards;
 }
 :root[data-theme="staunton"] .ball i{
@@ -5376,9 +5379,12 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 }
 :root[data-theme="staunton"] .ball.out{transition:opacity .6s ease; opacity:0}
 @keyframes ball-run{from{transform:rotate(0)} to{transform:rotate(-1260deg)}}
-@keyframes ball-fall{0%{transform:translateX(146px)} 70%{transform:translateX(146px)} 85%{transform:translateX(118px)} 100%{transform:translateX(112px)}}
+/* the outer track, the frets, the pocket: radii on the 384px wheel; the run
+   ends at half a turn, level with the hub, so the ball comes to rest inside
+   the bar where the sheet cannot cover it */
+@keyframes ball-fall{0%{transform:translateX(175px)} 70%{transform:translateX(175px)} 85%{transform:translateX(142px)} 100%{transform:translateX(134px)}}
 :root[data-theme="staunton"] .plaque{
-  position:fixed; left:150px; bottom:calc(150px + var(--taken,0px)); z-index:3; pointer-events:none;
+  position:fixed; left:calc(50% + 206px); bottom:26px; z-index:3; pointer-events:none;
   display:flex; align-items:center; gap:10px; padding:6px 12px 6px 6px;
   background:linear-gradient(180deg,#f4f1e4,#d9d3bd); color:#04140d; border-radius:3px;
   border:1px solid rgba(234,179,8,.7); box-shadow:0 8px 18px -8px rgba(0,0,0,.8), inset 0 1px 0 #fff;
