@@ -11770,6 +11770,14 @@ function refit(){
   for(const t of terms.values()){
     if(!t.fit || t.view.hidden) continue;
     try{ t.fit.fit(); }catch(e){ continue; }
+    // The fit addon sizes to the view's whole box, its padding included, so
+    // a sheet within a few px of a whole number of rows got one row more than
+    // it shows, and the last row ran under the sheet's foot. With the height
+    // dragged at will that is a third of all heights; take the row back.
+    const vs = getComputedStyle(t.view), screen = t.view.querySelector('.xterm-screen');
+    const room = t.view.clientHeight - parseFloat(vs.paddingTop) - parseFloat(vs.paddingBottom);
+    const cell = screen && t.term.rows ? screen.offsetHeight / t.term.rows : 0;
+    if(cell && t.term.rows > 1 && t.term.rows * cell > room + .5) t.term.resize(t.term.cols, Math.max(1, Math.floor(room / cell)));
     if(t.term.rows !== t.meta.rows || t.term.cols !== t.meta.cols){
       t.meta.rows = t.term.rows; t.meta.cols = t.term.cols;
       termPost('/api/term/resize', {tid:t.id, rows:t.term.rows, cols:t.term.cols});
