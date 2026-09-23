@@ -3750,10 +3750,10 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .bubble .x{color:#8a8578}
 :root[data-theme="staunton"] .bubble[data-state="idle"] .nm{color:#5a574d}
 :root[data-theme="staunton"] .bubble[data-state="idle"] .gist{color:#7a766a}
-:root[data-theme="staunton"] .bubble[data-state="idle"]:hover .nm, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .nm{color:#1b1a16}
-:root[data-theme="staunton"] .bubble[data-state="idle"]:hover .gist, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .gist{color:#3d3a32}
-:root[data-theme="staunton"] .bubble[data-state="idle"]:hover, :root[data-theme="staunton"] .bubble[data-state="idle"].sel{background-color:#fbf9f0}
-:root[data-theme="staunton"] .bubble:hover{
+:root[data-theme="staunton"] .bubble[data-state="idle"]:is(:hover,.lift) .nm, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .nm{color:#1b1a16}
+:root[data-theme="staunton"] .bubble[data-state="idle"]:is(:hover,.lift) .gist, :root[data-theme="staunton"] .bubble[data-state="idle"].sel .gist{color:#3d3a32}
+:root[data-theme="staunton"] .bubble[data-state="idle"]:is(:hover,.lift), :root[data-theme="staunton"] .bubble[data-state="idle"].sel{background-color:#fbf9f0}
+:root[data-theme="staunton"] .bubble:is(:hover,.lift){
   box-shadow:inset 0 1px 0 rgba(244,241,228,.14),
              0 0 0 1px rgba(234,179,8,.55),
              0 10px 22px -14px rgba(1,8,5,.9);
@@ -5517,7 +5517,11 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
    is symmetrical, so the mirrored face never shows. Point at a folded card
    and it lifts to a peek, the way you look at a hole card; the card in
    hand (the drawer) is up, and a collapsed board is a list, so it deals
-   face up too. Perspective sits on the hand, one vanishing point per
+   face up too. The peek is .lift, not :hover: mid-turn the card's footprint
+   narrows to a sliver, so a pointer near its edge fell off it, :hover
+   dropped, the card turned back under the pointer and it flapped for as
+   long as you held still. The script hit-tests on the box layout gave the
+   card, which does not turn (see "the hole card"). Perspective sits on the hand, one vanishing point per
    project, the way a hand on a table reads from a seat. */
 :root[data-theme="staunton"] .bubbles{perspective:1100px}
 :root[data-theme="staunton"] .bubble{transition:background .12s, border-color .12s, transform .12s, box-shadow .12s, rotate .45s ease-in-out}
@@ -5532,8 +5536,8 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
   box-shadow:inset 0 0 0 1px rgba(234,179,8,.6), inset 0 0 0 2px rgba(0,0,0,.3);
   animation:none; transition:opacity 0s linear .22s;
 }
-:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(:hover):not(.sel){rotate:y 180deg; outline-color:transparent}
-:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(:hover):not(.sel)::before{opacity:1}
+:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel){rotate:y 180deg; outline-color:transparent}
+:root[data-theme="staunton"] .board:not(.compact) .bubble:is([data-state="idle"],[data-state="unknown"]):not(.lift):not(.sel)::before{opacity:1}
 /* 4. The deal, the turn, the riffle. A card that arrives is dealt in from the
    dealer's corner (face down if it arrives folded, since the deal composes
    with the fold); a card whose state changed is turned over -- a full turn,
@@ -5559,7 +5563,7 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 :root[data-theme="staunton"] .board.shuffle .bubble{animation:riffle .5s ease-in-out both; animation-delay:calc(var(--i, 0) * 26ms)}
 @keyframes riffle{0%{transform:none} 35%{transform:translate(10px,-8px) rotate(3deg)} 70%{transform:translate(-6px,4px) rotate(-2deg)} 100%{transform:none}}
 :root[data-theme="staunton"] .brand b{cursor:pointer}
-:root[data-theme="staunton"] .bubble:hover{transform:translateY(-2px) rotate(-.5deg)}
+:root[data-theme="staunton"] .bubble:is(:hover,.lift){transform:translateY(-2px) rotate(-.5deg)}
 /* 5. Velvet. The pile and the nap are the cloth's own (so each felt's velvet
    is cut from the same bolt), on a wine ground with the lamp catching the
    rail's near edge -- a padded rail, which is what the rail of a card table
@@ -9139,6 +9143,46 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
     clearTimeout(riffleT);
     riffleT = setTimeout(() => { board.classList.remove('shuffle'); tiles.forEach(el => el.style.removeProperty('--i')); }, 520 + tiles.length * 26);
   });
+})();
+
+/* ---- the hole card (casino) --------------------------------------------- */
+/* A folded card peeks while the pointer is on it. :hover cannot say that --
+   it is hit-tested on the card as drawn, and the card is turning, so its
+   footprint narrows mid-turn and a pointer near an edge or a corner falls
+   off it and the card turns back, over and over. So the question is asked
+   of the box layout gave the card (offsets, which no rotate, lift or deal
+   moves) and the answer is a class, .lift, that the stylesheet peeks on.
+   Reapplied when a repaint rebuilds the tiles, as :hover would have been. */
+(function(){
+  const root = document.documentElement;
+  let held = '', px = -1, py = -1;
+  const tileOf = id => id ? board.querySelector('.bubble[data-id="'+CSS.escape(id)+'"]') : null;
+  const inside = el => {
+    const p = el.offsetParent; if(!p) return false;
+    const r = p.getBoundingClientRect();
+    const x = px - (r.left + p.clientLeft - p.scrollLeft + el.offsetLeft);
+    const y = py - (r.top + p.clientTop - p.scrollTop + el.offsetTop);
+    return x >= 0 && y >= 0 && x < el.offsetWidth && y < el.offsetHeight;
+  };
+  const aim = over => {
+    const was = tileOf(held);
+    let el = null;
+    if(root.dataset.theme === 'staunton' && px >= 0){
+      if(was && inside(was)) el = was;                       // the card in hand keeps it
+      else if(over) el = [...board.querySelectorAll('.bubble')].find(inside) || null;
+    }
+    if(was && was !== el) was.classList.remove('lift');
+    if(el) el.classList.add('lift');
+    held = el ? el.dataset.id : '';
+  };
+  document.addEventListener('pointermove', e => {
+    px = e.clientX; py = e.clientY;
+    if(held || board.contains(e.target)) aim(board.contains(e.target));
+  }, {passive:true});
+  window.addEventListener('pointerout', e => { if(!e.relatedTarget){ px = py = -1; if(held) aim(false); } });
+  // a repaint replaces the tiles: put the class back on the new one
+  new MutationObserver(() => { if(held) aim(false); }).observe(board, {childList:true});
+  document.addEventListener('fleet:theme', () => aim(false));
 })();
 
 /* ---- the cloth (casino) ------------------------------------------------- */

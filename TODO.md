@@ -229,7 +229,7 @@ runtime copy.
    written because it is the one with six bars side by side. Page-only
    (`WORLDS.plumbob`, its `plots` and the theme's doc comment, `ui.html`).
 
-8. [ ] **Casino (`staunton`): a folded card flips back when the pointer is
+8. [x] **Casino (`staunton`): a folded card flips back when the pointer is
    near its corner.** The face-down rule is on the card itself
    (`.bubble:is([data-state=idle],[data-state=unknown]):not(:hover):not(.sel)
    {rotate:y 180deg}`, `.45s` transition, under `perspective` on
@@ -240,6 +240,9 @@ runtime copy.
    around the card, or `pointerenter`/`pointerleave` on the stable cell
    setting a class), never `:hover` on the rotating element. Must hold with
    the cursor on the very corner. Page-only.
+   Done (2026-09-24): the peek is `.lift`, set by a pointer hit-test on the
+   card's layout box (offsets, which no turn moves) and put back after a repaint;
+   parked on a corner or edge for 2 s the card turned once (0 reversals; up to 4 before).
 
 9. [ ] **Casino: face-down when folded is a setting.** Today idle/unknown
    cards are dealt face down whenever the board is not compact. Add a toggle
