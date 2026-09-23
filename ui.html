@@ -2855,15 +2855,13 @@ html.theme-swapping .bubble > .halo{ animation:none; }
 
 /* ---------- HOARSTONE -- the compass strip --------------------------------------
    The one HUD element nobody misreads: a compass strip along the seam between
-   the deck and the world, cardinal points and ticks, the heading marked in
-   gold at the centre. */
+   the deck and the world, the heading marked in gold at the centre. This is
+   the band and the needle; the cardinal points and the quest markers are a
+   tape the script scrolls under the needle (see PASS 7: SKYRIM). */
 :root[data-theme="hoarstone"] .hud{position:relative}
 :root[data-theme="hoarstone"] .hud::after{
-  content:"N \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 NE \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 E \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 SE \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 S \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 SW \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 W \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 NW \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 \00b7 N";
+  content:"";
   position:absolute; left:0; right:0; bottom:-1px; height:14px; z-index:5; pointer-events:none;
-  text-align:center; white-space:nowrap; overflow:hidden;
-  font:600 9.5px/14px Futura, "Avenir Next Condensed", sans-serif; letter-spacing:.36em;
-  color:rgba(236,234,226,.46); text-shadow:0 1px 0 rgba(0,0,0,.7);
   background:
     linear-gradient(#e0b25a,#e0b25a) 50% 0/1px 100% no-repeat,
     linear-gradient(180deg, rgba(13,18,22,0), rgba(13,18,22,.92) 45%);
@@ -5832,16 +5830,39 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 @keyframes ring-spin{from{transform:scaleX(1)} 50%{transform:scaleX(.25)} to{transform:scaleX(1)}}
 @media (prefers-reduced-motion:reduce){ :root[data-theme="chequer"] .ring{display:none} }
 /* ==== PASS 7: SKYRIM ====
-   Quest markers on the compass. Every session that is working, stuck or
-   asking sits on the strip as the game's diamond, at the bearing of its
-   tile on the screen -- hollow bone for running, filled gold for waiting,
-   filled red for blocked -- so the compass points at the work. */
-:root[data-theme="hoarstone"] .quests{position:absolute; left:0; right:0; bottom:-1px; height:14px; z-index:6; pointer-events:none}
+   The compass, and the quest markers on it. The board is the horizon: its
+   left edge is north and a full turn is its width, so a tile's bearing is
+   how far across the board it sits (the middle of the board is due south).
+   The heading is the session you are looking at -- the selected tile, or
+   with none selected the one you last spoke to -- and the tape turns so its
+   bearing is under the gold needle; the letters then say where on the board
+   that session is, and every other marker keeps its bearing relative to it.
+   A full turn fits the dial, the way the static strip always drew it, so
+   no session is ever off the compass. Every session that is working, stuck
+   or asking sits on the tape as the game's diamond -- hollow bone for
+   running, filled gold for waiting, filled red for blocked -- and the one
+   under the needle is drawn larger, whatever its state. */
+:root[data-theme="hoarstone"] .quests{
+  position:absolute; left:50%; width:min(580px, 62%); bottom:-1px; height:14px; z-index:6; pointer-events:none;
+  transform:translateX(-50%); overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+          mask-image:linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+:root[data-theme="hoarstone"] .quests .tape{position:absolute; left:0; top:0; bottom:0; width:0; transition:transform .7s cubic-bezier(.3,.1,.2,1)}
+:root[data-theme="hoarstone"] .quests .pt{
+  position:absolute; top:0; transform:translateX(-50%); white-space:nowrap;
+  font:600 9.5px/14px Futura, "Avenir Next Condensed", sans-serif; letter-spacing:.08em;
+  color:rgba(236,234,226,.46); text-shadow:0 1px 0 rgba(0,0,0,.7);
+}
+:root[data-theme="hoarstone"] .quests .pt.c{color:rgba(236,234,226,.72)}
 :root[data-theme="hoarstone"] .quests .q{
   position:absolute; top:3px; width:8px; height:8px; margin-left:-4px; box-sizing:border-box;
   transform:rotate(45deg); border:1.5px solid #ece9e2; background:rgba(13,18,22,.92);
   box-shadow:0 0 5px rgba(236,233,226,.35); transition:left .25s ease;
 }
+:root[data-theme="hoarstone"] .quests .q.head{top:2px; width:10px; height:10px; margin-left:-5px; outline:1px solid rgba(224,178,90,.8); outline-offset:1px}
+@media (prefers-reduced-motion:reduce){ :root[data-theme="hoarstone"] .quests .tape{transition:none} }
+:root[data-theme="hoarstone"][data-motion="off"] .quests .tape{transition:none}
 :root[data-theme="hoarstone"] .quests .q.waiting{border-color:#e0b25a; background:#e0b25a; box-shadow:0 0 6px rgba(224,178,90,.6)}
 :root[data-theme="hoarstone"] .quests .q.blocked{border-color:var(--blocked); background:var(--blocked); box-shadow:0 0 6px var(--blocked)}
 /* ==== PASS 7: HOLLOW KNIGHT ====
@@ -9290,26 +9311,68 @@ const CUBE_KEY = 'fleet.cube';           // 'off' keeps the companion cube in st
   });
 })();
 
-/* ---- quest markers (skyrim) --------------------------------------------- */
-/* The compass strip under the HUD carries a diamond for every session that
-   wants attention or is working, at the bearing of its tile. Redrawn after
+/* ---- the compass (skyrim) ----------------------------------------------- */
+/* A real one (see PASS 7: SKYRIM in the stylesheet): a bearing for every
+   tile, from how far across the board it sits; a heading, from the selected
+   tile or else the session you last spoke to; and a tape of cardinal points
+   and quest diamonds, three turns long, slid so the heading is under the
+   needle. The heading is kept unwrapped so the tape always turns the short
+   way, and folded back into one turn once it has stopped. Redrawn after
    every paint and every re-fit, cheaply: a handful of rects, one rAF. */
 (function(){
-  let strip = null, raf = 0;
+  let strip = null, tape = null, raf = 0, head = 180, fold = 0;
+  const CARD = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const mod = (a, n) => ((a % n) + n) % n;
+  // The session to face: the one you picked; else the one you last spoke
+  // to; else, on a board where nothing says, the last to write. Not the
+  // last to write first: on a busy board that changes every poll and the
+  // needle would never settle.
+  const target = () => {
+    if(selected){ const el = board.querySelector('.bubble[data-id="'+CSS.escape(selected)+'"]'); if(el) return el; }
+    let best = null, key = -1;
+    (latest?.lanes || []).forEach(l => l.projects.forEach(p => p.sessions.forEach(s => {
+      const k = s.promptAt ? 1e15 + s.promptAt : (s.updated || 0);
+      if(k > key){ key = k; best = s.id; }
+    })));
+    return best ? board.querySelector('.bubble[data-id="'+CSS.escape(best)+'"]') : null;
+  };
   const draw = () => {
     raf = 0;
-    if(document.documentElement.dataset.theme !== 'hoarstone'){ if(strip) strip.innerHTML = ''; return; }
+    if(document.documentElement.dataset.theme !== 'hoarstone'){ if(strip) tape.innerHTML = ''; return; }
     if(!strip){
       strip = document.createElement('div'); strip.className = 'quests'; strip.setAttribute('aria-hidden', 'true');
+      tape = document.createElement('div'); tape.className = 'tape'; strip.appendChild(tape);
       document.querySelector('.hud').appendChild(strip);
     }
-    const hud = strip.parentElement.getBoundingClientRect();
-    strip.innerHTML = [...board.querySelectorAll('.bubble')]
-      .filter(el => /^(running|blocked|waiting)$/.test(el.dataset.state))
-      .map(el => {
-        const r = el.getBoundingClientRect(); if(!r.width) return '';
-        return '<i class="q ' + el.dataset.state + '" style="left:' + (r.left + r.width / 2 - hud.left).toFixed(0) + 'px"></i>';
-      }).join('');
+    const w = strip.clientWidth, deg = w / 360, field = board.getBoundingClientRect();
+    if(!w || !field.width) return;
+    const bearing = el => { const r = el.getBoundingClientRect(); return r.width ? 360 * (r.left + r.width / 2 - field.left) / field.width : null; };
+    const aim = target(), want = aim ? bearing(aim) : null;
+    if(want != null) head += mod(want - head + 180, 360) - 180;     // the short way round
+    const at = a => (a * deg).toFixed(1) + 'px';
+    let html = '';
+    // the letters, three turns of them: a point every 45 degrees, seven ticks between
+    for(let i = -64; i < 128; i++){
+      const a = i * 45 / 8, c = mod(i, 8) === 0;
+      html += '<i class="pt' + (c ? ' c' : '') + '" style="left:' + at(a) + '">' + (c ? CARD[mod(i / 8, 8)] : '\u00b7') + '</i>';
+    }
+    board.querySelectorAll('.bubble').forEach(el => {
+      const st = el.dataset.state, on = el === aim;
+      if(!on && !/^(running|blocked|waiting)$/.test(st)) return;
+      const a = bearing(el); if(a == null) return;
+      for(let k = -1; k <= 1; k++) html += '<i class="q ' + st + (on ? ' head' : '') + '" style="left:' + at(a + k * 360) + '"></i>';
+    });
+    tape.innerHTML = html;
+    strip.dataset.head = aim ? aim.dataset.id : '';
+    tape.style.transform = 'translateX(' + (w / 2 - head * deg).toFixed(1) + 'px)';
+    // once the turn has stopped, fold the heading back into one turn, unseen
+    clearTimeout(fold);
+    if(head < 0 || head >= 360) fold = setTimeout(() => {
+      head = mod(head, 360);
+      tape.style.transition = 'none';
+      tape.style.transform = 'translateX(' + (w / 2 - head * deg).toFixed(1) + 'px)';
+      void tape.offsetWidth; tape.style.transition = '';
+    }, 800);
   };
   const queue = () => { if(!raf) raf = requestAnimationFrame(draw); };
   new MutationObserver(queue).observe(board, {childList:true, subtree:true, attributes:true, attributeFilter:['style', 'data-state', 'class']});

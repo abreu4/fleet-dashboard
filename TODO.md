@@ -261,7 +261,7 @@ runtime copy.
    and move with it; and it belongs in the bottom bar of 2, since the sheet
    covers it now. Page-only.
 
-11. [ ] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
+11. [x] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
    strip of cardinal letters under the HUD (`.hud::after`, centred, clipped
    at the edges, gold needle at 50% — so it always reads S) and a diamond
    per working tile at that tile's x, with no relation to the letters;
@@ -272,6 +272,10 @@ runtime copy.
    the world a different staple — the quest banner ("quest completed" when a
    session finishes, "new objective" when one asks) or the XP bar for the
    day's done. Page-only.
+   Done (2026-09-24): (a), a real compass: the board is the horizon (left
+   edge north, a full turn its width); the tape of letters and diamonds turns the short way
+   so the selected tile, else the session you last spoke to (`promptAt`), sits under the
+   needle; blocked/waiting diamonds are drawn, and the heading's diamond is larger.
 
 12. [x] **Folder cards: a (+) that opens a new session of that agent in
    that folder.** Today a new session goes through the sheet's + picker
