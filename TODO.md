@@ -25,7 +25,7 @@ runtime copy.
    3h49m`, clock time, opening and tokens-in-window in its title ("23:58 ·
    58m" does not fit a cell at 1440). Its tile went to agents' memory.
 
-2. [ ] **Terminal rides over a fixed bottom bar.** With the sheet maximised
+2. [x] **Terminal rides over a fixed bottom bar.** With the sheet maximised
    (88vh) it covers Skyrim's bars, NERV's status bar, the Minecraft HUD and
    the casino wheel, and the band never shows while the sheet is on
    (`.band` is `:not(:has(.sheet.on))`). Why: `.sheet` is `fixed; bottom:0`
@@ -40,6 +40,15 @@ runtime copy.
    sheet step, in every world with an inset, the instrument is whole and the
    sheet's last row is visible; with no inset the bar is 0 tall. Page-only,
    but the biggest item on the board.
+   Done (2026-09-24): the bar is the --hud-inset strip itself -- the sheet
+   stands on it (`bottom:var(--hud-inset)`), every `.ghud` and Minecraft's
+   creeper sit in it at fixed heights (off the --taken ride), Lord of the
+   Rings' seal and Stardew's clock box were trimmed to fit it, the player,
+   crate and toast dock above sheet + bar, and the sheet is clamped to leave
+   the board's HUD in sight (`sheetRoom()`); --taken is written in px.
+   Checked headless in all ten inset worlds. Not done: the band still shows
+   only with the board collapsed and the sheet closed (it needs the space the
+   sheet takes); its rules keep a --taken term that is 0 whenever it is up.
 
 3. [x] **The two sides of the graph read as one instrument.** Left, six dials
    whose arcs measure six different things against six denominators (share
@@ -308,13 +317,19 @@ runtime copy.
    under the cloths (`fleet.casino.deal`, `data-deal="up"` on the root); default face down;
    face up, a fold or unfold turns the card over like any other change. Survives a reload.
 
-10. [ ] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
+10. [x] **Casino: the wheel centred and 20% bigger.** It is `.wrap::before`,
    fixed at `left:-50px; bottom:-60px`, 320px, cropped by the corner on
    purpose. Wanted: centred, 384px. Note it sits under the cards at z 2
    with `mix-blend-mode:screen`, so centred it crosses the middle lanes; the
    ball (`.ball`) and the winning-number plaque are placed for the corner
    and move with it; and it belongs in the bottom bar of 2, since the sheet
    covers it now. Page-only.
+   Done (2026-09-24): 384px, centred, hub 48px up in a 96px bottom bar of
+   its own (`--hud-inset:96px`), so the band through the hub stays in sight
+   at any sheet height and fullscreen; the upper half rises out of the bar
+   under the cards when the sheet is down. The ball's radii scaled by 1.2 and
+   its run ends level with the hub, inside the bar; the plaque sits in the
+   bar right of the wheel. The cost: the board and the sheet give up 96px.
 
 11. [x] **Skyrim (`hoarstone`): the compass does nothing.** It is a static
    strip of cardinal letters under the HUD (`.hud::after`, centred, clipped
@@ -352,7 +367,7 @@ runtime copy.
    opens in the cwd the card's sessions share, else the most recent one's (the tooltip names
    it and how many folders the card spans); stops the minimise click; Enter/Space work too.
 
-13. [ ] **Terminal: two states, fullscreen and normal; normal is resized by
+13. [x] **Terminal: two states, fullscreen and normal; normal is resized by
    dragging its top edge.** Today the sheet has three fixed heights —
    `SHEET_STEPS = [34, 54, 88]` vh — cycled by `#term-size`, stored as an
    index in `fleet.sheet`, applied by `applySheet()` to `--sheet` and
@@ -371,6 +386,14 @@ runtime copy.
    bar's inset is the drag's floor. `termSize()` sizes a pty off
    `SHEET_STEPS[sheetStep]` before it exists and must read the new height.
    Page-only.
+   Done (2026-09-24): a `.lip` on the sheet's top edge sets the docked
+   height (rAF-throttled `--sheet`/`--taken` in px, one refit on release,
+   clamped between 120px and the room under the board's HUD, floor = the
+   bottom bar); `#term-size` (now ⤢, lit when on) toggles fullscreen, which
+   covers everything above the bottom bar; both kept per browser
+   (`fleet.sheet` = e.g. `48.1vh`, `fleet.sheet.full`), an old index read as
+   its vh; double-click the edge resets to 34vh; a drag from fullscreen comes
+   down to the pointer. No keyboard chord for fullscreen yet.
 
 14. [x] **Power readings do not follow the cable.** Reported: NERV's power
    readout still says `internal` after the Mac is unplugged — it should
