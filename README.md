@@ -68,6 +68,7 @@ board, or let it detach itself (it does, when it notices).
 | `⌘,` | settings: tile scale, optional panels, terminal font, motion |
 | `⌘E` | collapse / expand every tile to its essentials |
 | `⌘G` | the graph window for the selected session |
+| `⌘I` | totals: everything the fleet has written since the oldest transcript, its records, a calendar |
 | `⌘J` / `` ctrl-` `` | the terminal sheet |
 | `⌘T` · `⌘W` · `⌘[` `⌘]` | new shell · close tab · cycle tabs |
 | click a tile | the drawer: brief, next step, tokens, model, open in iTerm / Terminal / VS Code |
@@ -109,6 +110,7 @@ algorithm, the graph, the terminal, the themes — is in
 | `dashboard.py` | the server: snapshot loop, HTTP API, the page |
 | `collectors.py` | reads the three agents' state off disk |
 | `usage.py` | the token ledger: tok/min, the usage window, today |
+| `totals.py` | the long record: a day-rollup in `~/.config/fleet/totals.json` that outlives the transcripts |
 | `graph.py` | a run's trail for the graph window |
 | `metrics.py` | host vitals: cpu, gpu, memory pressure, processes |
 | `terminal.py` | the in-page shells |

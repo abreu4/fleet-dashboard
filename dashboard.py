@@ -30,6 +30,7 @@ import graph
 import metrics
 import notes
 import music
+import totals
 import usage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -464,6 +465,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"available": False, "id": session_id,
                             "why": "%s: %s" % (type(exc).__name__, str(exc)[:200])})
             return
+        if path == "/api/totals":
+            # The totals panel's long record. Read from memory (the file as
+            # the last board left it until the first walk lands), never from
+            # the transcripts on the request thread.
+            try:
+                self._json(totals.TOTALS.summary())
+            except Exception as exc:
+                self._json({"available": False,
+                            "why": "%s: %s" % (type(exc).__name__, str(exc)[:200])})
+            return
         if path == "/api/term/stream":
             # No Origin is normal on a same-origin GET, so this one leans on
             # Host + the custom-header token instead.
@@ -850,6 +861,9 @@ def main():
     module = enable_terminal(args.host, args.port) if args.terminal else None
 
     SNAPSHOT.start()
+    # The long record walks every transcript on disk (seconds, not
+    # milliseconds), so it starts on its own thread a moment after the board.
+    totals.TOTALS.start()
     # Bind first: EADDRINUSE from the kernel is the authoritative answer on the
     # port, and a claim written for an instance that then fails to bind is
     # worse than none.

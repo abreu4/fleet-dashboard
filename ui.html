@@ -350,6 +350,56 @@
     font:11px var(--mono);
   }
   .settings input[type=checkbox]{accent-color:var(--accent); margin:0}
+  /* Totals: the same scrim and card, wider, for the long record -- what the
+     fleet has spent since the transcripts on disk begin, its records, a
+     calendar of output per day and where the tokens went. Every colour is a
+     theme token, so each world draws it in its own paint. */
+  .settings.totals .card{width:min(780px, 100%)}
+  .totals .note{color:var(--faint); text-transform:none; letter-spacing:.04em}
+  .totals .quiet{padding:26px 4px 18px; color:var(--dim); text-align:center; line-height:1.7}
+  .totals .quiet b{display:block; color:var(--ink); font:600 12px/1.4 var(--mono); letter-spacing:.14em; text-transform:uppercase; margin-bottom:4px}
+  .totals .spent{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+  .totals .spent .big{font:600 34px/1 var(--mono); letter-spacing:.02em; color:var(--ink); font-variant-numeric:tabular-nums}
+  .totals .spent .unit{color:var(--dim); text-transform:uppercase; letter-spacing:.14em}
+  .totals .share{display:flex; height:8px; margin:10px 0 6px; border-radius:4px; overflow:hidden; background:var(--cell); border:1px solid var(--edge)}
+  .totals .share i{display:block; height:100%; min-width:2px}
+  .totals .legend{display:flex; flex-wrap:wrap; gap:4px 16px; color:var(--dim)}
+  .totals .legend span{display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
+  .totals .legend b{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+  .totals .legend s{text-decoration:none; width:9px; height:9px; border-radius:2px; flex:none}
+  .totals .legend .off{color:var(--faint)}
+  .totals .recs{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px}
+  .totals .rec{padding:8px 10px 9px; border:1px solid var(--edge); border-radius:7px; background:var(--cell); min-width:0}
+  .totals .rec > span{display:block; color:var(--faint); text-transform:uppercase; letter-spacing:.12em; font-size:9.5px}
+  .totals .rec > b{display:block; margin:5px 0 3px; font:600 18px/1.1 var(--mono); color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .totals .rec > i{display:block; font-style:normal; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .totals .cal{--hm:11px; display:grid; grid-template-columns:auto 1fr; gap:4px 6px; overflow-x:auto; scrollbar-width:thin}
+  .totals .cal .mo{grid-column:2; display:grid; grid-auto-flow:column; grid-auto-columns:var(--hm); gap:2px; height:12px; color:var(--faint); font-size:9.5px}
+  .totals .cal .mo span{white-space:nowrap; overflow:visible}
+  .totals .cal .wd{display:grid; grid-template-rows:repeat(7, var(--hm)); gap:2px; color:var(--faint); font-size:9px; line-height:var(--hm)}
+  .totals .cal .grid{display:grid; grid-auto-flow:column; grid-template-rows:repeat(7, var(--hm)); grid-auto-columns:var(--hm); gap:2px}
+  .totals .cal .grid i, .totals .ramp i{border-radius:2px; background:var(--cell); outline:1px solid var(--edge); outline-offset:-1px}
+  .totals .cal .grid i.none{visibility:hidden}
+  .totals .cal .grid i.l1, .totals .ramp i.l1{background:color-mix(in srgb, var(--accent) 28%, var(--cell)); outline:0}
+  .totals .cal .grid i.l2, .totals .ramp i.l2{background:color-mix(in srgb, var(--accent) 52%, var(--cell)); outline:0}
+  .totals .cal .grid i.l3, .totals .ramp i.l3{background:color-mix(in srgb, var(--accent) 76%, var(--cell)); outline:0}
+  .totals .cal .grid i.l4, .totals .ramp i.l4{background:var(--accent); outline:0}
+  .totals .cal .grid i.today{outline:1.5px solid var(--ink); outline-offset:0}
+  .totals .cal-foot{display:flex; justify-content:space-between; gap:12px; margin-top:6px; color:var(--faint)}
+  .totals .cal-foot .ramp{display:inline-flex; align-items:center; gap:3px}
+  .totals .cal-foot .ramp span{margin:0 3px}
+  .totals .cal-foot .ramp i{width:10px; height:10px; border-radius:2px}
+  .totals .where{display:grid; grid-template-columns:1fr 1fr; gap:6px 22px}
+  .totals .where h4{margin:0 0 6px; font:10px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+  .totals .bar{display:grid; grid-template-columns:minmax(0, 11em) 1fr 4.5em; align-items:center; gap:8px; min-height:19px}
+  .totals .bar > span{color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:none}
+  .totals .bar > s{text-decoration:none; height:7px; border-radius:3px; background:var(--cell); overflow:hidden}
+  .totals .bar > s > i{display:block; height:100%; background:var(--accent)}
+  .totals .bar > b{text-align:right; color:var(--dim); font-weight:500; font-variant-numeric:tabular-nums}
+  @media (max-width: 640px){
+    .totals .recs{grid-template-columns:repeat(2, minmax(0, 1fr))}
+    .totals .where{grid-template-columns:1fr}
+  }
   /* motion off, by choice rather than by OS: everything that moves stops */
   :root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after{
     animation-duration:0s !important; animation-iteration-count:1 !important; transition-duration:0s !important;
@@ -8921,6 +8971,12 @@ themePicker.addEventListener('change', () => { themeBefore = null; countPick(the
   graphBtn.title = "one run's trail: its steps and the files it touched (\u2318G)";
   graphBtn.onclick = () => { if(G.open && G.mode === 'min') graphMode('win'); else graphOpen(!G.open); };
   menu.appendChild(graphBtn);
+  const totalsBtn = document.createElement('button');
+  totalsBtn.className = 'ghost'; totalsBtn.id = 'totalsbtn';
+  totalsBtn.innerHTML = 'Σ<span> totals</span>';
+  totalsBtn.title = 'everything the fleet has spent, and its records (⌘I)';
+  totalsBtn.onclick = () => openTotals();
+  menu.appendChild(totalsBtn);
   const settingsBtn = document.createElement('button');
   settingsBtn.className = 'ghost'; settingsBtn.id = 'settings';
   settingsBtn.innerHTML = '\u2699<span> settings\u2026</span>';
@@ -10483,6 +10539,160 @@ function fillSettings(){
   q('nerv-flash').checked = document.documentElement.dataset.nervFlash !== 'off';
 }
 function closeSettings(){ settingsEl?.classList.remove('on'); }
+
+/* ---- totals: the long record -------------------------------------------- */
+/* The retrospective view, beside the live one: what the fleet has written since
+   the oldest transcript on disk, and its records. The server keeps a day-rollup
+   (totals.py) that outlives the transcripts; this card only draws it. It asks
+   when opened, again every two seconds while the first walk is still reading,
+   then once a minute. A server older than the rollup answers 404, and the card
+   says it needs a restart instead of throwing. Output is the only token count
+   shown -- cache reads are in the file, never on the card. */
+let totalsEl = null, totalsTimer = 0;
+const TOTALS_AGENTS = [['claude', 'Claude Code', 'var(--accent)'], ['codex', 'Codex', 'var(--idle)']];
+function totalsDay(key, withYear){
+  const [y, m, d] = (key || '').split('-').map(Number);
+  if(!y) return '—';
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB',
+    withYear ? {day:'numeric', month:'short', year:'numeric'} : {weekday:'short', day:'numeric', month:'short'});
+}
+function openTotals(){
+  closeSettings();
+  if(!totalsEl){
+    totalsEl = document.createElement('div');
+    totalsEl.className = 'settings totals'; totalsEl.setAttribute('role', 'dialog'); totalsEl.setAttribute('aria-label', 'totals');
+    totalsEl.innerHTML = '<div class="card"><header><b>totals</b><span class="theme" data-k="since"></span>'
+      + '<button class="ghost x" data-k="close" title="close (esc)">×</button></header><div data-k="body"></div></div>';
+    document.body.appendChild(totalsEl);
+    totalsEl.querySelector('[data-k="close"]').onclick = closeTotals;
+    totalsEl.addEventListener('click', e => { if(e.target === totalsEl) closeTotals(); });
+    totalsEl.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.preventDefault(); closeTotals(); } e.stopPropagation(); });
+  }
+  totalsEl.classList.add('on');
+  totalsEl.querySelector('[data-k="close"]').focus();
+  pollTotals();
+}
+function closeTotals(){
+  totalsEl?.classList.remove('on');
+  clearTimeout(totalsTimer); totalsTimer = 0;
+}
+async function pollTotals(){
+  clearTimeout(totalsTimer); totalsTimer = 0;
+  let t = null, why = '';
+  try{
+    const r = await fetch('/api/totals', {cache:'no-store'});
+    if(r.ok) t = await r.json().catch(() => null);
+    if(!t) why = 'restart';
+  }catch(e){ why = 'offline'; }
+  if(!totalsEl || !totalsEl.classList.contains('on')) return;
+  try{ drawTotals(t, why); }
+  catch(e){ drawTotals(null, 'broken'); }
+  totalsTimer = setTimeout(pollTotals, t && t.available && !t.ready ? 2000 : 60000);
+}
+function drawTotals(t, why){
+  const body = totalsEl.querySelector('[data-k="body"]'), since = totalsEl.querySelector('[data-k="since"]');
+  const quiet = (head, text) => { since.textContent = ''; body.innerHTML = '<div class="quiet"><b>'+esc(head)+'</b>'+text+'</div>'; };
+  if(why === 'restart') return quiet('needs a board restart',
+    'this server started before the totals existed — the page is newer than the process serving it');
+  if(why === 'offline') return quiet('the board is not answering', 'trying again in a minute');
+  if(why === 'broken' || !t) return quiet('could not draw the totals', 'the answer came back in a shape this page does not know');
+  if(!t.available) return quiet('the record could not be read', esc(t.why || ''));
+  if(!Array.isArray(t.days)) return quiet('could not draw the totals', 'the answer came back in a shape this page does not know');
+  const days = t.days, tot = t.totals || {}, rec = t.records || {};
+  if(!days.length){
+    return t.ready
+      ? quiet('nothing on record yet', 'Claude Code and Codex are counted from their transcripts as they write — the first session will land here')
+      : quiet('reading the transcripts…', 'the first walk over every transcript on disk takes a few seconds');
+  }
+  const first = days[0][0];
+  since.textContent = '— since ' + totalsDay(first, true)
+    + (t.ready ? '' : ' · still reading');
+  const out = tot.out || 0, by = tot.byProvider || {}, pct = n => out ? Math.round(100 * n / out) : 0;
+  let html = '<section><h3>spent <span class="hint">output tokens — what the models wrote, thinking included</span></h3>'
+    + '<div class="spent"><span class="big">'+fmtTok(out)+'</span><span class="unit">output tokens</span>'
+    + '<span class="note">'+num(out)+' · '+num(tot.requests)+' requests</span></div>'
+    + '<div class="share">' + TOTALS_AGENTS.map(([k, , c]) => by[k] ? '<i style="width:'+(100 * by[k] / (out || 1))+'%;background:'+c+'"></i>' : '').join('') + '</div>'
+    + '<div class="legend">' + TOTALS_AGENTS.map(([k, label, c]) =>
+        '<span><s style="background:'+c+'"></s>'+label+' <b>'+fmtTok(by[k] || 0)+'</b> '+pct(by[k] || 0)+'%</span>').join('')
+    + (t.notCounted || []).map(k => '<span class="off" title="Antigravity writes no token usage anywhere this board can read">'
+        + (k === 'antigravity' ? 'Antigravity' : esc(k)) + ' — not countable</span>').join('')
+    + '</div></section>';
+
+  const tile = (label, value, sub) => '<div class="rec"><span>'+label+'</span><b>'+value+'</b><i>'+sub+'</i></div>';
+  const big = rec.biggestDay, most = rec.mostStarted, peak = rec.peakMinute, run = rec.longestRun, worked = rec.worked || {};
+  const sb = tot.startedBy || {};
+  const peakWhen = peak && peak.at ? new Date(peak.at).toLocaleString('en-GB',
+    {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hour12:false}) : '—';
+  html += '<section><h3>records</h3><div class="recs">'
+    + tile('biggest day', big ? fmtTok(big.out) : '—', big ? totalsDay(big.day) : 'no output yet')
+    + tile('most sessions started', most ? most.started : '—', most ? totalsDay(most.day) : 'none yet')
+    + tile('busiest minute', peak ? fmtTok(peak.out) : '—', esc(peakWhen))
+    + tile('longest run', run ? run.days + (run.days === 1 ? ' day' : ' days') : '—',
+           run ? totalsDay(run.from) + ' → ' + (run.to === t.today ? 'today' : totalsDay(run.to)) : 'consecutive days with output')
+    + tile('days worked', (worked.days || 0) + ' <small class="note">of ' + (worked.elapsed || 0) + '</small>',
+           worked.elapsed ? Math.round(100 * worked.days / worked.elapsed) + '% of days since ' + totalsDay((t.since || {}).tokens || days[0][0], false).replace(/^\S+ /, '') : 'days with any output')
+    + tile('sessions started', num(tot.started || 0),
+           TOTALS_AGENTS.filter(([k]) => sb[k]).map(([k, label]) => label + ' ' + sb[k]).join(' · ') || 'on the day each was opened')
+    + '</div></section>';
+
+  // The calendar: a column per week, Monday on top, from the first day on
+  // record (the last 53 weeks at most) to today. Four shades by quartile of
+  // the days that wrote anything, so one enormous day does not flatten the rest.
+  const map = new Map(days.map(d => [d[0], d]));
+  const key = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  const [ty, tm, td] = t.today.split('-').map(Number), today = new Date(ty, tm - 1, td);
+  const [fy, fm, fd] = first.split('-').map(Number);
+  let start = new Date(fy, fm - 1, fd);
+  const floor = new Date(ty, tm - 1, td - 7 * 52);
+  if(start < floor) start = floor;
+  start = new Date(start.getFullYear(), start.getMonth(), start.getDate() - ((start.getDay() + 6) % 7));
+  const outs = days.map(d => d[1]).filter(n => n > 0).sort((a, b) => a - b);
+  const q = f => outs.length ? outs[Math.min(outs.length - 1, Math.floor(f * outs.length))] : 0;
+  const cuts = [q(.25), q(.5), q(.75)];
+  const level = n => !n ? '' : n <= cuts[0] ? 'l1' : n <= cuts[1] ? 'l2' : n <= cuts[2] ? 'l3' : 'l4';
+  let cells = '', months = '', weeks = 0, lastMonth = -1, lastLabel = -9;
+  for(let dt = new Date(start); dt <= today || dt.getDay() !== 1; dt = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + 1)){
+    if(dt.getDay() === 1){
+      weeks++;
+      const m = dt.getMonth();
+      // a month's name over its first week, unless the last one is still too close to read
+      const label = m !== lastMonth && weeks - lastLabel >= 3;
+      months += '<span>' + (label ? dt.toLocaleDateString('en-GB', {month:'short'}) : '') + '</span>';
+      if(label) lastLabel = weeks;
+      lastMonth = m;
+    }
+    const k = key(dt), d = map.get(k);
+    if(dt > today){ cells += '<i class="none"></i>'; continue; }
+    const tip = totalsDay(k) + ' — ' + (d && d[1] ? fmtTok(d[1]) + ' out' : 'no output') + (d && d[2] ? ', ' + d[2] + ' started' : '');
+    cells += '<i class="' + level(d ? d[1] : 0) + (k === t.today ? ' today' : '') + '" title="' + esc(tip) + '"></i>';
+  }
+  html += '<section><h3>calendar <span class="hint">output per day, darker is more — the four shades split the days that wrote into quarters</span></h3>'
+    + '<div class="cal" style="--hm:' + Math.max(11, Math.min(16, Math.floor(700 / Math.max(1, weeks)) - 2)) + 'px"><span></span><div class="mo">' + months + '</div>'
+    + '<div class="wd"><span>mon</span><span></span><span>wed</span><span></span><span>fri</span><span></span><span></span></div>'
+    + '<div class="grid">' + cells + '</div></div>'
+    + '<div class="cal-foot"><span>' + weeks + (weeks === 1 ? ' week' : ' weeks') + ' · ' + (rec.startDays || 0)
+    + (rec.startDays === 1 ? ' day' : ' days') + ' with a session started</span>'
+    + '<span class="ramp"><span>less</span><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>more</span></span></div></section>';
+
+  const bars = (rows) => {
+    const top = rows.length ? rows[0].out : 1;
+    return rows.length ? rows.map(r => '<div class="bar"><span title="' + esc(r.name) + '">' + esc(r.name) + '</span>'
+      + '<s><i style="width:' + Math.max(1, 100 * r.out / top) + '%"></i></s><b>' + fmtTok(r.out) + '</b></div>').join('')
+      : '<div class="note">nothing yet</div>';
+  };
+  html += '<section><h3>where it went <span class="hint">output by project (worktrees on their repo) and by model</span></h3>'
+    + '<div class="where"><div><h4>projects</h4>' + bars(t.projects || []) + '</div>'
+    + '<div><h4>models</h4>' + bars(t.models || []) + '</div></div></section>';
+  body.innerHTML = html;
+}
+// ⌘I opens and closes the totals: "info", the way Finder's Get Info is. Taken
+// by nothing else on the page or in the native shell's menus.
+document.addEventListener('keydown', e => {
+  if(e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'i' || e.key === 'I')){
+    e.preventDefault(); e.stopPropagation();
+    totalsEl?.classList.contains('on') ? closeTotals() : openTotals();
+  }
+}, true);
 document.addEventListener('keydown', e => {
   // ⌘, opens settings the way every Mac app does
   if(e.metaKey && !e.ctrlKey && !e.altKey && e.key === ','){ e.preventDefault(); openSettings(); }
