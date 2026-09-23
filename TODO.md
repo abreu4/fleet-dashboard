@@ -10,7 +10,7 @@ direction. Nothing here is started. Python-side items need a board restart
 (which kills embedded terminals); page-only items deploy by patching the
 runtime copy.
 
-1. [ ] **The 5h window dial is misleading.** It reads e.g. `128k · 5h window`
+1. [x] **The 5h window dial is misleading.** It reads e.g. `128k · 5h window`
    with a yellow arc near full. The number is Claude Code output tokens since
    the open usage window began (this Mac only, Claude only — `usage.window()`);
    the arc is *time elapsed* in the five hours, not usage; and the colour is
@@ -20,6 +20,10 @@ runtime copy.
    fold the window into the readout's `resets` cell as a countdown (`resets
    23:58 · 58m`), tokens-in-window in its tooltip; give the freed dial to the
    consolidation in 3. Page-only (`drawHud` specs, `ui.html`).
+
+   Done (2026-09-24): the dial is gone; the readout's cell reads `resets in
+   3h49m`, clock time, opening and tokens-in-window in its title ("23:58 ·
+   58m" does not fit a cell at 1440). Its tile went to agents' memory.
 
 2. [ ] **Terminal rides over a fixed bottom bar.** With the sheet maximised
    (88vh) it covers Skyrim's bars, NERV's status bar, the Minecraft HUD and
@@ -37,7 +41,7 @@ runtime copy.
    sheet's last row is visible; with no inset the bar is 0 tall. Page-only,
    but the biggest item on the board.
 
-3. [ ] **The two sides of the graph read as one instrument.** Left, six dials
+3. [x] **The two sides of the graph read as one instrument.** Left, six dials
    whose arcs measure six different things against six denominators (share
    of the fleet, vs today's peak minute, time elapsed, % of a ceiling, OS
    pressure, done÷(done+active)); right, six cells that repeat some of the
@@ -53,13 +57,22 @@ runtime copy.
    what "waiting on you" is in practice). Subsumes where 4 and 5 land.
    Page-only.
 
-4. [ ] **`max context` — say which session.** It is the fullest context on
+   Done (2026-09-24): four dials (max context, next context -- battery off
+   the cable or a >90% disk in its place -- mem pressure, agents mem) and six
+   cells (tok/min, out today, turns today, resets in, load 1m, agents);
+   `waiting` and the swap cell dropped. Note: roster jobs *do* report
+   `blocked` (maquina-aws did, 62m), so `waiting` was not always `—`.
+
+4. [x] **`max context` — say which session.** It is the fullest context on
    the board (`d.context`: name, used, max); the name is only in the hover
    tooltip and the tile is a click-to-open. Direction: print the session's
    name (aliased) under the percentage, and mark that tile on the board.
    Page-only; small.
 
-5. [ ] **`done today` is always 0.** Not the timezone: the live board's
+   Done (2026-09-24): the name prints between figure and word; the tile
+   (`data-ctxmax`) leads its foot with a boxed ctx reading.
+
+5. [x] **`done today` is always 0.** Not the timezone: the live board's
    midnight is 00:00 WEST (`local_midnight_ms` uses `time.localtime`). The
    count is `~/.claude/jobs/*/state.json` in state `done` since midnight
    (the last one was 2026-09-20) plus roster sessions in state `done`, and
@@ -69,6 +82,12 @@ runtime copy.
    (running→idle transitions, which the collectors already see) or sessions
    that wrote today and are now idle — or retire the dial into a cell in 3.
    Python side (`usage.finished`, `dashboard.py`), so a restart.
+
+   Done (2026-09-24): `usage.today.turns` counts finished turns off the
+   transcripts (Claude stop reason not tool_use/pause_turn, once per request,
+   no sidechain or `<synthetic>`; Codex `task_complete`), so it survives a
+   restart; the cell reads `turns / 8 today`, jobs named in its title. Needs
+   a restart; an old server shows `done / N today` of jobs.
 
 6. [ ] **A totals panel: everything the fleet has spent, and its records.**
    Nothing on the board can answer this. `usage.Ledger` keeps one-minute
