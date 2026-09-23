@@ -182,6 +182,17 @@
   .trace .cap .by span{margin-left:8px}
   .gauge.link{cursor:pointer}
   .gauge.link:hover .lab{color:var(--dim)}
+  /* A dial that reads one session names it between the figure and the word:
+     "34% / length-band-headline / max context". In the session name's own
+     face, not the label's, since it is a name and not chrome. */
+  .gauge .gnm{font:clamp(9.5px,1.2vh,11.5px)/1.15 var(--face-data); color:var(--dim);
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+  .gauge .gnm:empty{display:none}
+  /* ...and the tile it names is marked on the board: its context reading
+     leads the foot line, boxed, so the eye finds it from the dial. */
+  .bubble[data-ctxmax] .foot .rest > .ctx{box-shadow:inset 0 0 0 1px currentColor; border-radius:3px;
+                                         padding:0 .3em}
+  .bubble[data-ctxmax] .foot .rest > .ctx::before{content:none}
   /* A tile's context fill: quiet until it matters, then the warning colour,
      then the blocked one -- the same two steps as the gauge up top. */
   .bubble .foot .ctx[data-hot="1"]{color:var(--warn)}
@@ -7621,7 +7632,7 @@ function gauge(label, pct, value, colour){
     + '<path class="track" d="M5 27a21 21 0 0 1 42 0" pathLength="100"/>'
     + '<path class="arc" d="M5 27a21 21 0 0 1 42 0" pathLength="100" stroke="'+colour+'"'
     + ' stroke-dasharray="'+p.toFixed(1)+' 100" style="filter:drop-shadow(0 0 calc(var(--glow)*5px) '+colour+')"/>'
-    + '</svg><div class="gtxt"><span class="val">'+value+'</span>'
+    + '</svg><div class="gtxt"><span class="val">'+value+'</span><span class="gnm"></span>'
     + '<span class="lab">'+label+'</span></div></div>';
 }
 
@@ -7631,7 +7642,7 @@ function gauge(label, pct, value, colour){
    (the trace reads computed colours) -- for readings that mostly had not
    moved. Same markup, same numbers, and the arcs still snap to a reading
    (see .arc in the stylesheet for why they must). */
-const HUD = {arcs:null, vals:null, tiles:null, keys:'', dds:null, cells:null, titles:null, tally:'', vars:{}};
+const HUD = {arcs:null, vals:null, names:null, tiles:null, keys:'', dds:null, cells:null, titles:null, tally:'', vars:{}};
 /* Output tokens, the way they read on a tile: 42k, 1.2M. Never "0k". */
 const fmtTok = n => n==null ? '—' : n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1)+'M'
   : n >= 1e4 ? Math.round(n/1e3)+'k' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(Math.round(n));
@@ -7655,9 +7666,25 @@ function until(ms){
    still published as CSS variables for the worlds that draw them; they left
    the HUD because none of them changes what you do next. Their trace is
    back as an optional panel (see PANELS) for a screen with the room. */
+/* The session nearest a compaction, read off the tiles themselves (the same
+   sessions and the same numbers the server's `context` is picked from), so
+   the dial and the tile it marks cannot disagree. The server's pick stands
+   in when no tile carries a context. */
+let CTX_MAX = '';
+function fullestContext(d){
+  let best = null;
+  (d.lanes || []).forEach(l => l.projects.forEach(p => p.sessions.forEach(s => {
+    const u = s.usage;
+    if(u && u.ctxMax && (!best || u.ctxPct > best.pct))
+      best = {id: s.id, name: s.name, pct: u.ctxPct, used: u.ctx, max: u.ctxMax};
+  })));
+  return best || d.context || null;
+}
 function drawHud(d){
   const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = h.power||{};
-  const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, ctx = d.context, done = d.done||{};
+  const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, done = d.done||{};
+  const ctx = fullestContext(d);
+  CTX_MAX = ctx ? ctx.id : '';
   const active = (d.tally.running||0)+(d.tally.blocked||0);
   const fleetPct = d.total ? 100*active/d.total : 0;
   const ramPct = mem.total ? 100*(h.agentRssMb*1048576)/mem.total : 0;
@@ -7688,9 +7715,10 @@ function drawHud(d){
       + '\nArc: their share of the machine.'],
     ['context', 'max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
       (ctxPct > 85 ? 'var(--blocked)' : ctxPct > 70 ? 'var(--warn)' : 'var(--idle)'),
-      ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.\nClick to open it.'
+      ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.'
+            + '\nIts tile is the one with the boxed ctx reading. Click to open it.'
           : 'No session has reported its context size yet.',
-      ctx ? ctx.id : ''],
+      ctx ? ctx.id : '', ctx ? ctx.name : ''],
     ['pressure', 'mem pressure', h.pressurePct, (h.pressurePct==null ? '—' : h.pressurePct+'%'), tone(h.pressurePct??0, 70, 85),
       'macOS memory pressure: the share of memory that cannot be reclaimed. Above 70% the machine starts swapping; above 85% agents stall.'
       + '\nMemory '+Math.round(mem.pct||0)+'% used, agents hold '+agentsMem+' of it.'],
@@ -7734,10 +7762,12 @@ function drawHud(d){
     HUD.tiles = [...g.children]; HUD.titles = shown.map(() => ''); HUD.keys = keys;
     HUD.tiles.forEach((el, i) => { el.dataset.k = shown[i][0]; });
     HUD.arcs = [...g.querySelectorAll('.arc')]; HUD.vals = [...g.querySelectorAll('.val')];
+    HUD.names = [...g.querySelectorAll('.gnm')];
     moved = true;
   }
-  shown.forEach(([, , pct, value, colour, title, id], i) => {
-    const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i];
+  shown.forEach(([, , pct, value, colour, title, id, who], i) => {
+    const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i], nm = HUD.names[i];
+    if(nm.textContent !== (who || '')){ nm.textContent = who || ''; moved = true; }
     const dash = Math.max(0, Math.min(100, pct||0)).toFixed(1)+' 100';
     if(arc.getAttribute('stroke-dasharray') !== dash) arc.setAttribute('stroke-dasharray', dash);
     if(arc.getAttribute('stroke') !== colour){
@@ -8295,9 +8325,15 @@ function tile(s){
   const hot = ctxPct == null ? '' : ctxPct >= 85 ? '2' : ctxPct >= 70 ? '1' : '0';
   if(tok) TOKS.set(s.id, tok);
   if(ctxPct != null) CTXS.set(s.id, {text: 'ctx '+ctxPct+'%', hot});
-  const rest = [when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
+  // The fullest context on the board -- the one the HUD's dial names -- is
+  // marked where it lives: its reading leads the foot line, where the parts
+  // that drop off a narrow tile can never take it, and is boxed.
+  const top = ctxPct != null && s.id === CTX_MAX;
+  const ctxPart = ctxPct != null ? '<span class="ctx" data-hot="'+hot+'" title="context in use: '+fmtTok(u.ctx)+' of '+fmtTok(u.ctxMax)
+                  + (top ? ' — the fullest on the board' : '')+'">ctx '+ctxPct+'%</span>' : '';
+  const rest = [top ? ctxPart : '', when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
                 tok ? '<span class="tok" title="output tokens this session">'+tok+'</span>' : '',
-                ctxPct != null ? '<span class="ctx" data-hot="'+hot+'" title="context in use: '+fmtTok(u.ctx)+' of '+fmtTok(u.ctxMax)+'">ctx '+ctxPct+'%</span>' : '',
+                top ? '' : ctxPart,
                 where ? '<span>'+esc(shortPlace(where))+'</span>' : ''].filter(Boolean).join('');
   // A block that has sat unanswered escalates: a little louder after eight
   // minutes, an outline after thirty. Amplitude and area, never rate.
@@ -8306,7 +8342,7 @@ function tile(s){
   const vt = (s.state && prevState.has(s.id) && prevState.get(s.id) !== s.state)
            ? ';view-transition-name:tile-' + s.id.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
   return '<button class="bubble" data-id="'+esc(s.id)+'" data-state="'+esc(s.state)+'"'
-    + (stale ? ' data-stale="'+stale+'"' : '')
+    + (stale ? ' data-stale="'+stale+'"' : '') + (top ? ' data-ctxmax="1"' : '')
     + ' style="--rib:var(--'+s.state+')'+vt+'" title="'+esc(s.name)+' — '+esc(s.state)+'&#10;'+esc(where||'')+'&#10;'+esc(gist)+'">'
     + '<i class="halo" aria-hidden="true"></i>'
     + ((s.pid || s.jobId || s.state === 'running')
