@@ -106,20 +106,33 @@ runtime copy.
    must include them, and widening `_discover` fixes today's tok/min, out
    today and the 5h window at the same time.
 
-   **What it would print today** (measured 2026-09-22, so the discussion has
-   real numbers): 37 days on record; 29.4M output tokens, of which Codex 1.4M;
-   6.9 *billion* cache reads and 137M cache writes against 0.2M of fresh
-   input; 32,056 requests; biggest day 2026-09-10 at 2.8M output over 22
-   sessions; most sessions 2026-09-18 at 27.
+   **Both definitions are settled** (2026-09-23).
 
-   **Two definitions to settle first.** (a) "Sessions spun in a day" -- ones
-   that *wrote* that day (what `today.sessions` counts now: distinct
-   transcript files with a bucket, so a session running past midnight counts
-   twice) or ones that *started* that day (the first row's timestamp). (b)
-   "Token expenditure" -- output has always been this board's word for tokens,
-   and cache reads are 230x larger; output stays the headline and the rest
-   goes on a second line, or the biggest number on the panel is the one that
-   means the least.
+   *A session counts on the day it was started*, not the days it wrote --
+   the first timestamped row of its transcript. This is not what
+   `today.sessions` counts now (distinct files with a bucket, so a session
+   running past midnight counts on both days), so the rollup keeps its own
+   per-day start count beside the write count the ledger already has. Cheap:
+   the backfill reads each file's first row, and the live fold only needs it
+   once per new path. Two consequences to carry: a *resumed* transcript keeps
+   its original first row, so it counts on the day it was first opened even
+   if all its work happened weeks later -- which is the honest reading of
+   "spun up", and why starts span 49 days where tokens span 37; and subagent
+   transcripts are not sessions, so they are excluded from this count while
+   their tokens still count.
+
+   *Cache reads stay out of the panel.* Not a second line, not a tooltip --
+   6.9 billion against 29.4M of output, it would be the biggest number shown
+   and the least meaningful. Output is the panel's word for tokens. Cache
+   writes and fresh input are worth keeping in the rollup rows (they cost
+   nothing to store and say what the context was doing) but they are not
+   drawn unless a later reading needs them.
+
+   **What it would print today** (measured 2026-09-22/23, so the discussion
+   has real numbers): 37 days of tokens on record, 49 of session starts;
+   29.4M output tokens, of which Codex 1.4M; 32,056 requests; 287 sessions
+   started; biggest day by tokens 2026-09-10 at 2.8M; most sessions started
+   2026-09-18 at 23.
 
    **Proposed readings, to discuss** -- each with what it would be read from,
    so it can be costed:
