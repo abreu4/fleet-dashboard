@@ -267,6 +267,23 @@ runtime copy.
    session finishes, "new objective" when one asks) or the XP bar for the
    day's done. Page-only.
 
+12. [ ] **Folder cards: a (+) that opens a new session of that agent in
+   that folder.** Today a new session goes through the sheet's + picker
+   (`newTermPicker`): choose a folder, choose an agent, open. The project
+   card's header (`boardMarkup`: caret, name, count) has no launcher, though
+   it already knows both answers — the lane is the agent, the card is the
+   folder. The plumbing exists: `openFresh(cwd, agent)` → `/api/term/open`
+   with `{cwd, agent}` → `TERMINAL.open_at` → `actions.fresh_script`, and the
+   lane keys (`claude`, `antigravity`, `codex`) are already keys of
+   `actions.FRESH`, so the page still never names a command. One catch: a
+   card groups by `session.project` (a display name), not by a path, so its
+   sessions can sit in different cwds (subfolders, worktrees). Direction: a
+   (+) in the header, after the count, that calls `openFresh(cwd, lane.key)`
+   with the cwd its sessions share — or their most recent session's cwd when
+   they differ (say which in the tooltip); stop the click reaching the
+   header's minimise toggle; the terminal-off toast covers boards started
+   without `--terminal`. Page-only; small.
+
 ## Theme Quality Board
 
 ### Done
