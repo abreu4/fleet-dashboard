@@ -182,6 +182,17 @@
   .trace .cap .by span{margin-left:8px}
   .gauge.link{cursor:pointer}
   .gauge.link:hover .lab{color:var(--dim)}
+  /* A dial that reads one session names it between the figure and the word:
+     "34% / length-band-headline / max context". In the session name's own
+     face, not the label's, since it is a name and not chrome. */
+  .gauge .gnm{font:clamp(9.5px,1.2vh,11.5px)/1.15 var(--face-data); color:var(--dim);
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+  .gauge .gnm:empty{display:none}
+  /* ...and the tile it names is marked on the board: its context reading
+     leads the foot line, boxed, so the eye finds it from the dial. */
+  .bubble[data-ctxmax] .foot .rest > .ctx{box-shadow:inset 0 0 0 1px currentColor; border-radius:3px;
+                                         padding:0 .3em}
+  .bubble[data-ctxmax] .foot .rest > .ctx::before{content:none}
   /* A tile's context fill: quiet until it matters, then the warning colour,
      then the blocked one -- the same two steps as the gauge up top. */
   .bubble .foot .ctx[data-hot="1"]{color:var(--warn)}
@@ -205,7 +216,7 @@
   .readout dd{margin:0; text-align:center; color:var(--dim); white-space:nowrap; max-width:100%;
               overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
   .readout dd b{color:var(--ink); font-weight:600; font-size:1.1em}
-  /* The one cell that points at a session -- the longest wait -- opens it. */
+  /* A cell that points at a session opens it (none has since the waiting cell left). */
   .readout > div.link{cursor:pointer}
   .readout > div.link:hover dt{color:var(--dim)}
 
@@ -7698,7 +7709,7 @@ function gauge(label, pct, value, colour){
     + '<path class="track" d="M5 27a21 21 0 0 1 42 0" pathLength="100"/>'
     + '<path class="arc" d="M5 27a21 21 0 0 1 42 0" pathLength="100" stroke="'+colour+'"'
     + ' stroke-dasharray="'+p.toFixed(1)+' 100" style="filter:drop-shadow(0 0 calc(var(--glow)*5px) '+colour+')"/>'
-    + '</svg><div class="gtxt"><span class="val">'+value+'</span>'
+    + '</svg><div class="gtxt"><span class="val">'+value+'</span><span class="gnm"></span>'
     + '<span class="lab">'+label+'</span></div></div>';
 }
 
@@ -7708,7 +7719,7 @@ function gauge(label, pct, value, colour){
    (the trace reads computed colours) -- for readings that mostly had not
    moved. Same markup, same numbers, and the arcs still snap to a reading
    (see .arc in the stylesheet for why they must). */
-const HUD = {arcs:null, vals:null, tiles:null, keys:'', dds:null, cells:null, titles:null, tally:'', vars:{}};
+const HUD = {arcs:null, vals:null, names:null, tiles:null, keys:'', dds:null, cells:null, titles:null, tally:'', vars:{}};
 /* Output tokens, the way they read on a tile: 42k, 1.2M. Never "0k". */
 const fmtTok = n => n==null ? '—' : n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1)+'M'
   : n >= 1e4 ? Math.round(n/1e3)+'k' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(Math.round(n));
@@ -7721,67 +7732,109 @@ function until(ms){
   return h ? h+'h'+(m ? String(m).padStart(2,'0')+'m' : '') : m+'m';
 }
 
-/* The six readings, and why these six. The board is glanced at from a metre
-   away while something else has your attention, so it answers five questions
-   in order and nothing else: who needs me (the tally, top left), how hard is
-   the fleet working (tok/min), what is it costing me (the 5-hour window),
-   what is about to go wrong (context fill, memory pressure), and what got
-   done (today's score). Every reading names its window in its label or its
-   title -- "5m", "5h", "today" -- because a number without one is a guess.
+/* The HUD's two sides, and the one rule each keeps. The board is glanced at
+   from a metre away while something else has your attention, so it answers
+   a few questions in order and nothing else: who needs me (the tally, top
+   left), what is about to go wrong (the dials), and how hard the fleet is
+   working and what it got done (the readout).
+
+   A dial is a fill against a hard ceiling, and the ceiling is where
+   something breaks: a context that fills compacts, memory that cannot be
+   reclaimed stalls the agents, a battery that empties stops the machine.
+   Its arc is that fill and nothing else -- never a share of the fleet, a
+   ratio against today's peak or the time elapsed in a window, which is what
+   the old six measured against six different denominators. Only four
+   readings pass that test, so there are four dials: the two fullest
+   contexts (the second gives way to the battery off the cable, or to a
+   disk past 90%), memory pressure, and the agents' own memory.
+
+   A cell is a count with its window named -- in its word ("today", "1m",
+   "in") or, where a readout cell has no room for it, its title (tok/min
+   over the last five minutes) -- because a number without one is a guess:
+   output per minute, output today, turns finished today, the countdown to
+   the Claude window's reset, the load, the agents' processes. Where the
+   word and its window do not both fit a cell ("done today" does not, at
+   1440 wide), the word says what is counted and the figure carries the
+   window: "turns / 8 today". No reading is up twice (the window was a dial
+   and a cell; tok/min a dial beside "out today"), and nothing is up that
+   cannot move: `waiting` left, since the roster's jobs are the only thing
+   that can ever report blocked and the tally already counts them.
+
    The host's other vitals (cpu, disk, swap, uptime) are still measured and
-   still published as CSS variables for the worlds that draw them; they left
-   the HUD because none of them changes what you do next. Their trace is
-   back as an optional panel (see PANELS) for a screen with the room. */
+   still published as CSS variables for the worlds that draw them; their
+   trace is an optional panel (see PANELS) for a screen with the room. */
+/* The sessions nearest a compaction, fullest first, read off the tiles
+   themselves (the same sessions and the same numbers the server's `context`
+   is picked from), so the dial and the tile it marks cannot disagree. The
+   server's pick stands in when no tile carries a context. */
+let CTX_MAX = '';
+function contexts(d){
+  const all = [];
+  (d.lanes || []).forEach(l => l.projects.forEach(p => p.sessions.forEach(s => {
+    const u = s.usage;
+    if(u && u.ctxMax) all.push({id: s.id, name: s.name, pct: u.ctxPct, used: u.ctx, max: u.ctxMax});
+  })));
+  all.sort((a, b) => b.pct - a.pct);
+  return all.length ? all : d.context ? [d.context] : [];
+}
 function drawHud(d){
   const h = d.host||{}, cpu = h.cpu||{}, mem = h.memory||{}, sw = h.swap||{}, pw = powerOf(h);
-  const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, ctx = d.context, done = d.done||{};
+  const u = d.usage||{}, rate = u.rate||{}, today = u.today||{}, win = u.window, done = d.done||{};
+  const [ctx, next] = contexts(d);
+  CTX_MAX = ctx ? ctx.id : '';
   const active = (d.tally.running||0)+(d.tally.blocked||0);
   const fleetPct = d.total ? 100*active/d.total : 0;
   const ramPct = mem.total ? 100*(h.agentRssMb*1048576)/mem.total : 0;
   const ratePct = rate.peakPerMin ? 100*(rate.perMin||0)/rate.peakPerMin : 0;
   const ctxPct = ctx ? ctx.pct : 0;
-  const donePct = (done.today||0) ? 100*done.today/(done.today+active) : 0;
   const by = today.byProvider||{};
   const split = Object.keys(by).length > 1
     ? ' — ' + Object.entries(by).map(([k,v]) => k+' '+fmtTok(v)).join(', ') : '';
   const gb = b => (b/1073741824).toFixed(b >= 10*1073741824 ? 0 : 1);
   const agentsMem = h.agentRssMb >= 1024 ? (h.agentRssMb/1024).toFixed(1)+'G' : Math.round(h.agentRssMb||0)+'M';
+  const swapG = (sw.usedMb||0)/1024;
   const tone = (v, warn, bad) => v > bad ? 'var(--blocked)' : v > warn ? 'var(--warn)' : 'var(--good)';
+  const ctxTone = p => p > 85 ? 'var(--blocked)' : p > 70 ? 'var(--warn)' : 'var(--idle)';
+  const theme = document.documentElement.dataset.theme;
+  const drawn = new Set(theme === CONTROL_THEME || typeof fleetPlots !== 'function' ? [] : fleetPlots(theme));
+  // The wall runs plugged in, so a battery dial would sit at 100% all day.
+  // It takes the second context's tile only on the day the cable is out --
+  // and a nearly full disk takes it the same way; a world whose instrument
+  // reads the battery (NERV's power source, the Game Boy's HP bar) keeps
+  // the context, since the charge is already up.
+  const onBat = pw.onBattery && pw.pct != null && !drawn.has('batt');
+  const diskFull = (h.disk?.pct??0) > 90;
   // Each reading keyed by the name a world's `plots` uses to say it already
   // draws that one (see drawn, below).
   const specs = [
-    ['live', 'live', fleetPct, active+'/'+d.total, 'var(--good)',
-      active+' of '+d.total+' sessions are working right now (running or blocked on you).'],
-    ['rate', 'tok/min · 5m', ratePct, fmtTok(rate.perMin), 'var(--accent)',
-      'Output tokens the whole fleet is writing per minute, averaged over the last '+(rate.minutes||5)+' whole minutes.'
-      + (rate.peakPerMin ? '\nArc: against today’s busiest minute, '+fmtTok(rate.peakPerMin)+'/min at '+hhmm(rate.peakAt)+'.' : '')],
-    ['window', '5h window', win ? win.elapsedPct : 0, win ? fmtTok(win.out) : '—', 'var(--warn)',
-      win ? 'Est. output tokens in the open 5-hour Claude usage window: opened '+hhmm(win.start)+', resets '+hhmm(win.end)+' ('+until(win.end)+' left).'
-          + '\nArc: how much of the window has elapsed.'
-          + '\nCounts Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here.'
-          : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
-    ['context', 'max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—',
-      (ctxPct > 85 ? 'var(--blocked)' : ctxPct > 70 ? 'var(--warn)' : 'var(--idle)'),
-      ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.\nClick to open it.'
+    ['context', 'max context', ctxPct, ctx ? Math.round(ctx.pct)+'%' : '—', ctxTone(ctxPct),
+      ctx ? 'The fullest context on the board: '+ctx.name+' at '+fmtTok(ctx.used)+' of '+fmtTok(ctx.max)+'. Past ~80% it will compact soon.'
+            + '\nIts tile is the one with the boxed ctx reading. Click to open it.'
           : 'No session has reported its context size yet.',
-      ctx ? ctx.id : ''],
+      ctx ? ctx.id : '', ctx ? ctx.name : ''],
+    onBat
+      ? ['batt', 'battery', pw.pct, pw.pct+'%', pw.pct <= 20 ? 'var(--blocked)' : pw.pct <= 40 ? 'var(--warn)' : 'var(--good)',
+          'On battery at '+pw.pct+'%'+(pw.remaining ? ', about '+hmLeft(pw.remaining)+' left' : '')+'. Plug in before it runs the fleet down.'
+          + (next ? '\nThe next-fullest context, '+next.name+' at '+Math.round(next.pct)+'%, has this dial back when the cable is in.' : '')]
+      : diskFull
+      ? ['disk', 'disk used', h.disk.pct, Math.round(h.disk.pct)+'%', tone(h.disk.pct, 80, 90),
+          'The data volume is '+Math.round(h.disk.pct)+'% full, '+h.disk.freeGb+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.']
+      : ['context2', 'next context', next ? next.pct : 0, next ? Math.round(next.pct)+'%' : '—', ctxTone(next ? next.pct : 0),
+          next ? 'The next-fullest context on the board: '+next.name+' at '+fmtTok(next.used)+' of '+fmtTok(next.max)+'.\nClick to open it.'
+               : 'Only one session has reported its context size.',
+          next ? next.id : '', next ? next.name : ''],
     ['pressure', 'mem pressure', h.pressurePct, (h.pressurePct==null ? '—' : h.pressurePct+'%'), tone(h.pressurePct??0, 70, 85),
       'macOS memory pressure: the share of memory that cannot be reclaimed. Above 70% the machine starts swapping; above 85% agents stall.'
-      + '\nMemory '+Math.round(mem.pct||0)+'% used, agents hold '+agentsMem+' of it.'],
-    ['done', 'done today', donePct, String(done.today||0), 'var(--done)',
-      (done.today||0)+' session'+(done.today===1?'':'s')+' reached done since midnight'
-      + (done.mrs ? ', opening '+done.mrs+' merge request'+(done.mrs===1?'':'s') : '')+'.'
-      + '\nArc: finished against still going.'],
-  ];
-  // The reserve: readings the HUD does not carry, in the order they earn a
-  // tile when a world's instrument has taken one of the six. A world that
-  // draws the pressure as a health bar does not need it on a dial as well;
-  // what the fleet's processes are eating, which nothing else shows, is
-  // worth the tile more.
-  const reserve = [
+      + '\nMemory '+Math.round(mem.pct||0)+'% used'+(mem.total ? ' ('+gb(mem.used)+' of '+gb(mem.total)+'G)' : '')
+      + ', agents hold '+agentsMem+' of it; swap '+swapG.toFixed(1)+'G.'],
     ['ram', 'agents mem', ramPct, agentsMem, tone(ramPct, 35, 60),
       'Memory the agent processes (claude, codex, agy) hold between them: '+agentsMem+(mem.total ? ' of '+gb(mem.total)+'G ('+Math.round(ramPct)+'%)' : '')+'.'
       + '\nArc: their share of the machine.'],
+  ];
+  // The reserve: readings the HUD does not carry, in the order they earn a
+  // tile when a world's instrument has taken one of the four. A world that
+  // draws the pressure as a health bar does not need it on a dial as well.
+  const reserve = [
     ['cpu', 'cpu busy', cpu.pct, cpu.pct==null ? '—' : Math.round(cpu.pct)+'%', tone(cpu.pct??0, 70, 85),
       'CPU busy across every core'+(h.gpu?.pct != null ? ', GPU '+Math.round(h.gpu.pct)+'%' : '')+'.'
       + '\nLoad 1m '+(cpu.load1??'?')+' on '+(cpu.cores||1)+' cores; agents take '+Math.round(h.agentCpu??0)+'% of it.'],
@@ -7792,15 +7845,13 @@ function drawHud(d){
       'The data volume is '+Math.round(h.disk?.pct??0)+'% full, '+(h.disk?.freeGb??'?')+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.'],
     ['gpu', 'gpu busy', h.gpu?.pct, h.gpu?.pct==null ? '—' : Math.round(h.gpu.pct)+'%', 'var(--accent)',
       h.gpu?.pct==null ? 'No GPU counter answers on this machine.' : 'GPU busy, from the accelerator’s own counters.'],
-  ];
+  ].filter(sp => sp[0] !== specs[1][0]);
   // What this world's own instrument already reads -- Skyrim's health bar is
   // the pressure, Doom's ammo the live count, NERV's power the battery. A
   // reading drawn there is not drawn here as well: its tile goes to the
-  // first reserve reading the world does not draw either, so the row still
-  // carries six figures and none of them twice. The control theme never
+  // first reserve reading the world does not draw either, so the dials still
+  // carry four figures and none of them twice. The control theme never
   // reallocates -- every reading stays where the HUD's own notes put it.
-  const theme = document.documentElement.dataset.theme;
-  const drawn = new Set(theme === CONTROL_THEME || typeof fleetPlots !== 'function' ? [] : fleetPlots(theme));
   const spare = reserve.filter(sp => !drawn.has(sp[0]));
   const shown = specs.map(sp => drawn.has(sp[0]) ? spare.shift() || sp : sp);
   const keys = shown.map(sp => sp[0]).join(' ');
@@ -7811,10 +7862,12 @@ function drawHud(d){
     HUD.tiles = [...g.children]; HUD.titles = shown.map(() => ''); HUD.keys = keys;
     HUD.tiles.forEach((el, i) => { el.dataset.k = shown[i][0]; });
     HUD.arcs = [...g.querySelectorAll('.arc')]; HUD.vals = [...g.querySelectorAll('.val')];
+    HUD.names = [...g.querySelectorAll('.gnm')];
     moved = true;
   }
-  shown.forEach(([, , pct, value, colour, title, id], i) => {
-    const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i];
+  shown.forEach(([, , pct, value, colour, title, id, who], i) => {
+    const arc = HUD.arcs[i], val = HUD.vals[i], el = HUD.tiles[i], nm = HUD.names[i];
+    if(nm.textContent !== (who || '')){ nm.textContent = who || ''; moved = true; }
     const dash = Math.max(0, Math.min(100, pct||0)).toFixed(1)+' 100';
     if(arc.getAttribute('stroke-dasharray') !== dash) arc.setAttribute('stroke-dasharray', dash);
     if(arc.getAttribute('stroke') !== colour){
@@ -7846,11 +7899,10 @@ function drawHud(d){
   put('--g-disk', whole(h.disk?.pct));
   put('--g-batt', whole(pw.pct != null ? pw.pct : 100));
   put('--g-rate', whole(ratePct));          // tok/min against today's peak
-  put('--g-window', whole(win ? win.elapsedPct : 0));
   put('--g-ctx',  whole(ctxPct));           // the fullest context
   put('--n-active', String(active|0));
   put('--n-total',  String(d.total|0));
-  put('--n-done-today', String(done.today|0));
+  put('--n-done-today', String((today.turns ?? done.today)|0));   // turns, or jobs on an older server
   put('--n-tok-min', String(rate.perMin|0));
   // ...and the tally itself, one integer per state, for the same reason.
   STATES.forEach(k => put('--n-' + k, String(d.tally[k]|0)));
@@ -7858,51 +7910,45 @@ function drawHud(d){
   // numbers wants to follow them every second, like the gauges do.
   document.dispatchEvent(new CustomEvent('fleet:hud'));
 
-  // The wall runs plugged in, so a power cell read "100% AC" all day. Now the
-  // battery only takes a cell on the day the cable is out; otherwise the slot
-  // holds swap, which is the number behind the pressure gauge on a 16G machine.
-  // A full disk outranks swap the same way.
-  // A world whose instrument reads the battery (NERV's power source, the
-  // Game Boy's HP bar) keeps the cell on swap: the figure is already up.
-  const onBat = pw.onBattery && pw.pct != null && !drawn.has('batt');
-  const power = '<b'+(pw.pct<=20 ? ' style="color:var(--blocked)"' : '')+'>'+pw.pct+'%</b> '+(pw.charging ? 'chg' : 'batt');
   const cores = cpu.cores || 1, load = cpu.load1;
-  const swapG = (sw.usedMb||0)/1024;
-  const diskFull = (h.disk?.pct??0) > 90;
-  // The longest anything has been waiting on you. A blocked or waiting
-  // session's last write is the moment it asked, the same age its tile shows.
-  let oldest = null, waiting = 0;
-  d.lanes.forEach(l => l.projects.forEach(p => p.sessions.forEach(s2 => {
-    if(s2.state !== 'blocked' && s2.state !== 'waiting') return;
-    waiting++;
-    if(s2.updated && (!oldest || s2.updated < oldest.updated)) oldest = s2;
-  })));
-  const waitMin = oldest ? (Date.now() - oldest.updated)/60000 : 0;
-  const waitTone = waitMin >= 15 ? ' style="color:var(--blocked)"' : waitMin >= 5 ? ' style="color:var(--warn)"' : '';
+  // What got done. For interactive work the unit is a finished turn -- the
+  // model stopping and handing it back to you -- which the ledger counts off
+  // the transcripts, so it survives a restart. A background job that reached
+  // `done` is named in the title rather than added: its turns are already in
+  // the count. An older server sends no turns, and the cell falls back to
+  // the jobs it always counted, under its old word.
+  const turns = today.turns;
+  const tby = today.turnsByProvider || {};
+  const jobs = (done.today||0) ? done.today+' background job'+(done.today===1?'':'s')+' reached done since midnight'
+      + (done.mrs ? ', opening '+done.mrs+' merge request'+(done.mrs===1?'':'s') : '')+'.'
+    : 'No background job has reached done since midnight.';
   const cell = (k, v, t, id) => '<div'+(id ? ' class="link" data-id="'+esc(id)+'"' : '')+' title="'+esc(t)+'"><dt>'+k+'</dt><dd>'+v+'</dd></div>';
   const cells = [
+    ['tok/min', '<b>'+fmtTok(rate.perMin)+'</b>',
+      'Output tokens the whole fleet is writing per minute, averaged over the last '+(rate.minutes||5)+' whole minutes.'
+      + (rate.peakPerMin ? '\nToday’s busiest minute: '+fmtTok(rate.peakPerMin)+' at '+hhmm(rate.peakAt)+'.' : '')],
+    ['out today', '<b>'+fmtTok(today.out)+'</b>',
+      'Output tokens written by every agent since midnight'+(today.sessions ? ', across '+today.sessions+' sessions and '+num(today.requests)+' requests' : '')+'.'+split
+      + '\nInput was '+fmtTok((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0))+', '+(today.cacheRead && today.in!=null ? Math.round(100*today.cacheRead/((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0)))+'% of it from cache' : 'mostly cache')+'.'],
+    turns != null
+      ? ['turns', '<b>'+num(turns)+'</b> today',
+          num(turns)+' turn'+(turns===1?'':'s')+' finished since midnight: a reply that stopped and handed the turn back to you'
+          + (Object.keys(tby).length > 1 ? ' — '+Object.entries(tby).map(([k,v]) => k+' '+v).join(', ') : '')+'.'
+          + '\n'+jobs]
+      : ['done', '<b>'+(done.today||0)+'</b> today', jobs],
+    // The 5-hour window is a clock, so it reads as one: a countdown to the
+    // reset. The clock time and what the window has cost so far ride in the
+    // title -- the cell is too narrow for "23:58 · 58m" -- and the cost is
+    // not a headline, since nothing here knows the limit it is measured by.
+    ['resets in', win ? '<b>'+(win.end - Date.now() < 60000 ? '&lt;1m' : until(win.end))+'</b>' : '<b>—</b>',
+      win ? 'The open 5-hour Claude window closes at '+hhmm(win.end)+', in '+until(win.end)+' (it opened at '+hhmm(win.start)+'). The first message after that opens the next one.'
+          + '\nEst. '+fmtTok(win.out)+' output tokens written in it so far. Claude Code on this Mac only — claude.ai chats draw on the same limit but are not visible here, and the limit itself is not known.'
+          : 'No 5-hour Claude window is open: the next message to Claude opens one.'],
     ['load 1m', '<b'+(load > cores ? ' style="color:var(--warn)"' : '')+'>'+(load??'—')+'</b>/'+cores,
       'Load average over the last minute: '+(load??'?')+' processes wanting a turn on '+cores+' cores. Under '+cores+' is comfortable; over it, they queue.'
       + '\nCPU busy '+Math.round(cpu.pct||0)+'%'+(h.gpu?.pct != null ? ', GPU '+Math.round(h.gpu.pct)+'%' : '')+'.'],
     ['agents', '<b>'+(h.agentProcs??'—')+'</b> '+Math.round(h.agentCpu??0)+'%',
       (h.agentProcs??0)+' agent processes (claude, codex, agy) using '+Math.round(h.agentCpu??0)+'% CPU between them, out of '+(cores*100)+'% available.'],
-    onBat
-      ? ['power', power, 'On battery at '+pw.pct+'%'+(pw.remaining ? ', about '+hmLeft(pw.remaining)+' left' : '')+'. Swap '+swapG.toFixed(1)+'G.']
-      : diskFull
-      ? ['disk', '<b style="color:var(--blocked)">'+Math.round(h.disk.pct)+'%</b> full', 'The data volume is '+Math.round(h.disk.pct)+'% full, '+h.disk.freeGb+'G free. Transcripts alone take '+(h.archive?.gb??'?')+'G.']
-      : ['swap', '<b>'+swapG.toFixed(1)+'</b>G',
-         'Swap in use. Memory '+(mem.total ? gb(mem.used)+' of '+gb(mem.total)+'G' : '?')+' used, agents hold '
-         + agentsMem+' of it; disk '+(h.disk?.freeGb??'?')+'G free.'],
-    ['waiting', oldest ? '<b'+waitTone+'>'+age(oldest.updated)+'</b>'+(waiting > 1 ? ' ×'+waiting : '') : '<b>—</b>',
-      oldest ? 'Longest a session has been waiting on you: '+oldest.name+', '+age(oldest.updated)+'. '
-             + (waiting === 1 ? 'It is the only one.' : waiting+' sessions are waiting.')+'\nClick to open it.'
-             : 'Nothing is waiting on you.',
-      oldest ? oldest.id : ''],
-    ['out today', '<b>'+fmtTok(today.out)+'</b>',
-      'Output tokens written by every agent since midnight'+(today.sessions ? ', across '+today.sessions+' sessions and '+num(today.requests)+' requests' : '')+'.'+split
-      + '\nInput was '+fmtTok((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0))+', '+(today.cacheRead && today.in!=null ? Math.round(100*today.cacheRead/((today.in||0)+(today.cacheRead||0)+(today.cacheWrite||0)))+'% of it from cache' : 'mostly cache')+'.'],
-    win ? ['resets', '<b>'+hhmm(win.end)+'</b>', 'The open 5-hour Claude window closes at '+hhmm(win.end)+', in '+until(win.end)+'. The first message after that opens the next one.']
-        : ['window', '<b>—</b> open', 'No 5-hour Claude window is open right now.'],
   ];
   const ro = document.getElementById('readout');
   if(!HUD.dds || ro.children.length !== cells.length){
@@ -7928,8 +7974,8 @@ function drawHud(d){
   drawTrace(d.usage);
   drawHost(d.history);
 }
-// The context gauge and the waiting cell are the readings that point at a
-// session: open it.
+// The context dials point at a session: open it. (A readout cell can too,
+// through data-id, though none does since the waiting cell left.)
 document.getElementById('gauges').addEventListener('click', e => {
   const tile = e.target.closest('.gauge'); if(!tile || !tile.dataset.id) return;
   select(tile.dataset.id);
@@ -7985,7 +8031,7 @@ function fitHud(){
 /* The control theme. Every world with an instrument of its own tells the HUD
    what it already draws (`plots`, in the worlds), and the HUD moves those
    readings off its dials so nothing is up twice. On this one theme the HUD
-   never moves anything: the six dials and the readout are always what the
+   never moves anything: the four dials and the readout are always what the
    notes above say they are, so there is one board to read the others
    against. The default, and the one the README shows. */
 const CONTROL_THEME = 'console';
@@ -8367,9 +8413,15 @@ function tile(s){
   const hot = ctxPct == null ? '' : ctxPct >= 85 ? '2' : ctxPct >= 70 ? '1' : '0';
   if(tok) TOKS.set(s.id, tok);
   if(ctxPct != null) CTXS.set(s.id, {text: 'ctx '+ctxPct+'%', hot});
-  const rest = [when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
+  // The fullest context on the board -- the one the HUD's dial names -- is
+  // marked where it lives: its reading leads the foot line, where the parts
+  // that drop off a narrow tile can never take it, and is boxed.
+  const top = ctxPct != null && s.id === CTX_MAX;
+  const ctxPart = ctxPct != null ? '<span class="ctx" data-hot="'+hot+'" title="context in use: '+fmtTok(u.ctx)+' of '+fmtTok(u.ctxMax)
+                  + (top ? ' — the fullest on the board' : '')+'">ctx '+ctxPct+'%</span>' : '';
+  const rest = [top ? ctxPart : '', when ? '<span class="age">'+esc(when)+'</span>' : '', s.turns ? '<span>'+s.turns+'t</span>' : '',
                 tok ? '<span class="tok" title="output tokens this session">'+tok+'</span>' : '',
-                ctxPct != null ? '<span class="ctx" data-hot="'+hot+'" title="context in use: '+fmtTok(u.ctx)+' of '+fmtTok(u.ctxMax)+'">ctx '+ctxPct+'%</span>' : '',
+                top ? '' : ctxPart,
                 where ? '<span>'+esc(shortPlace(where))+'</span>' : ''].filter(Boolean).join('');
   // A block that has sat unanswered escalates: a little louder after eight
   // minutes, an outline after thirty. Amplitude and area, never rate.
@@ -8378,7 +8430,7 @@ function tile(s){
   const vt = (s.state && prevState.has(s.id) && prevState.get(s.id) !== s.state)
            ? ';view-transition-name:tile-' + s.id.replace(/[^a-zA-Z0-9_-]/g, '_') : '';
   return '<button class="bubble" data-id="'+esc(s.id)+'" data-state="'+esc(s.state)+'"'
-    + (stale ? ' data-stale="'+stale+'"' : '')
+    + (stale ? ' data-stale="'+stale+'"' : '') + (top ? ' data-ctxmax="1"' : '')
     + ' style="--rib:var(--'+s.state+')'+vt+'" title="'+esc(s.name)+' — '+esc(s.state)+'&#10;'+esc(where||'')+'&#10;'+esc(gist)+'">'
     + '<i class="halo" aria-hidden="true"></i>'
     + ((s.pid || s.jobId || s.state === 'running')

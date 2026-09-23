@@ -239,6 +239,11 @@ class Walker(usage.Ledger):
                 continue                    # nothing timestamped yet; next pass
             self._tail(rec)
 
+    def _turn(self, at, provider):
+        # The live ledger counts finished turns into its minute buckets; the
+        # walker keeps none of those, and never prunes, so a turn lands nowhere.
+        pass
+
     def _credit(self, at, provider, path, out, inp, cache_read, cache_write):
         if not at:
             return

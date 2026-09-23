@@ -16,13 +16,21 @@ def iso(ms):
 
 
 def claude_row(at, out, inp=2, cache_read=1000, cache_write=0, rid="req_1",
-               model="claude-opus-5", effort="high"):
-    return json.dumps({
+               model="claude-opus-5", effort="high", stop=None, sidechain=None):
+    row = {
         "type": "assistant", "requestId": rid, "timestamp": iso(at), "effort": effort,
-        "message": {"model": model, "usage": {
+        "message": {"model": model, "stop_reason": stop, "usage": {
             "input_tokens": inp, "output_tokens": out,
             "cache_read_input_tokens": cache_read, "cache_creation_input_tokens": cache_write}},
-    })
+    }
+    if sidechain is not None:
+        row["isSidechain"] = sidechain
+    return json.dumps(row)
+
+
+def codex_event(at, kind, turn="t1"):
+    return json.dumps({"type": "event_msg", "timestamp": iso(at),
+                       "payload": {"type": kind, "turn_id": turn}})
 
 
 def model_row(model_id):
@@ -177,6 +185,42 @@ class Ledger(unittest.TestCase):
         self.assertEqual(trace, [100, 60, 0, 0])
         # Codex never opens a Claude window
         self.assertIsNone(self.ledger.window(self.now))
+
+    def test_a_turn_is_finished_where_the_model_stops_for_you(self):
+        m = max(self.now // MIN - 3, usage.local_midnight_ms(self.now) // MIN)
+        self.write("t1", [
+            # a tool call is the middle of a turn, however many rows it takes
+            claude_row(m * MIN, 10, rid="a", stop="tool_use"),
+            claude_row(m * MIN, 10, rid="a", stop="tool_use"),
+            # the reply that ends it is streamed as three rows: one turn
+            claude_row(m * MIN + 100, 20, rid="b", stop="end_turn"),
+            claude_row(m * MIN + 100, 20, rid="b", stop="end_turn"),
+            claude_row(m * MIN + 100, 20, rid="b", stop="end_turn"),
+            # a subagent's reply is its caller's business
+            claude_row(m * MIN + 200, 5, rid="c", stop="end_turn", sidechain=True),
+            # the CLI's own row for an API error is not work finished
+            claude_row(m * MIN + 300, 0, rid="d", stop="stop_sequence", model="<synthetic>"),
+            claude_row(m * MIN + 400, 30, rid="e", stop="max_tokens"),
+        ])
+        self.write("r3", [codex_event(m * MIN, "task_complete"),
+                          codex_event(m * MIN + 50, "turn_aborted", "t2"),
+                          codex_event(m * MIN + 90, "task_complete", "t3")], provider="codex")
+        self.ledger.scan(self.now)
+        today = self.ledger.summary(self.now)["today"]
+        self.assertEqual(today["turns"], 4)
+        self.assertEqual(today["turnsByProvider"], {"claude": 2, "codex": 2})
+
+    def test_turns_before_midnight_are_yesterdays_and_a_restart_rereads_today(self):
+        midnight = usage.local_midnight_ms(self.now)
+        if self.now - midnight < 2 * MIN:
+            self.skipTest("too close to midnight to place a turn on each side")
+        self.write("t2", [claude_row(midnight - MIN, 5, rid="a", stop="end_turn"),
+                          claude_row(self.now - MIN, 5, rid="b", stop="end_turn")])
+        self.ledger.scan(self.now)
+        self.assertEqual(self.ledger.summary(self.now)["today"]["turns"], 1)
+        fresh = usage.Ledger(claude_root=self.claude, codex_root=self.codex)
+        fresh.scan(self.now)
+        self.assertEqual(fresh.summary(self.now)["today"]["turns"], 1)
 
 
 class Finished(unittest.TestCase):

@@ -10,6 +10,7 @@ one-minute buckets, so the board can answer, with its window stated:
     how fast is the fleet writing right now     tokens/min over the last 5
     how much has it written today               since local midnight
     how much in the open 5-hour Claude window   and when that window resets
+    how many turns it finished today            since local midnight
     per session: written, context in use, model, effort
 
 "Tokens" on this board has always meant OUTPUT tokens -- what the model
@@ -47,6 +48,10 @@ RESCAN_SECONDS = 10                     # how often new files are looked for
 CONTEXT_SHORT = 200_000                 # Haiku 4.5 and the pre-4.6 generation
 CONTEXT_LONG = 1_000_000                # every Claude model since Opus/Sonnet 4.6
 SUBAGENTS = os.sep + "subagents" + os.sep    # <session>/subagents/*.jsonl
+# A Claude reply that stops for one of these hands the turn to a tool (or
+# asks to be resumed); any other stop reason -- end_turn, stop_sequence,
+# max_tokens, refusal -- gives it back to you, and that is a finished turn.
+TURN_CONTINUES = frozenset(("tool_use", "pause_turn"))
 
 
 def context_window(model_id):
@@ -103,7 +108,7 @@ class _File:
     __slots__ = ("path", "provider", "ino", "offset", "pending", "seen", "recent",
                  "out", "inp", "cacheRead", "cacheWrite", "requests",
                  "ctx", "ctxPeak", "model", "modelId", "effort", "lastAt",
-                 "codexTotal", "ctxMax")
+                 "codexTotal", "ctxMax", "ended")
 
     def __init__(self, path, provider):
         self.path, self.provider = path, provider
@@ -112,6 +117,9 @@ class _File:
         # repeating the request's usage. The last few request ids are enough
         # to fold them: rows of one request are consecutive.
         self.seen, self.recent = set(), collections.deque(maxlen=64)
+        # ...and the ones already counted as a finished turn, for the same
+        # reason: every row of the last reply repeats its stop reason.
+        self.ended = collections.deque(maxlen=16)
         self.out = self.inp = self.cacheRead = self.cacheWrite = self.requests = 0
         self.ctx = self.ctxPeak = 0
         self.model = self.modelId = self.effort = None
@@ -212,7 +220,7 @@ class Ledger:
             # Rotated or rewritten: everything counted from it stands (the
             # buckets are history), but the running totals start again.
             rec.ino, rec.offset, rec.pending = stat.st_ino, 0, b""
-            rec.seen.clear(); rec.recent.clear()
+            rec.seen.clear(); rec.recent.clear(); rec.ended.clear()
             rec.out = rec.inp = rec.cacheRead = rec.cacheWrite = rec.requests = 0
             rec.codexTotal = None
         if stat.st_size == rec.offset:
@@ -231,7 +239,7 @@ class Ledger:
         # A cheap byte test before the parse: only one row in three carries
         # usage, and none of the others need decoding.
         needles = ((b'"usage"', b'"modelId"') if rec.provider == "claude"
-                   else (b'"token_count"',))
+                   else (b'"token_count"', b'"task_complete"'))
         for raw in lines:
             if not any(needle in raw for needle in needles):
                 continue
@@ -259,6 +267,18 @@ class Ledger:
         if not isinstance(usage, dict):
             return
         rid = row.get("requestId") or message.get("id")
+        # A turn is finished where the model stops and waits for you. Counted
+        # off the transcript rather than off the collectors' running -> idle
+        # flips, so a restart rereads the day instead of starting it at zero.
+        # Not a subagent's reply (its turn belongs to the session that called
+        # it), and not the CLI's own "<synthetic>" row for an error.
+        stop = message.get("stop_reason")
+        if (stop and stop not in TURN_CONTINUES and not row.get("isSidechain")
+                and message.get("model") != "<synthetic>"
+                and not (rid and rid in rec.ended)):
+            if rid:
+                rec.ended.append(rid)
+            self._turn(_epoch_ms(row.get("timestamp")), "claude")
         if rid:
             if rid in rec.seen:
                 return
@@ -284,6 +304,11 @@ class Ledger:
 
     def _codex_row(self, rec, row):
         payload = row.get("payload") or {}
+        if payload.get("type") == "task_complete":
+            # Codex closes each turn with its own event; an aborted one
+            # (`turn_aborted`) is not a finished turn.
+            self._turn(_epoch_ms(row.get("timestamp")), "codex")
+            return
         if payload.get("type") != "token_count":
             return
         info = payload.get("info") or {}
@@ -314,15 +339,22 @@ class Ledger:
         self._credit(at, "codex", rec.path, delta["output_tokens"], fresh,
                      delta["cached_input_tokens"], delta["cache_write_input_tokens"])
 
+    def _cell(self, at, provider):
+        slot = self._buckets.setdefault(_floor_minute(at), {})
+        cell = slot.get(provider)
+        if cell is None:
+            cell = slot[provider] = {"out": 0, "in": 0, "cacheRead": 0, "cacheWrite": 0,
+                                     "requests": 0, "turns": 0, "files": set()}
+        return cell
+
+    def _turn(self, at, provider):
+        if at:
+            self._cell(at, provider)["turns"] += 1
+
     def _credit(self, at, provider, path, out, inp, cache_read, cache_write):
         if not at:
             return
-        minute = _floor_minute(at)
-        slot = self._buckets.setdefault(minute, {})
-        cell = slot.get(provider)
-        if cell is None:
-            cell = slot[provider] = {"out": 0, "in": 0, "cacheRead": 0,
-                                     "cacheWrite": 0, "requests": 0, "files": set()}
+        cell = self._cell(at, provider)
         cell["out"] += out; cell["in"] += inp
         cell["cacheRead"] += cache_read; cell["cacheWrite"] += cache_write
         cell["requests"] += 1
@@ -393,10 +425,11 @@ class Ledger:
         recent = range(now_minute - RATE_MINUTES, now_minute)
         rate = sum(self._minute_out(m) for m in recent) / float(RATE_MINUTES)
 
-        today = {"out": 0, "in": 0, "cacheRead": 0, "cacheWrite": 0, "requests": 0}
+        today = {"out": 0, "in": 0, "cacheRead": 0, "cacheWrite": 0, "requests": 0,
+                 "turns": 0}
         files_today = set()
         peak_out, peak_at = 0, None
-        by_provider = {}
+        by_provider, turns_by = {}, {}
         for minute, slot in self._buckets.items():
             if minute < midnight or minute > now_minute:
                 continue
@@ -407,12 +440,15 @@ class Ledger:
                 files_today |= cell["files"]
                 minute_out += cell["out"]
                 by_provider[provider] = by_provider.get(provider, 0) + cell["out"]
+                if cell["turns"]:
+                    turns_by[provider] = turns_by.get(provider, 0) + cell["turns"]
             if minute_out > peak_out:
                 peak_out, peak_at = minute_out, minute
         # Subagent transcripts count for tokens, not as sessions.
         today["sessions"] = len([f for f in files_today if SUBAGENTS not in f])
         today["since"] = midnight * MINUTE_MS
         today["byProvider"] = by_provider
+        today["turnsByProvider"] = turns_by
 
         first = now_minute - trace_minutes + 1
         span = range(first, now_minute + 1)
