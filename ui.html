@@ -5571,43 +5571,45 @@ button.ghost        { font-size: calc(11px   * var(--fs-chrome)); letter-spacing
 /* 2. The red ball. One element, one composited transform, on a precomputed
    path (tmp: straight runs reflected off the fret ring at 146px and the hub
    at 50px, nudged at every bounce so it never settles into a figure). It
-   lives in .wrap so it stacks between the wheel and the rails. */
+   lives in .wrap so it stacks between the wheel and the rails. The wheel is
+   centred in the bottom bar at 384px now, so the ball rides the same hub
+   (50%, 48px up) and its path is the 320px one scaled by 1.2. */
 .redball{display:none}
 :root[data-theme="staunton"] .redball{
-  display:block; position:fixed; left:110px; bottom:100px; width:9px; height:9px; margin:0 0 -4.5px -4.5px;
+  display:block; position:fixed; left:50%; bottom:48px; width:9px; height:9px; margin:0 0 -4.5px -4.5px;
   border-radius:50%; z-index:2; pointer-events:none; opacity:.92; will-change:transform;
   background:radial-gradient(circle at 34% 30%, #ffb3a6, #e0362a 48%, #7a100c 100%);
   box-shadow:0 1px 3px rgba(0,0,0,.65), 0 0 7px rgba(224,54,42,.4);
   animation:pong 52s linear infinite;
 }
 @keyframes pong{
-  0%{transform:translate(90px,-60px)}
-  3.33%{transform:translate(-24px,-140px)}
-  8.59%{transform:translate(-132px,52px)}
-  14.63%{transform:translate(119px,77px)}
-  20.37%{transform:translate(18px,-141px)}
-  22.82%{transform:translate(-25px,-48px)}
-  25.26%{transform:translate(-125px,-67px)}
-  27.52%{transform:translate(-54px,-5px)}
-  29.95%{transform:translate(-125px,67px)}
-  32.38%{transform:translate(-25px,48px)}
-  35.07%{transform:translate(47px,134px)}
-  37.56%{transform:translate(45px,30px)}
-  40.30%{transform:translate(136px,-39px)}
-  42.44%{transform:translate(48px,-25px)}
-  44.60%{transform:translate(108px,-93px)}
-  47.15%{transform:translate(8px,-53px)}
-  49.92%{transform:translate(-95px,-105px)}
-  52.15%{transform:translate(-48px,-25px)}
-  54.35%{transform:translate(-140px,-24px)}
-  60.47%{transform:translate(69px,124px)}
-  66.45%{transform:translate(66px,-126px)}
-  72.61%{transform:translate(-138px,32px)}
-  77.72%{transform:translate(50px,133px)}
-  83.85%{transform:translate(72px,-122px)}
-  89.21%{transform:translate(-136px,-39px)}
-  95.05%{transform:translate(31px,139px)}
-  100%{transform:translate(90px,-60px)}
+  0%{transform:translate(108px,-72px)}
+  3.33%{transform:translate(-29px,-168px)}
+  8.59%{transform:translate(-158px,62px)}
+  14.63%{transform:translate(143px,92px)}
+  20.37%{transform:translate(22px,-169px)}
+  22.82%{transform:translate(-30px,-58px)}
+  25.26%{transform:translate(-150px,-80px)}
+  27.52%{transform:translate(-65px,-6px)}
+  29.95%{transform:translate(-150px,80px)}
+  32.38%{transform:translate(-30px,58px)}
+  35.07%{transform:translate(56px,161px)}
+  37.56%{transform:translate(54px,36px)}
+  40.30%{transform:translate(163px,-47px)}
+  42.44%{transform:translate(58px,-30px)}
+  44.60%{transform:translate(130px,-112px)}
+  47.15%{transform:translate(10px,-64px)}
+  49.92%{transform:translate(-114px,-126px)}
+  52.15%{transform:translate(-58px,-30px)}
+  54.35%{transform:translate(-168px,-29px)}
+  60.47%{transform:translate(83px,149px)}
+  66.45%{transform:translate(79px,-151px)}
+  72.61%{transform:translate(-166px,38px)}
+  77.72%{transform:translate(60px,160px)}
+  83.85%{transform:translate(86px,-146px)}
+  89.21%{transform:translate(-163px,-47px)}
+  95.05%{transform:translate(37px,167px)}
+  100%{transform:translate(108px,-72px)}
 }
 /* 3. The back. The rib's ::before is the card's back: a cream margin round a
    wine field with a gold lattice and the house spade in the middle, laid over
