@@ -445,6 +445,24 @@ runtime copy.
    change. `--g-batt` keeps its fallback of 100 on purpose until then (the
    Game Boy's HP and the Pip-Boy's Endurance read it). Page-only.
 
+16. [ ] **New terminal: pick the folder with the native macOS chooser.**
+   Today the sheet's + picker (`newTermPicker`) offers a `<select>` of recent
+   and board folders plus a free-text `path` input ("or type a path under
+   ~"); a folder that is in neither list has to be typed by hand. Asked for
+   (2026-09-25): a button beside the path input that opens the standard
+   macOS folder dialog and fills the path with the choice. The catch: a page
+   cannot get a real path from the browser (`showDirectoryPicker` returns a
+   handle, not a path, and WKWebView lacks it anyway). Direction: a
+   `/api/pick-folder` endpoint that runs `osascript -e 'POSIX path of
+   (choose folder default location …)'` on the server (same Mac), defaulting
+   to the path already typed or the selected folder; the button fills
+   `path` with the answer, a cancel leaves it as it was. The dialog must come
+   to the front over the fullscreen kiosk (`tell application "System Events"
+   to activate` or a `fleet-browser.swift` message handler with
+   `NSOpenPanel` if osascript lands behind it); the button is disabled with a
+   tooltip on a board started without `--terminal`. Python side needs a
+   board restart.
+
 ## Theme Quality Board
 
 ### Done
