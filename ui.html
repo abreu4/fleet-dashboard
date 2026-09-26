@@ -12298,7 +12298,9 @@ function showSheet(on){
 
 function refit(){
   for(const t of terms.values()){
-    if(!t.fit || t.view.hidden) continue;
+    // A closed sheet has no size to fit to; the pty keeps the one it has
+    // until the sheet is shown again.
+    if(!t.fit || t.view.hidden || !sheetOn || !t.view.clientWidth || !t.view.clientHeight) continue;
     try{ t.fit.fit(); }catch(e){ continue; }
     // The fit addon sizes to the view's whole box, its padding included, so
     // a sheet within a few px of a whole number of rows got one row more than
@@ -12409,7 +12411,11 @@ function cycleTerminal(step){
 
 function ensureTerm(meta){
   let t = terms.get(meta.id);
-  if(t){ t.meta.title = meta.title; t.alive = meta.alive !== false; drawTabs(); return t; }
+  if(t && t.term){ t.meta.title = meta.title; t.alive = meta.alive !== false; drawTabs(); return t; }
+  // Output that beat its tab here left a placeholder with no terminal in it
+  // (writeOut); returning that made a tab that never drew. Build the real one
+  // and hand it what the placeholder held.
+  const early = t && t.pendingOut;
   const view = document.createElement('div');
   view.className = 'view'; view.hidden = true;
   bodyEl.appendChild(view);
@@ -12420,6 +12426,12 @@ function ensureTerm(meta){
     // with a little more ink for a board read from arm's length. Line height
     // 1.0 is what iTerm draws at spacing 1x1.
     ...termFontOptions(),
+    // Born at the pty's own size, not xterm's 80x24. A tab is built before
+    // the sheet can be measured (on every reload, and hidden tabs are never
+    // fitted), so the default made refit post 80x24 -- two SIGWINCHes and an
+    // 80-column repaint of every agent on each reload -- and replayed a
+    // 138-column scrollback into 80 columns, where it wrapped into garbage.
+    rows: Math.max(1, +meta.rows || 24), cols: Math.max(2, +meta.cols || 80),
     cursorBlink: true, scrollback: 8000, allowProposedApi: true,
     macOptionIsMeta: true, theme: xtermTheme(),
   });
@@ -12439,7 +12451,7 @@ function ensureTerm(meta){
   term.onData(data => queueInput(meta.id, data));
   t = {id: meta.id, meta, term, fit: fitAddon, view, alive: meta.alive !== false};
   terms.set(meta.id, t);
-  if(t.pendingOut){ t.pendingOut.forEach(u => term.write(u)); t.pendingOut = null; }
+  if(early) early.forEach(u => term.write(u));
   drawTabs();
   return t;
 }
@@ -12517,6 +12529,10 @@ async function handleFrame(event, payload){
       if(!live.has(t.id)){ t.term?.dispose(); t.view?.remove(); terms.delete(t.id); }
     }
     if(activeTid && !live.has(activeTid)) activeTid = null;
+    // Ids start again at t1 with every server, so an order saved before a
+    // restart names tabs that no longer exist -- and the next t19 opened
+    // would jump to wherever the old one sat instead of the end of the bar.
+    if(tabOrder.some(id => !live.has(id))) setTabOrder(tabOrder.filter(id => live.has(id)));
     drawTabs();
     if(payload.terminals.length){
       await loadXterm();

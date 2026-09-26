@@ -54,6 +54,13 @@ IDLE_KILL_SECONDS = 2 * 60 * 60
 # child of the shell, and a Claude one a few seconds more to reach the roster.
 LINK_GRACE_SECONDS = 20
 DEFAULT_SHELL = os.environ.get("SHELL") or "/bin/zsh"
+# What a running Claude Code session puts in its children's environment. None
+# of it belongs to a terminal the board opens.
+_AGENT_MARKERS = ("CLAUDECODE", "CLAUDE_PID", "CLAUDE_EFFORT",
+                  "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXECPATH",
+                  "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_CHILD_SESSION",
+                  "CLAUDE_CODE_SESSION_ATTENDED", "CLAUDE_CODE_MESSAGING_SOCKET",
+                  "CLAUDE_CODE_MESSAGING_TOKEN")
 
 # Sequences that ask the terminal a question. They matter because replay is not
 # a recording: xterm.js parses the bytes it is given, so a page that reloads and
@@ -112,6 +119,7 @@ class Pty:
         # keeps that link as long as something is running in the tab, since
         # `claude attach` is a different process from the session's own.
         self.opened_for = session_id
+        self.born_as = title                 # held through the launch grace (adopt)
         self.cwd = cwd
         self.rows, self.cols = rows, cols
         self.started = time.time()
@@ -135,6 +143,13 @@ class Pty:
             env.update({"TERM": "xterm-256color", "COLORTERM": "truecolor",
                         "FLEET_TERMINAL": "1"})
             env.pop("FLEET_TERMINAL_TOKEN", None)   # never hand the token to a shell
+            # A board started from inside a Claude Code session (an agent
+            # restarting it, fleet.command run from a Claude tab) carries that
+            # session's markers, and every `claude` in its terminals then
+            # believed it was a child: transcript saving off, so it never
+            # reached the board, could not be named, adopted or resumed.
+            for name in _AGENT_MARKERS:
+                env.pop(name, None)
             try:
                 os.execve(script, [script], env)
             except Exception:
@@ -344,6 +359,12 @@ class Terminals:
                 session = by_id.get(term.opened_for)
                 if session is None:               # off the board, still running
                     continue
+            elif not term.opened_for and term.title == getattr(term, "born_as", None) \
+                    and term.title != term.fallback and now - term.started < LINK_GRACE_SECONDS:
+                # A fresh agent from the + picker ("~ · claude") is not on the
+                # roster for its first seconds; renaming it "~" meanwhile made
+                # the launch look like it had not happened.
+                continue
             else:
                 session = None
                 term.opened_for = None            # a shell now; the next agent typed into it is adopted by pid

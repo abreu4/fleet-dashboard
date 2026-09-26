@@ -67,6 +67,17 @@ class Adopt(unittest.TestCase):
         t.adopt([{"id": "s", "name": "work", "pid": None}], {100: 1})
         self.assertEqual((shell.title, shell.session_id), ("~", None))
 
+    def test_a_fresh_agent_tab_keeps_its_name_until_the_agent_shows_up(self):
+        # "~ · claude" from the + picker, seconds old, not on the roster yet.
+        tab = FakePty("t1", pid=100, title="~ \u00b7 claude")
+        tab.born_as = tab.title
+        t, sent = board([tab])
+        t.adopt([], {})
+        self.assertEqual((tab.title, sent), ("~ \u00b7 claude", []))
+        tab.started -= 600                          # past the grace: a shell again
+        t.adopt([], {})
+        self.assertEqual(tab.title, "~")
+
     def test_a_tab_opened_for_a_session_keeps_it_while_attached(self):
         # `claude attach` is pid 250 under the shell; the session's own pid is
         # 900, in some iTerm tab. Old enough to be past the grace period.
