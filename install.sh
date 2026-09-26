@@ -17,12 +17,13 @@ mkdir -p "$RUNTIME" "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 # LaunchAgents do not inherit a terminal application's permission to read
 # ~/Documents. Keep a small runtime copy somewhere launchd can always read.
 # Every module dashboard.py imports (directly or through actions/terminal)
-# has to be here, or the copy starts and dies on an ImportError; vendor/ holds
-# xterm, the fonts and the sound bank the page loads from /vendor/.
-FILES=(README.md actions.py aliases.py collectors.py dashboard.py fleet-name
-       fleet.command fleet-browser.plist fleet-browser.swift fleet-icon.swift flush.py graph.py install.sh instance.py iterm_link.py metrics.py
-       music.py notes.py requirements.txt sunset.py terminal.py uninstall.sh
-       ui.html usage.py)
+# has to be here, or the copy starts and dies on an ImportError -- a hand-kept
+# list missed totals.py and did exactly that (2026-09-26), so every top-level
+# module goes. vendor/ holds xterm, the fonts and the sound bank the page
+# loads from /vendor/.
+FILES=(README.md fleet-name fleet.command fleet-browser.plist fleet-browser.swift
+       fleet-icon.swift install.sh requirements.txt uninstall.sh ui.html)
+for module in "$SOURCE"/*.py; do FILES+=("$(basename "$module")"); done
 if [[ -z "$RESTART_ONLY" && "$SOURCE" != "$RUNTIME" ]]; then
   for file in "${FILES[@]}"; do
     cp -p "$SOURCE/$file" "$RUNTIME/$file"
@@ -62,6 +63,12 @@ fi
   -r "$RUNTIME/requirements.txt"
 fi
 PYTHON="$VENV/bin/python"
+# Import the copy before touching the running board. A module missing from
+# the runtime otherwise surfaces only after bootout, as a board that is down.
+if ! (cd "$RUNTIME" && "$PYTHON" -c 'import dashboard, terminal, actions' 2>&1); then
+  echo "the runtime copy in $RUNTIME does not import; the running board was left alone" >&2
+  exit 1
+fi
 
 cat > "$PLIST" <<PLISTEOF
 <?xml version="1.0" encoding="UTF-8"?>
