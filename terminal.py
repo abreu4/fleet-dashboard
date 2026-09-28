@@ -254,6 +254,22 @@ class Pty:
 
 
 
+def _attach_target(sessions, target):
+    """The session `claude attach <target>` joins: its job id, or its
+    conversation id (whole or a prefix of at least eight characters)."""
+    target = str(target or "")
+    if not target:
+        return None
+    for session in sessions:
+        if target in (session.get("jobId"), session.get("sessionId"), session.get("id")):
+            return session
+    if len(target) >= 8:
+        for session in sessions:
+            if str(session.get("sessionId") or "").startswith(target):
+                return session
+    return None
+
+
 class Terminals:
     """Every open pty, and the fan-out to the pages watching them."""
 
@@ -308,7 +324,7 @@ class Terminals:
         self._broadcast("open", term.meta())
         return term, ""
 
-    def adopt(self, sessions, parent_of):
+    def adopt(self, sessions, parent_of, attached=None):
         """Name every terminal after the session running inside it.
 
         A tab opened from the + button as a shell in ~ is called "~", and stayed
@@ -327,6 +343,13 @@ class Terminals:
         never matches by pid. A bare shell, opened for nothing or with its
         agent gone, goes back to its folder name. Runs on the snapshot thread;
         the writes are plain attributes, and only a change is broadcast.
+
+        `attached` ({pid: target}) is every `claude attach <target>` running.
+        A shell opened bare, into which the user typed `claude attach 6212000a`,
+        has no session pid under it and no session it was opened for, so it
+        stayed "~" -- five tabs of them at once. The target names the session
+        (its job id, or a prefix of its conversation id), and the client's pid
+        is walked up to its shell like any agent's.
         """
         with self._lock:
             live = [p for p in self._ptys.values() if p.exited is None]
@@ -336,14 +359,21 @@ class Terminals:
         shells = {p.pid: p for p in live}
         busy = set(parent_of.values())            # pids with a child
         nearest = {}                              # tid -> (depth, session)
+        found = []                                # (pid, session) to walk up
         for session in sessions:
             try:
-                pid = int(session.get("pid") or 0)
+                found.append((int(session.get("pid") or 0), session))
             except (TypeError, ValueError):
                 continue
-            depth = 0
+        for pid, target in (attached or {}).items():
+            session = _attach_target(sessions, target)
+            if session is not None:
+                found.append((pid, session))
+        for pid, session in found:
+            depth = -1                            # 0 is the pty's own process (`exec claude ...`)
             while pid and pid > 1 and depth < 32:
-                pid = parent_of.get(pid)
+                if depth >= 0:
+                    pid = parent_of.get(pid)
                 depth += 1
                 term = shells.get(pid)
                 if term is not None:

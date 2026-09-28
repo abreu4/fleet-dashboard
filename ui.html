@@ -2681,6 +2681,23 @@ html.theme-swapping .bubble > .halo{ animation:none; }
   .sheet .tab .nm{overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 auto}
   .sheet .tab .x{opacity:.45; font-size:13px; line-height:1; flex:none}
   .sheet .tab .x:hover{opacity:1; color:var(--blocked)}
+  /* What the session in the tab is doing, in the board's own dot: running,
+     blocked on you, done with its turn, idle. A tab that wants you breathes
+     and takes the state's tint, so it is found without reading names. A bare
+     shell keeps the slot, hollow, so the names stay in one column. */
+  .sheet .tab .dot{margin:0}
+  /* background-color alone: the generic .dot fallback further down would
+     grey these out, and a theme that paints its dots with an image keeps it */
+  .sheet .tab .dot.s-running{background-color:var(--running)}
+  .sheet .tab .dot.s-blocked{background-color:var(--blocked)}
+  .sheet .tab .dot.s-idle{background-color:var(--idle)}
+  .sheet .tab .s-shell{background:transparent; border:1px solid var(--faint); opacity:.45}
+  .sheet .tab[data-state="blocked"], .sheet .tab[data-state="waiting"]{
+    color:var(--ink); background:color-mix(in oklab, var(--st) 14%, transparent); border-left-color:var(--st)}
+  .sheet .tab[data-state="blocked"]{--st:var(--blocked)}
+  .sheet .tab[data-state="waiting"]{--st:var(--waiting)}
+  .sheet .tab[data-state="blocked"] .dot, .sheet .tab[data-state="waiting"] .dot{animation:pulse 1.6s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){ .sheet .tab .dot{animation:none !important} }
   .sheet .bar .grp{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; flex:none; padding:8px; border-top:1px solid var(--edge)}
   .sheet .bar button{
     background:transparent; border:1px solid var(--edge); color:var(--dim); border-radius:4px;
@@ -8330,6 +8347,7 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 function render(d){
   latest = d;
   drawHud(d);
+  if(paintTabs) paintTabs();
   // The clock bucket is the floor: a board where nothing at all moved still
   // redraws every thirty seconds so ages stay useful without replacing every
   // interactive tile twelve times a minute on an otherwise quiet board.
@@ -8994,6 +9012,7 @@ const themePicker = document.getElementById('theme');
    The terminal section assigns this; it stays null until then, because setTheme
    runs once at load before any of that has been evaluated. */
 let retintTerms = null;
+let paintTabs = null;          // the terminal tabs' state dots; set by the terminal block
 
 /* Per-theme colour overrides from the settings card. Five tokens everything
    else derives from -- accent and the four states -- stored per theme, laid
@@ -12378,7 +12397,8 @@ function drawTabs(){
   if(!list.length) emptyEl.textContent = 'no terminals — open one from a session, or press + shell';
   tabsEl.innerHTML = list.map(t =>
     '<div class="tab'+(t.id===activeTid?' sel':'')+(t.alive?'':' dead')+'" data-tid="'+t.id+'" title="'+esc(t.meta.cwd || t.meta.title)+'">'
-    + '<span class="nm">'+esc(t.meta.title)+'</span><span class="x" data-close="'+t.id+'">×</span></div>').join('');
+    + '<i class="dot"></i><span class="nm">'+esc(t.meta.title)+'</span><span class="x" data-close="'+t.id+'">×</span></div>').join('');
+  paintTabs();
   const closeBtn = document.getElementById('term-close');
   if(closeBtn) closeBtn.disabled = !terms.has(activeTid);
   tabsEl.querySelectorAll('.tab').forEach(el => {
@@ -12390,6 +12410,23 @@ function drawTabs(){
     el.onpointerdown = ev => dragTab(el, ev);
   });
 }
+
+/* Called on every snapshot as well as every redraw, so it touches only the
+   dot's class, the tab's data-state and its tooltip -- never the tab itself,
+   which may be mid-drag. The state is the board's, found through the session
+   id the server stamps on the tab (Terminals.adopt). */
+paintTabs = () => {
+  tabsEl.querySelectorAll('.tab').forEach(el => {
+    const t = terms.get(el.dataset.tid);
+    if(!t) return;
+    const s = t.alive && t.meta.session_id ? sessionById(t.meta.session_id) : null;
+    const st = !t.alive ? 'unknown' : s ? (s.state || 'unknown') : 'shell';
+    if(el.dataset.state === st) return;
+    el.dataset.state = st;
+    el.querySelector('.dot').className = 'dot s-' + st;
+    el.title = (t.meta.cwd || t.meta.title) + ' \u2014 ' + (!t.alive ? 'exited' : s ? voice(st) : 'shell');
+  });
+};
 
 function activate(tid){
   activeTid = tid;

@@ -93,6 +93,22 @@ class Adopt(unittest.TestCase):
         t.adopt([{"id": "claude:x", "name": "theia b6 (mine)", "pid": 900}], {900: 5})
         self.assertEqual((tab.title, tab.session_id, tab.opened_for), ("~", None, None))
 
+    def test_an_attach_typed_into_a_bare_shell_names_the_tab(self):
+        # `claude attach 6212000a` is pid 250 under shell 100; the session's
+        # own process (900) lives elsewhere, so only the command line links them.
+        tab = FakePty("t1", pid=100, started=time.time() - 600)
+        t, _ = board([tab])
+        roster = [{"id": "claude:6212000a:frase", "name": "frase-resumo", "pid": 900,
+                   "jobId": "6212000a", "sessionId": "a1b2c3d4-0000"}]
+        t.adopt(roster, {250: 100, 900: 5}, {250: "6212000a"})
+        self.assertEqual((tab.title, tab.session_id), ("frase-resumo", "claude:6212000a:frase"))
+        # by conversation-id prefix too
+        t.adopt(roster, {250: 100, 900: 5}, {250: "a1b2c3d4"})
+        self.assertEqual(tab.session_id, "claude:6212000a:frase")
+        # an attach to nothing on the board leaves the shell a shell
+        t.adopt(roster, {250: 100, 900: 5}, {250: "ffffffff"})
+        self.assertEqual((tab.title, tab.session_id), ("~", None))
+
     def test_a_fresh_resume_is_not_stripped_before_it_starts(self):
         tab = FakePty("t1", pid=100, title="work", opened_for="s")
         t, sent = board([tab])

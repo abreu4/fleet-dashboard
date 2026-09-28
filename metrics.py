@@ -83,6 +83,28 @@ def parents():
     return found
 
 
+_ATTACH = re.compile(r"(?:^|/)claude\s+attach\s+(\S+)")
+
+
+def attach_clients():
+    """pid -> target, for every `claude attach <job>` on this machine. An
+    attach is a client of a session that runs somewhere else, so its pid is
+    never a session's own; the terminal sheet reads the target off the
+    command line to know whose conversation its tab is showing."""
+    found = {}
+    for line in process_table().splitlines():
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            continue
+        hit = _ATTACH.search(parts[5])
+        if hit:
+            try:
+                found[int(parts[0])] = hit.group(1)
+            except ValueError:
+                pass
+    return found
+
+
 # --------------------------------------------------------------------------
 
 def memory():

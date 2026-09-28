@@ -219,7 +219,7 @@ class Snapshot:
         # same sessions and the same process table this pass just read.
         if TERMINAL is not None:
             try:
-                TERMINAL.adopt(sessions, metrics.parents())
+                TERMINAL.adopt(sessions, metrics.parents(), metrics.attach_clients())
             except Exception as exc:
                 print("terminal adopt failed: %s: %s" % (type(exc).__name__, exc))
 
